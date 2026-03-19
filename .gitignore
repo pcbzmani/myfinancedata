@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+.python-version
+pyproject.toml
+uv.lock
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Build output
+dist/
+.next/
+
+# Environment & secrets
+.env
+.env.local
+*.env.local
+backend/.env
+frontend/.env
+
+# Runtime / user data
+config.json
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+
+# Secrets
+.env
+*.env.local
+backend/.env
+frontend/.env
+
+# Runtime / user data
+config.json
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
