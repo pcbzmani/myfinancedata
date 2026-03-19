@@ -5,27 +5,31 @@ import Anthropic from '@anthropic-ai/sdk';
 const router = Router();
 const prisma = new PrismaClient();
 
+const MAX_MESSAGE_LENGTH = 500;
+
 router.post('/chat', async (req: Request, res: Response) => {
   const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message required' });
+  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'Message required' });
+  if (message.length > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` });
 
-  const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
-  if (!settings?.aiApiKey) {
-    return res.status(400).json({ error: 'No AI API key configured. Go to Settings to add your key.' });
-  }
+  try {
+    const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
+    if (!settings?.aiApiKey) {
+      return res.status(400).json({ error: 'No AI API key configured. Go to Settings to add your key.' });
+    }
 
-  const [transactions, investments, insurance] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: 'desc' }, take: 50 }),
-    prisma.investment.findMany(),
-    prisma.insurance.findMany(),
-  ]);
+    const [transactions, investments, insurance] = await Promise.all([
+      prisma.transaction.findMany({ orderBy: { date: 'desc' }, take: 50 }),
+      prisma.investment.findMany(),
+      prisma.insurance.findMany(),
+    ]);
 
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const totalInvested = investments.reduce((s, i) => s + i.amountInvested, 0);
-  const currentPortfolio = investments.reduce((s, i) => s + i.currentValue, 0);
+    const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const totalInvested = investments.reduce((s, i) => s + i.amountInvested, 0);
+    const currentPortfolio = investments.reduce((s, i) => s + i.currentValue, 0);
 
-  const systemPrompt = `You are a personal finance assistant with access to the user's financial data:
+    const systemPrompt = `You are a personal finance assistant with access to the user's financial data:
 
 SUMMARY:
 - Total Income: ₹${totalIncome.toLocaleString('en-IN')}
@@ -47,7 +51,6 @@ ${insurance.map(p => `- ${p.provider} (${p.type}) | ₹${p.premium}/${p.frequenc
 
 Give helpful, practical financial advice. Use ₹ for currency.`;
 
-  try {
     if (settings.aiProvider === 'anthropic') {
       const client = new Anthropic({ apiKey: settings.aiApiKey });
       const response = await client.messages.create({
@@ -75,8 +78,9 @@ Give helpful, practical financial advice. Use ₹ for currency.`;
     }
 
     return res.status(400).json({ error: 'Unsupported AI provider' });
-  } catch (err: any) {
-    return res.status(500).json({ error: `AI error: ${err.message}` });
+  } catch (err) {
+    console.error('AI route error:', err);
+    return res.status(500).json({ error: 'AI service unavailable' });
   }
 });
 
