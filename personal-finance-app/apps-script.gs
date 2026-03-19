@@ -1,5 +1,4 @@
-/**
- * Personal Finance App — Google Apps Script Backend
+/*** Personal Finance App — Google Apps Script Backend
  * ===================================================
  * HOW TO DEPLOY:
  * 1. Open your Google Sheet → Extensions → Apps Script
