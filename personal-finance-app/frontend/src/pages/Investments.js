@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { getRows, addRow, deleteRow } from '../lib/api';
 const TYPES = ['stocks', 'mutual_fund', 'crypto', 'fd', 'ppf', 'other'];
 const TYPE_META = {
     stocks: { label: 'Stocks', color: 'text-blue-700', bg: 'bg-blue-100' },
@@ -18,18 +18,19 @@ export default function Investments() {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const load = () => api.get('/investments').then(setItems).catch(e => setError(e.message));
+    const load = () => getRows('investments').then(setItems).catch(e => setError(e.message));
     useEffect(() => { load(); }, []);
     const handleAdd = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.post('/investments', {
+            await addRow('investments', {
+                id: crypto.randomUUID(),
                 ...form,
                 amountInvested: Number(form.amountInvested),
                 currentValue: Number(form.currentValue),
-                units: form.units ? Number(form.units) : undefined,
-                buyPrice: form.buyPrice ? Number(form.buyPrice) : undefined,
+                units: form.units ? Number(form.units) : '',
+                buyPrice: form.buyPrice ? Number(form.buyPrice) : '',
             });
             setShowForm(false);
             setForm(EMPTY);
@@ -44,7 +45,7 @@ export default function Investments() {
     };
     const handleDelete = async (id) => {
         try {
-            await api.delete(`/investments/${id}`);
+            await deleteRow('investments', id);
             load();
         }
         catch (e) {

@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { getRows, addRow, deleteRow } from '../lib/api';
 const CATEGORIES = ['Salary', 'Freelance', 'Food', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
 const fmt = (n) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
 const EMPTY_FORM = { type: 'expense', category: 'Food', amount: '', description: '', date: '' };
@@ -11,13 +11,18 @@ export default function Transactions() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [filter, setFilter] = useState('all');
-    const load = () => api.get('/transactions').then(setItems).catch(e => setError(e.message));
+    const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
     useEffect(() => { load(); }, []);
     const handleAdd = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.post('/transactions', { ...form, amount: Number(form.amount) });
+            await addRow('transactions', {
+                id: crypto.randomUUID(),
+                ...form,
+                amount: Number(form.amount),
+                date: form.date || new Date().toISOString().split('T')[0],
+            });
             setShowForm(false);
             setForm(EMPTY_FORM);
             load();
@@ -31,7 +36,7 @@ export default function Transactions() {
     };
     const handleDelete = async (id) => {
         try {
-            await api.delete(`/transactions/${id}`);
+            await deleteRow('transactions', id);
             load();
         }
         catch (e) {

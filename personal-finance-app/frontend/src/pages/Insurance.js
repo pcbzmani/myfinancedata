@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { getRows, addRow, deleteRow } from '../lib/api';
 const TYPES = ['health', 'life', 'vehicle', 'home', 'term'];
 const TYPE_META = {
     health: { emoji: '🏥', color: 'text-emerald-700', border: 'border-emerald-200', bg: 'bg-emerald-50' },
@@ -17,13 +17,19 @@ export default function Insurance() {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const load = () => api.get('/insurance').then(setItems).catch(e => setError(e.message));
+    const load = () => getRows('insurance').then(setItems).catch(e => setError(e.message));
     useEffect(() => { load(); }, []);
     const handleAdd = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.post('/insurance', { ...form, premium: Number(form.premium), sumAssured: Number(form.sumAssured) });
+            await addRow('insurance', {
+                id: crypto.randomUUID(),
+                ...form,
+                premium: Number(form.premium),
+                sumAssured: Number(form.sumAssured),
+                status: 'active',
+            });
             setShowForm(false);
             setForm(EMPTY);
             load();
@@ -37,7 +43,7 @@ export default function Insurance() {
     };
     const handleDelete = async (id) => {
         try {
-            await api.delete(`/insurance/${id}`);
+            await deleteRow('insurance', id);
             load();
         }
         catch (e) {

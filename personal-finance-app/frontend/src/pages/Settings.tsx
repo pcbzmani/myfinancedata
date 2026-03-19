@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { getScriptUrl, setScriptUrl, ping } from '../lib/api';
 
 const SCRIPT_CODE = `function doGet(e) {
   const output = ContentService.createTextOutput();
@@ -50,19 +50,17 @@ function deleteRow(ss, name, id) {
 }`;
 
 export default function Settings() {
-  const [scriptUrl, setScriptUrl] = useState('');
+  const [url, setUrl] = useState('');
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    api.get<any>('/settings').then(d => { if (d.scriptUrl) setScriptUrl(d.scriptUrl); });
-  }, []);
+  useEffect(() => { setUrl(getScriptUrl()); }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    await api.put('/settings', { scriptUrl });
+    setScriptUrl(url);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -70,8 +68,9 @@ export default function Settings() {
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
-    const r = await api.get<any>('/settings/test');
-    setTestResult(r.ok ? 'ok' : 'fail');
+    setScriptUrl(url);
+    const ok = await ping();
+    setTestResult(ok ? 'ok' : 'fail');
     setTesting(false);
   };
 
@@ -88,23 +87,19 @@ export default function Settings() {
         <p className="text-sm text-slate-400 mt-0.5">Connect your Google Sheets database</p>
       </div>
 
-      {/* Setup Instructions */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 bg-violet-600">
           <h2 className="font-semibold text-white">📊 Google Sheets Setup</h2>
           <p className="text-violet-200 text-xs mt-0.5">One-time setup — your data lives in YOUR Google Sheet</p>
         </div>
-
         <div className="p-6 space-y-5">
-          {/* Steps */}
           <div className="space-y-3">
             {[
-              { n: '1', text: 'Create a new Google Spreadsheet at sheets.google.com', sub: 'Give it any name, e.g. "My Finance Data"' },
+              { n: '1', text: 'Create a new Google Spreadsheet at sheets.google.com', sub: 'Give it any name e.g. "My Finance Data"' },
               { n: '2', text: 'Open Apps Script editor', sub: 'Click Extensions → Apps Script in the top menu' },
-              { n: '3', text: 'Paste the script code', sub: 'Delete any existing code, paste the code below, click Save (Ctrl+S)' },
-              { n: '4', text: 'Deploy as a Web App', sub: 'Click Deploy → New Deployment → Type: Web app → Execute as: Me → Who can access: Anyone → Deploy' },
-              { n: '5', text: 'Copy the Web App URL', sub: 'It looks like: https://script.google.com/macros/s/ABC.../exec' },
-              { n: '6', text: 'Paste the URL below and click Save', sub: '' },
+              { n: '3', text: 'Paste the script code below', sub: 'Delete any existing code, paste, click Save (Ctrl+S)' },
+              { n: '4', text: 'Deploy as a Web App', sub: 'Deploy → New Deployment → Type: Web app → Execute as: Me → Who can access: Anyone → Deploy' },
+              { n: '5', text: 'Copy the Web App URL and paste it below', sub: 'Looks like: https://script.google.com/macros/s/ABC.../exec' },
             ].map(({ n, text, sub }) => (
               <div key={n} className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex-shrink-0 flex items-center justify-center">{n}</span>
@@ -116,7 +111,6 @@ export default function Settings() {
             ))}
           </div>
 
-          {/* Script Code */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Apps Script Code</p>
@@ -134,7 +128,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* URL Form */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <h2 className="font-semibold text-slate-800 mb-4">Web App URL</h2>
         <form onSubmit={handleSave} className="space-y-4">
@@ -143,15 +136,15 @@ export default function Settings() {
             <input
               type="url"
               placeholder="https://script.google.com/macros/s/.../exec"
-              value={scriptUrl}
-              onChange={e => setScriptUrl(e.target.value)}
+              value={url}
+              onChange={e => setUrl(e.target.value)}
               className="w-full mt-1.5 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
           </div>
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={!scriptUrl}
+              disabled={!url}
               className="flex-1 bg-violet-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-40 transition-colors"
             >
               {saved ? '✓ Saved!' : 'Save URL'}
@@ -159,7 +152,7 @@ export default function Settings() {
             <button
               type="button"
               onClick={handleTest}
-              disabled={!scriptUrl || testing}
+              disabled={!url || testing}
               className="px-5 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
             >
               {testing ? 'Testing…' : 'Test Connection'}
@@ -178,7 +171,6 @@ export default function Settings() {
         </form>
       </div>
 
-      {/* Data info */}
       <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
         <h3 className="font-medium text-slate-700 mb-2">🔒 Privacy</h3>
         <ul className="text-sm text-slate-500 space-y-1.5">
