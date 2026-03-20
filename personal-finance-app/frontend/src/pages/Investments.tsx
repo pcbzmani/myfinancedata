@@ -79,6 +79,10 @@ export default function Investments() {
   const [editItem, setEditItem]   = useState<any>(null);
   const [editForm, setEditForm]   = useState<any>(null);
   const [updating, setUpdating]   = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Sort
+  const [sortBy, setSortBy] = useState<'default'|'pl_desc'|'pl_asc'|'invested_desc'|'invested_asc'>('default');
 
   const load = () => getRows('investments').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -150,6 +154,7 @@ export default function Investments() {
   };
 
   const openEdit = (inv: any) => {
+    setEditError('');
     setEditItem(inv);
     setEditForm({
       name: inv.name || '',
@@ -174,8 +179,9 @@ export default function Investments() {
       await updateRow('investments', editItem.id, updates);
       setEditItem(null);
       setEditForm(null);
+      setEditError('');
       load();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setEditError(e.message); }
     finally { setUpdating(false); }
   };
 
@@ -185,6 +191,18 @@ export default function Investments() {
   const totalCurrent  = items.reduce((s, i) => s + Number(i.currentValue  || 0), 0);
   const gain    = totalCurrent - totalInvested;
   const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(1) : '0.0';
+
+  const sortedItems = [...items].sort((a, b) => {
+    const aInvested = Number(a.amountInvested) || 0;
+    const bInvested = Number(b.amountInvested) || 0;
+    const aPL = (Number(a.currentValue) || 0) - aInvested;
+    const bPL = (Number(b.currentValue) || 0) - bInvested;
+    if (sortBy === 'pl_desc')       return bPL - aPL;
+    if (sortBy === 'pl_asc')        return aPL - bPL;
+    if (sortBy === 'invested_desc') return bInvested - aInvested;
+    if (sortBy === 'invested_asc')  return aInvested - bInvested;
+    return 0; // default: original order
+  });
 
   // ── render ───────────────────────────────────────────────────────────────────
 
@@ -438,6 +456,11 @@ export default function Investments() {
             </div>
 
             <form onSubmit={handleUpdate} className="p-6 space-y-4">
+              {editError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-lg px-3 py-2 text-sm">
+                  {editError}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
 
                 {/* Name */}
@@ -514,6 +537,28 @@ export default function Investments() {
         </div>
       )}
 
+      {/* ── Sort bar ────────────────────────────────────────────────────────── */}
+      {items.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Sort by</span>
+          {([
+            ['default',      'Date Added'],
+            ['pl_desc',      'P&L ↓ High'],
+            ['pl_asc',       'P&L ↑ Low'],
+            ['invested_desc','Invested ↓'],
+            ['invested_asc', 'Invested ↑'],
+          ] as const).map(([val, label]) => (
+            <button key={val} onClick={() => setSortBy(val)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                sortBy === val
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'border-slate-200 text-slate-500 hover:border-violet-300'
+              }`}
+            >{label}</button>
+          ))}
+        </div>
+      )}
+
       {/* ── Investment Cards ─────────────────────────────────────────────────── */}
       {items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
@@ -523,7 +568,7 @@ export default function Investments() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map(inv => {
+          {sortedItems.map(inv => {
             const invested   = Number(inv.amountInvested) || (Number(inv.units || 0) * Number(inv.buyPrice || 0));
             const current    = Number(inv.currentValue) || 0;
             const units      = Number(inv.units) || 0;

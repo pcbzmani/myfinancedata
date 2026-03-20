@@ -119,7 +119,7 @@ function updateRow(ss, name, id, updates) {
 
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][idCol]) === String(id)) {
-      var rowNum = i + 1;
+      var rowNum          = i + 1;
       var unitsCol        = headers.indexOf('units');
       var buyPriceCol     = headers.indexOf('buyPrice');
       var amountCol       = headers.indexOf('amountInvested');
@@ -127,19 +127,25 @@ function updateRow(ss, name, id, updates) {
       var typeCol         = headers.indexOf('type');
       var symbolCol       = headers.indexOf('symbol');
 
-      // Update editable fields
+      // Build an updated copy of the row from the cached values array,
+      // then write it back in one setValues call (avoids read-after-write issues).
+      var updatedRow = values[i].slice(); // shallow copy
+
       ['name', 'units', 'buyPrice', 'currentValue'].forEach(function(key) {
         if (updates[key] !== undefined) {
           var col = headers.indexOf(key);
-          if (col >= 0) sheet.getRange(rowNum, col + 1).setValue(updates[key]);
+          if (col >= 0) updatedRow[col] = updates[key];
         }
       });
 
-      // Recompute amountInvested
-      var units     = Number(sheet.getRange(rowNum, unitsCol + 1).getValue());
-      var buyPrice  = Number(sheet.getRange(rowNum, buyPriceCol + 1).getValue());
+      // Recompute amountInvested from the updated values
+      var units          = Number(updatedRow[unitsCol]);
+      var buyPrice       = Number(updatedRow[buyPriceCol]);
       var amountInvested = units * buyPrice;
-      if (amountCol >= 0) sheet.getRange(rowNum, amountCol + 1).setValue(amountInvested);
+      if (amountCol >= 0) updatedRow[amountCol] = amountInvested;
+
+      // Write the entire row back in one shot (reliable, no caching issues)
+      sheet.getRange(rowNum, 1, 1, updatedRow.length).setValues([updatedRow]);
 
       // Re-stamp GOOGLEFINANCE formula for stocks/MF (units may have changed)
       var type   = String(values[i][typeCol] || '').trim();
