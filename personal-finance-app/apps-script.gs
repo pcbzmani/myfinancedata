@@ -119,6 +119,71 @@ function addRow(ss, name, data) {
   return { success: true };
 }
 
+/**
+ * Scans every row in the 'investments' sheet and stamps the correct
+ * GOOGLEFINANCE formula into the currentValue column for stocks and
+ * mutual funds.  Run this ONCE manually from the Apps Script editor
+ * (select fixAllFormulas → Run) to fix any existing rows that have a
+ * plain 0.  It is also wired to the onOpen trigger so formulas are
+ * refreshed every time the spreadsheet is opened.
+ */
+function fixAllFormulas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('investments');
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+
+  var typeCol         = headers.indexOf('type');
+  var symbolCol       = headers.indexOf('symbol');
+  var unitsCol        = headers.indexOf('units');
+  var amountCol       = headers.indexOf('amountInvested');
+  var currentValueCol = headers.indexOf('currentValue');
+
+  if (typeCol < 0 || symbolCol < 0 || unitsCol < 0 || currentValueCol < 0) return;
+
+  for (var i = 1; i < data.length; i++) {
+    var rowNum  = i + 1; // 1-based sheet row
+    var type    = String(data[i][typeCol]).trim();
+    var symbol  = String(data[i][symbolCol]).trim();
+    var invested = Number(data[i][amountCol]) || 0;
+
+    if (!symbol || (type !== 'stocks' && type !== 'mutual_fund')) continue;
+
+    var symbolCell = colLetter(symbolCol + 1) + rowNum;
+    var unitsCell  = colLetter(unitsCol  + 1) + rowNum;
+    var formula;
+
+    if (type === 'stocks') {
+      var sym = symbol.toUpperCase();
+      var gfTicker;
+      if (sym.endsWith('.BO')) {
+        gfTicker = 'BOM:' + sym.slice(0, -3);
+      } else {
+        gfTicker = 'NSE:' + (sym.endsWith('.NS') ? sym.slice(0, -3) : sym);
+      }
+      formula = '=IFERROR(GOOGLEFINANCE("' + gfTicker + '","price")*' + unitsCell + ',' + invested + ')';
+    } else if (type === 'mutual_fund') {
+      formula = '=IFERROR(GOOGLEFINANCE(' + symbolCell + ')*' + unitsCell + ',' + invested + ')';
+    }
+
+    if (formula) {
+      sheet.getRange(rowNum, currentValueCol + 1).setFormula(formula);
+    }
+  }
+}
+
+/**
+ * Automatically refresh GOOGLEFINANCE formulas each time the spreadsheet
+ * is opened.  To register this trigger:
+ *   Apps Script editor → Triggers (clock icon) → Add Trigger →
+ *   Function: onOpen, Event: From spreadsheet, On open
+ */
+function onOpen() {
+  fixAllFormulas();
+}
+
 /** Convert a 1-based column index to a spreadsheet letter (1→A, 27→AA, etc.) */
 function colLetter(col) {
   var letter = '';
