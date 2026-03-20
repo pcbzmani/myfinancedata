@@ -190,12 +190,12 @@ export default function Investments() {
 
   // ── totals ───────────────────────────────────────────────────────────────────
 
+  const filteredItems = filterType === 'all' ? items : items.filter(i => i.type === filterType);
+
   const totalInvested = filteredItems.reduce((s, i) => s + Number(i.amountInvested || 0), 0);
   const totalCurrent  = filteredItems.reduce((s, i) => s + Number(i.currentValue  || 0), 0);
   const gain    = totalCurrent - totalInvested;
   const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(1) : '0.0';
-
-  const filteredItems = filterType === 'all' ? items : items.filter(i => i.type === filterType);
 
   const sortedItems = [...filteredItems].sort((a, b) => {
     const aInvested = Number(a.amountInvested) || 0;
