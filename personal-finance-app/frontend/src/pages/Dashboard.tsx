@@ -1,6 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getRows } from '../lib/api';
+
+// ── Market data helpers ───────────────────────────────────────────────────────
+
+interface MarketQuote {
+  price: number;
+  change: number;
+  changePct: number;
+}
+
+async function fetchYahoo(symbol: string): Promise<MarketQuote | null> {
+  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+  const proxy = `https://corsproxy.io/?${encodeURIComponent(base)}`;
+  try {
+    const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta?.regularMarketPrice) return null;
+    const price = meta.regularMarketPrice;
+    const prev  = meta.chartPreviousClose ?? meta.previousClose ?? price;
+    return { price, change: price - prev, changePct: prev > 0 ? ((price - prev) / prev) * 100 : 0 };
+  } catch { return null; }
+}
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
@@ -90,6 +113,12 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Market data
+  const [nifty, setNifty]       = useState<MarketQuote | null>(null);
+  const [gold, setGold]         = useState<MarketQuote | null>(null);
+  const [marketLoading, setMarketLoading] = useState(true);
+  const [marketTime, setMarketTime]       = useState('');
+
   useEffect(() => {
     Promise.all([
       getRows('transactions'),
@@ -98,6 +127,23 @@ export default function Dashboard() {
     ]).then(([t, inv, ins]) => {
       setTxns(t); setInvestments(inv); setInsurance(ins); setLoading(false);
     }).catch(e => { setError(e.message); setLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    async function loadMarket() {
+      setMarketLoading(true);
+      // ^NSEI = Nifty 50 | XAUINR=X = Gold spot in INR per troy oz
+      const [n, g] = await Promise.all([
+        fetchYahoo('^NSEI'),
+        fetchYahoo('XAUINR=X'),
+      ]);
+      setNifty(n);
+      // Convert troy oz → per 10 grams (1 troy oz = 31.1035 g)
+      if (g) setGold({ ...g, price: (g.price / 31.1035) * 10, change: (g.change / 31.1035) * 10 });
+      setMarketTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+      setMarketLoading(false);
+    }
+    loadMarket();
   }, []);
 
   if (loading) return (
@@ -134,8 +180,65 @@ export default function Dashboard() {
     }, {})
   ).map(([name, value]) => ({ name, value }));
 
+  // ── Market ticker helpers ──────────────────────────────────────────────────
+  const fmtIndex = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const fmtChg   = (n: number, pct: number) => {
+    const sign = n >= 0 ? '+' : '';
+    return `${sign}${fmtIndex(n)} (${sign}${pct.toFixed(2)}%)`;
+  };
+
   return (
     <div className="space-y-6">
+
+      {/* ── Market ticker strip ─────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap items-center gap-4 md:gap-8">
+        {marketLoading ? (
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
+            Fetching live market data…
+          </div>
+        ) : (
+          <>
+            {/* Nifty 50 */}
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Nifty 50</p>
+                {nifty ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-slate-800">{fmtIndex(nifty.price)}</span>
+                    <span className={`text-xs font-semibold ${nifty.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {fmtChg(nifty.change, nifty.changePct)}
+                    </span>
+                  </div>
+                ) : <span className="text-sm text-slate-400">N/A</span>}
+              </div>
+            </div>
+
+            <div className="w-px h-8 bg-slate-100 hidden sm:block" />
+
+            {/* Gold per 10g */}
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Gold (10g)</p>
+                {gold ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-slate-800">₹{fmtIndex(gold.price)}</span>
+                    <span className={`text-xs font-semibold ${gold.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {gold.change >= 0 ? '+' : ''}₹{fmtIndex(gold.change)} ({gold.change >= 0 ? '+' : ''}{gold.changePct.toFixed(2)}%)
+                    </span>
+                  </div>
+                ) : <span className="text-sm text-slate-400">N/A</span>}
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Live · {marketTime}
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-slate-400">{getGreeting()} 👋</p>

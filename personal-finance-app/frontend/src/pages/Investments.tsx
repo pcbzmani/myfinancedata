@@ -84,6 +84,9 @@ export default function Investments() {
   // Sort
   const [sortBy, setSortBy] = useState<'default'|'pl_desc'|'pl_asc'|'invested_desc'|'invested_asc'>('default');
 
+  // Filter by type
+  const [filterType, setFilterType] = useState<string>('all');
+
   const load = () => getRows('investments').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
 
@@ -192,7 +195,9 @@ export default function Investments() {
   const gain    = totalCurrent - totalInvested;
   const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(1) : '0.0';
 
-  const sortedItems = [...items].sort((a, b) => {
+  const filteredItems = filterType === 'all' ? items : items.filter(i => i.type === filterType);
+
+  const sortedItems = [...filteredItems].sort((a, b) => {
     const aInvested = Number(a.amountInvested) || 0;
     const bInvested = Number(b.amountInvested) || 0;
     const aPL = (Number(a.currentValue) || 0) - aInvested;
@@ -246,6 +251,35 @@ export default function Investments() {
           <p className={`text-xs mt-1 ${gain >= 0 ? 'text-emerald-500' : 'text-rose-400'}`}>{gainPct}% return</p>
         </div>
       </div>
+
+      {/* ── Type filter tabs ─────────────────────────────────────────────────── */}
+      {items.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['all', ...TYPES] as const).map(t => {
+            const count = t === 'all' ? items.length : items.filter(i => i.type === t).length;
+            if (t !== 'all' && count === 0) return null;
+            const meta = t === 'all' ? null : TYPE_META[t];
+            return (
+              <button key={t} onClick={() => setFilterType(t)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                  filterType === t
+                    ? t === 'all'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : `${meta!.bg} ${meta!.color} border-transparent`
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'
+                }`}
+              >
+                {t === 'all' ? 'All' : meta!.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                  filterType === t
+                    ? 'bg-white/30 text-inherit'
+                    : 'bg-slate-100 text-slate-400'
+                }`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Add Form ─────────────────────────────────────────────────────────── */}
       {showForm && (
@@ -538,7 +572,7 @@ export default function Investments() {
       )}
 
       {/* ── Sort bar ────────────────────────────────────────────────────────── */}
-      {items.length > 1 && (
+      {filteredItems.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Sort by</span>
           {([
@@ -560,11 +594,13 @@ export default function Investments() {
       )}
 
       {/* ── Investment Cards ─────────────────────────────────────────────────── */}
-      {items.length === 0 ? (
+      {sortedItems.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <p className="text-4xl mb-3">📈</p>
-          <p className="text-slate-500 font-medium">No investments yet</p>
-          <p className="text-sm text-slate-400 mt-1">Click "+ Add" to track your portfolio</p>
+          {items.length === 0
+            ? <><p className="text-slate-500 font-medium">No investments yet</p><p className="text-sm text-slate-400 mt-1">Click "+ Add" to track your portfolio</p></>
+            : <><p className="text-slate-500 font-medium">No {TYPE_META[filterType]?.label ?? filterType} investments</p><button onClick={() => setFilterType('all')} className="text-sm text-violet-600 hover:underline mt-1">Show all →</button></>
+          }
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
