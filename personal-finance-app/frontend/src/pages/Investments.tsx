@@ -524,12 +524,16 @@ export default function Investments() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map(inv => {
-            const invested = Number(inv.amountInvested) || (Number(inv.units || 0) * Number(inv.buyPrice || 0));
-            const current  = Number(inv.currentValue) || 0;
-            const g        = current - invested;
-            const gPct     = invested > 0 ? ((g / invested) * 100).toFixed(1) : '0.0';
-            const meta     = TYPE_META[inv.type] || TYPE_META.other;
-            const isMarket = MARKET_TYPES.includes(inv.type);
+            const invested   = Number(inv.amountInvested) || (Number(inv.units || 0) * Number(inv.buyPrice || 0));
+            const current    = Number(inv.currentValue) || 0;
+            const units      = Number(inv.units) || 0;
+            const unitPrice  = current > 0 && units > 0 ? current / units : 0;
+            const g          = current - invested;
+            const gPct       = invested > 0 ? ((g / invested) * 100).toFixed(1) : '0.0';
+            const meta       = TYPE_META[inv.type] || TYPE_META.other;
+            const isMarket   = MARKET_TYPES.includes(inv.type);
+            const isStock    = inv.type === 'stocks';
+            const isMF       = inv.type === 'mutual_fund';
             return (
               <div key={inv.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow group">
                 <div className="flex items-start justify-between mb-3">
@@ -558,6 +562,20 @@ export default function Investments() {
                     {Number(inv.units).toLocaleString('en-IN')} units
                     {inv.buyPrice > 0 && ` @ ₹${Number(inv.buyPrice).toLocaleString('en-IN')} avg`}
                   </p>
+                )}
+
+                {/* LTP / NAV pill */}
+                {unitPrice > 0 && (isStock || isMF) && (
+                  <div className="mb-2.5">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      isStock ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'
+                    }`}>
+                      {isStock ? 'LTP' : 'NAV'}
+                      <span className="font-mono">
+                        ₹{unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </span>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
