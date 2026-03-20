@@ -190,8 +190,8 @@ export default function Investments() {
 
   // ── totals ───────────────────────────────────────────────────────────────────
 
-  const totalInvested = items.reduce((s, i) => s + Number(i.amountInvested || 0), 0);
-  const totalCurrent  = items.reduce((s, i) => s + Number(i.currentValue  || 0), 0);
+  const totalInvested = filteredItems.reduce((s, i) => s + Number(i.amountInvested || 0), 0);
+  const totalCurrent  = filteredItems.reduce((s, i) => s + Number(i.currentValue  || 0), 0);
   const gain    = totalCurrent - totalInvested;
   const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(1) : '0.0';
 
@@ -234,13 +234,17 @@ export default function Investments() {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4" key={filterType}>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Invested</p>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            Total Invested{filterType !== 'all' && <span className="ml-1 normal-case text-violet-500">· {TYPE_META[filterType]?.label}</span>}
+          </p>
           <p className="text-2xl font-bold text-slate-700 mt-1.5">{fmt(totalInvested)}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Current Value</p>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+            Current Value{filterType !== 'all' && <span className="ml-1 normal-case text-violet-500">· {TYPE_META[filterType]?.label}</span>}
+          </p>
           <p className="text-2xl font-bold text-blue-600 mt-1.5">{fmt(totalCurrent)}</p>
         </div>
         <div className={`rounded-2xl border shadow-sm p-5 ${gain >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
