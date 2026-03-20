@@ -1,115 +1,178 @@
 # MyFinance — Personal Finance App
 
-A full-stack personal finance application to track income, expenses, investments, and insurance — all in one place, powered by Google Sheets as the database.
+A mobile-friendly personal finance app to track income, expenses, investments, and insurance — all powered by Google Sheets as the database. No paid database or hosting required.
 
 ## Features
 
-- **Authentication** — Secure sign up / login with JWT
-- **Dashboard** — Financial summary at a glance
-- **Finance Tracker** — Track income, expenses, and budgets
-- **Investment Portfolio** — Stocks, mutual funds, crypto, and more
-- **Insurance Manager** — Health, life, vehicle, home policies
-- **Reports & Analytics** — Charts and insights on your finances
+- **Dashboard** — Financial summary with cash flow chart and expense breakdown
+- **Transactions** — Track income and expenses by category
+- **Investment Portfolio** — Stocks, mutual funds, crypto, FD, PPF with live market prices (NSE/BSE/US)
+- **Insurance Manager** — Health, life, vehicle, home, term policies
+- **Mobile-ready** — Bottom tab bar on phones, sidebar on desktop
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS |
-| State | Zustand |
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
 | Backend | Node.js + Express + TypeScript |
-| Auth | JWT |
 | Database | Google Sheets (via Google Apps Script) |
-| Frontend Hosting | Vercel |
-| Backend Hosting | Render |
+| Market Prices | Yahoo Finance (via corsproxy.io — no API key needed) |
+| Frontend Hosting | **Netlify** |
+| Backend Hosting | **Railway** (optional — only needed if you extend the AI features) |
 | CI/CD | GitHub Actions |
+
+## How It Works
+
+```
+Browser  →  Netlify (React app)  →  Google Apps Script  →  Google Sheets
+                    ↓
+             corsproxy.io  →  Yahoo Finance  (live stock/MF prices)
+```
+
+Your Google Sheet is the database. No external database service is needed.
+
+---
+
+## Local Development
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
+
+### 2. Set up Google Sheets
+
+1. Create a new Google Sheet
+2. Go to **Extensions → Apps Script**
+3. Paste the contents of `personal-finance-app/apps-script.gs`
+4. Click **Deploy → New Deployment**
+   - Type: **Web app**
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+5. Copy the **Web App URL** — you'll paste it in the app's Settings page
+
+### 3. Run the frontend
+
+```bash
+cd personal-finance-app/frontend
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:5173`.
+
+### 4. (Optional) Run the backend
+
+Only needed if you use the AI assistant or extend server-side features.
+
+```bash
+cd personal-finance-app/backend
+npm install
+npm run dev
+```
+
+Backend runs at `http://localhost:5000`. The Vite dev server already proxies `/api` to it.
+
+### 5. Connect your Google Sheet
+
+Open the app → go to **Settings** → paste your Apps Script Web App URL → Save.
+
+---
+
+## Deploying to Netlify
+
+### Step 1 — Push your code to GitHub
+
+Make sure your code is on GitHub (the `main` branch is what Netlify deploys).
+
+```bash
+git add .
+git commit -m "initial commit"
+git push origin main
+```
+
+### Step 2 — Create a Netlify site
+
+1. Go to [netlify.com](https://netlify.com) and log in
+2. Click **Add new site → Import an existing project**
+3. Choose **GitHub** and select your repository
+
+### Step 3 — Configure build settings
+
+In the Netlify site setup screen, set:
+
+| Setting | Value |
+|---|---|
+| Base directory | `personal-finance-app/frontend` |
+| Build command | `npm run build` |
+| Publish directory | `personal-finance-app/frontend/dist` |
+
+### Step 4 — Deploy
+
+Click **Deploy site**. Netlify will build and deploy automatically.
+
+Once deployed, open your live URL → go to **Settings** → paste your Google Apps Script Web App URL → Save.
+
+That's it. The app is fully working — no backend deployment needed for core features.
+
+---
+
+## Setting Up Live Stock & Mutual Fund Prices
+
+No setup required. When you add a stock or mutual fund in the **Investments** tab, enter the **Yahoo Finance symbol** and click **Fetch Price**.
+
+| Market | Symbol format | Example |
+|---|---|---|
+| NSE (India) | `SYMBOL.NS` | `RELIANCE.NS`, `TCS.NS`, `INFY.NS` |
+| BSE (India) | `SYMBOL.BO` | `500325.BO` |
+| US stocks | `SYMBOL` | `AAPL`, `MSFT`, `TSLA` |
+| Indian MFs | Yahoo MF code | Search on finance.yahoo.com |
+
+The app fetches prices via **corsproxy.io → Yahoo Finance** directly in the browser. No API key or backend needed.
+
+---
+
+## Continuous Deployment (GitHub Actions)
+
+The included CI/CD pipeline (`.github/workflows/ci.yml`) runs on every push:
+
+- **`dev` branch** — runs build and type-check only
+- **`main` branch** — runs build, then Netlify deploys automatically via its GitHub integration
+
+No extra GitHub secrets are needed for Netlify if you connect via the Netlify GitHub integration (recommended). Netlify detects pushes to `main` and redeploys automatically.
+
+---
 
 ## Project Structure
 
 ```
 /
 ├── personal-finance-app/
-│   ├── frontend/        # React app (Vite + Tailwind)
-│   ├── backend/         # Express API server
-│   └── apps-script.gs   # Google Apps Script (Sheets backend)
+│   ├── frontend/              # React + Vite app
+│   │   └── src/
+│   │       ├── components/    # Layout, navigation
+│   │       ├── pages/         # Dashboard, Transactions, Investments, Insurance, Settings
+│   │       └── lib/api.ts     # Google Sheets + Yahoo Finance API calls
+│   ├── backend/               # Express API (optional — for AI features)
+│   │   └── src/
+│   │       ├── routes/        # transactions, investments, insurance, market, ai
+│   │       └── sheets.ts      # Google Sheets client
+│   └── apps-script.gs         # Google Apps Script (deploy this to your Sheet)
 ├── .github/
 │   └── workflows/
-│       └── ci.yml       # CI/CD pipeline
+│       └── ci.yml
 └── README.md
-```
-
-## How It Works
-
-```
-Mobile Browser → Vercel (React) → Render (Express) → Google Apps Script → Google Sheets
-```
-
-Your Google Sheet acts as the database. No external database service required.
-
-## Getting Started
-
-### 1. Set Up Google Sheets
-
-1. Create a new Google Sheet
-2. Go to **Extensions → Apps Script**
-3. Paste the contents of `personal-finance-app/apps-script.gs`
-4. Click **Deploy → New Deployment**
-   - Type: `Web app`
-   - Execute as: `Me`
-   - Who has access: `Anyone`
-5. Copy the **Web App URL**
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in `personal-finance-app/backend/`:
-
-```env
-JWT_SECRET=your-random-secret-key
-NODE_ENV=development
-```
-
-### 3. Run Locally
-
-```bash
-# Backend
-cd personal-finance-app/backend
-npm install
-npm run dev
-
-# Frontend (new terminal)
-cd personal-finance-app/frontend
-npm install
-npm run dev
-```
-
-Frontend runs at `http://localhost:5173`, backend at `http://localhost:3000`.
-
-### 4. Connect Google Sheets
-
-Open the app → go to **Settings** → paste your Apps Script Web App URL.
-
-## Deployment
-
-Push to `dev` → CI builds and tests only.
-Push to `main` → CI builds, then auto-deploys to Vercel + Render.
-
-### Required GitHub Secrets
-
-```
-VERCEL_TOKEN
-VERCEL_ORG_ID
-VERCEL_PROJECT_ID
-VITE_API_URL          # your Render backend URL
-RENDER_DEPLOY_HOOK_URL
 ```
 
 ## Privacy
 
-- Passwords hashed with bcrypt
-- JWT-based authentication
-- No third-party analytics or tracking
-- All financial data stays in your own Google Sheet
+- No third-party analytics or tracking scripts
+- All financial data stays in **your own** Google Sheet
+- Passwords hashed with bcrypt (if auth is enabled)
+- Market price lookups go through corsproxy.io (only the stock symbol is sent — no personal data)
 
 ## License
 

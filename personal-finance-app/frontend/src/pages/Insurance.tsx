@@ -74,7 +74,7 @@ export default function Insurance() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Policies</p>
           <p className="text-2xl font-bold text-slate-700 mt-1.5">{items.length}</p>
@@ -98,7 +98,7 @@ export default function Insurance() {
           <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
             <h3 className="font-semibold text-slate-700">Add Insurance Policy</h3>
           </div>
-          <form onSubmit={handleAdd} className="p-6 grid grid-cols-2 gap-4">
+          <form onSubmit={handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
               <select
@@ -180,7 +180,7 @@ export default function Insurance() {
                 required
               />
             </div>
-            <div className="col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
+            <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
               <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); }} className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
               <button type="submit" disabled={saving} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving…' : 'Save Policy'}

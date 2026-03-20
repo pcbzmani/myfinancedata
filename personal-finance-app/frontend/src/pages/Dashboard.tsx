@@ -136,21 +136,21 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm text-slate-400">{getGreeting()} 👋</p>
-          <h1 className="text-2xl font-bold text-slate-800 mt-0.5">Financial Overview</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 mt-0.5">Financial Overview</h1>
+          <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
         {totalIncome > 0 && (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border ${
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border flex-shrink-0 ${
             savingsRate >= 20 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
             : savingsRate >= 0 ? 'bg-amber-50 border-amber-200 text-amber-700'
             : 'bg-rose-50 border-rose-200 text-rose-600'
           }`}>
-            <span className="text-xs font-medium opacity-70">Savings Rate</span>
+            <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings Rate</span>
             <span>{savingsRate}%</span>
           </div>
         )}
@@ -164,8 +164,8 @@ export default function Dashboard() {
         <StatCard label="Portfolio" value={fmt(currentPortfolio)} sub={`${gainPct} gain/loss`} color="text-blue-600" iconBg="bg-blue-100" icon={<BarChartIcon />} />
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-4 mb-5">
             <div><h2 className="font-semibold text-slate-800">Cash Flow</h2><p className="text-xs text-slate-400">Last 6 months</p></div>
             <div className="ml-auto flex gap-4 text-xs text-slate-500">
@@ -189,7 +189,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        <div className="lg:col-span-2 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold text-slate-800 mb-1">Expenses by Category</h2>
           <p className="text-xs text-slate-400 mb-3">All time</p>
           {pieData.length === 0 ? (
@@ -210,8 +210,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
             <h2 className="font-semibold text-slate-800">Recent Transactions</h2>
             <Link to="/transactions" className="text-xs text-violet-600 hover:text-violet-700 font-medium">View all →</Link>
@@ -246,7 +246,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-slate-800">Investments</h2>

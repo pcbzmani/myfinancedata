@@ -37,3 +37,27 @@ export async function ping(): Promise<boolean> {
   try { await call({ action: 'ping' }); return true; }
   catch { return false; }
 }
+
+// Fetch live market price via a free CORS proxy → Yahoo Finance.
+// No backend needed — works directly from the browser.
+export async function getMarketPrice(symbol: string): Promise<{
+  symbol: string; price: number; currency: string; exchange: string; name: string;
+}> {
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
+
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error(`Symbol "${symbol}" not found`);
+
+  const data = await res.json();
+  const meta = data?.chart?.result?.[0]?.meta;
+  if (!meta?.regularMarketPrice) throw new Error('No price data for this symbol');
+
+  return {
+    symbol: meta.symbol,
+    price: meta.regularMarketPrice,
+    currency: meta.currency || 'INR',
+    exchange: meta.exchangeName || '',
+    name: meta.longName || meta.shortName || symbol,
+  };
+}

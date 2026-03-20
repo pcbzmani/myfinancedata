@@ -10,6 +10,7 @@ import insuranceRoutes from './routes/insurance';
 import dashboardRoutes from './routes/dashboard';
 import settingsRoutes from './routes/settings';
 import aiRoutes from './routes/ai';
+import marketRoutes from './routes/market';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/v1/insurance', insuranceRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/market', marketRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 

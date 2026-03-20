@@ -64,7 +64,7 @@ export default function Transactions() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         {[
           { label: 'Total Income', value: totalIn, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
           { label: 'Total Expenses', value: totalOut, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-100' },
@@ -82,7 +82,7 @@ export default function Transactions() {
           <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
             <h3 className="font-semibold text-slate-700">New Transaction</h3>
           </div>
-          <form onSubmit={handleAdd} className="p-6 grid grid-cols-2 gap-4">
+          <form onSubmit={handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
               <div className="flex gap-2 mt-1.5">
@@ -116,12 +116,12 @@ export default function Transactions() {
               <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
                 className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Note (optional)</label>
               <input placeholder="What was this for?" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
                 className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
-            <div className="col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
+            <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
               <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }} className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
               <button type="submit" disabled={saving}
                 className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
@@ -152,41 +152,70 @@ export default function Transactions() {
             <p className="text-sm text-slate-400 mt-1">Click "Add Transaction" to get started</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Note</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 w-8" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filtered.map(t => (
-                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-3.5 text-slate-500 text-xs whitespace-nowrap">
-                    {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-500' : 'bg-rose-400'}`} />
-                      <span className="font-medium text-slate-700">{t.category}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>{t.type}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-3.5 text-slate-400 text-xs max-w-xs truncate">{t.description || '—'}</td>
-                  <td className={`px-6 py-3.5 text-right font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
-                  </td>
-                  <td className="px-6 py-3.5 text-right">
-                    <button onClick={() => handleDelete(t.id)}
-                      className="text-slate-200 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-base font-bold">×</button>
-                  </td>
+          <>
+            {/* Desktop table */}
+            <table className="hidden sm:table w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Note</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 w-8" />
                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtered.map(t => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-3.5 text-slate-500 text-xs whitespace-nowrap">
+                      {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-500' : 'bg-rose-400'}`} />
+                        <span className="font-medium text-slate-700">{t.category}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>{t.type}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3.5 text-slate-400 text-xs max-w-xs truncate">{t.description || '—'}</td>
+                    <td className={`px-6 py-3.5 text-right font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <button onClick={() => handleDelete(t.id)}
+                        className="text-slate-200 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-base font-bold">×</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Mobile card list */}
+            <div className="sm:hidden divide-y divide-slate-50">
+              {filtered.map(t => (
+                <div key={t.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-100' : 'bg-rose-100'}`}>
+                      <span className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>{t.type === 'income' ? '↑' : '↓'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{t.category}</p>
+                      <p className="text-xs text-slate-400">{t.description || new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
+                      </p>
+                      <p className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                    <button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-rose-400 transition-colors text-lg font-bold px-1">×</button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>
