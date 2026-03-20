@@ -53,6 +53,10 @@ export async function deleteRow(sheet: string, id: string): Promise<void> {
   await call({ action: 'delete', sheet, id });
 }
 
+export async function updateRow(sheet: string, id: string, data: Record<string, any>): Promise<void> {
+  await call({ action: 'update', sheet, id, data: JSON.stringify(data) });
+}
+
 export async function ping(): Promise<boolean> {
   try {
     await call({ action: 'ping' });

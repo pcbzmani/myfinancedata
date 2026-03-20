@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getRows, addRow, deleteRow } from '../sheets';
+import { getRows, addRow, deleteRow, updateRow } from '../sheets';
 
 const router = Router();
 
@@ -72,6 +72,27 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (e) {
     console.error('POST /investments error:', e);
     res.status(500).json({ error: 'Failed to save investment' });
+  }
+});
+
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return res.status(400).json({ error: 'Invalid id' });
+    const { name, units, buyPrice, currentValue } = req.body;
+    const unitsNum    = units    !== undefined ? Number(units)    : undefined;
+    const buyPriceNum = buyPrice !== undefined ? Number(buyPrice) : undefined;
+    const updates: any = {};
+    if (name     !== undefined) updates.name     = String(name).trim();
+    if (unitsNum !== undefined) { if (isNaN(unitsNum) || unitsNum < 0) return res.status(400).json({ error: 'Invalid units' }); updates.units = unitsNum; }
+    if (buyPriceNum !== undefined) { if (isNaN(buyPriceNum) || buyPriceNum < 0) return res.status(400).json({ error: 'Invalid buyPrice' }); updates.buyPrice = buyPriceNum; }
+    if (unitsNum !== undefined && buyPriceNum !== undefined) updates.amountInvested = unitsNum * buyPriceNum;
+    if (currentValue !== undefined) { const cv = Number(currentValue); if (isNaN(cv) || cv < 0) return res.status(400).json({ error: 'Invalid currentValue' }); updates.currentValue = cv; }
+    await updateRow('investments', id, updates);
+    res.json({ message: 'Updated' });
+  } catch (e) {
+    console.error('PUT /investments error:', e);
+    res.status(500).json({ error: 'Failed to update investment' });
   }
 });
 
