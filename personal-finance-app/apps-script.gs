@@ -46,7 +46,7 @@ function readSheet(ss, name) {
   const sheet = ss.getSheetByName(name);
   if (!sheet || sheet.getLastRow() < 2) return { data: [] };
 
-  const values = sheet.getDataRange().getValues();
+  const values = sheet.getDataRange().getValues(); // returns computed values (formulas evaluated)
   const headers = values[0];
   const rows = values.slice(1).map(function(row) {
     const obj = {};
@@ -74,7 +74,50 @@ function addRow(ss, name, data) {
     return data[h] !== undefined ? data[h] : '';
   });
   sheet.appendRow(row);
+
+  // For stocks and mutual funds, replace the currentValue cell with a live
+  // GOOGLEFINANCE formula so the price auto-updates in Google Sheets.
+  if (name === 'investments' && data.symbol &&
+      (data.type === 'stocks' || data.type === 'mutual_fund')) {
+
+    const lastRow = sheet.getLastRow();
+    const currentValueCol = headerRow.indexOf('currentValue') + 1; // 1-based
+    const unitsCol = headerRow.indexOf('units') + 1;
+
+    if (currentValueCol > 0 && unitsCol > 0) {
+      const ticker = yahooToGoogleTicker(data.symbol);
+      const unitsCell = colLetter(unitsCol) + lastRow;
+      // =IFERROR(GOOGLEFINANCE("NSE:INFY","price") * units_cell, amountInvested)
+      const formula = '=IFERROR(GOOGLEFINANCE("' + ticker + '","price")*' + unitsCell + ',' + (data.amountInvested || 0) + ')';
+      sheet.getRange(lastRow, currentValueCol).setFormula(formula);
+    }
+  }
+
   return { success: true };
+}
+
+/**
+ * Converts a Yahoo Finance symbol to a Google Finance ticker.
+ *   INFY.NS   → NSE:INFY
+ *   RELIANCE.NS → NSE:RELIANCE
+ *   500325.BO → BOM:500325
+ *   AAPL      → AAPL  (US stocks work as-is)
+ */
+function yahooToGoogleTicker(symbol) {
+  if (symbol.endsWith('.NS')) return 'NSE:' + symbol.slice(0, -3);
+  if (symbol.endsWith('.BO')) return 'BOM:' + symbol.slice(0, -3);
+  return symbol;
+}
+
+/** Convert a 1-based column index to a spreadsheet letter (1→A, 27→AA, etc.) */
+function colLetter(col) {
+  var letter = '';
+  while (col > 0) {
+    var rem = (col - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    col = Math.floor((col - 1) / 26);
+  }
+  return letter;
 }
 
 function deleteRow(ss, name, id) {
