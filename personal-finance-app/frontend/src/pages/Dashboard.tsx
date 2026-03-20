@@ -12,17 +12,24 @@ interface MarketQuote {
 
 async function fetchYahoo(symbol: string): Promise<MarketQuote | null> {
   const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-  const proxy = `https://corsproxy.io/?${encodeURIComponent(base)}`;
-  try {
-    const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return null;
-    const data = await r.json();
-    const meta = data?.chart?.result?.[0]?.meta;
-    if (!meta?.regularMarketPrice) return null;
-    const price = meta.regularMarketPrice;
-    const prev  = meta.chartPreviousClose ?? meta.previousClose ?? price;
-    return { price, change: price - prev, changePct: prev > 0 ? ((price - prev) / prev) * 100 : 0 };
-  } catch { return null; }
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+    `https://corsproxy.io/?${encodeURIComponent(base)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(base)}`,
+  ];
+  for (const proxy of proxies) {
+    try {
+      const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) continue;
+      const data = await r.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta?.regularMarketPrice) continue;
+      const price = meta.regularMarketPrice;
+      const prev  = meta.chartPreviousClose ?? meta.previousClose ?? price;
+      return { price, change: price - prev, changePct: prev > 0 ? ((price - prev) / prev) * 100 : 0 };
+    } catch { continue; }
+  }
+  return null;
 }
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -116,6 +123,7 @@ export default function Dashboard() {
   // Market data
   const [nifty, setNifty]       = useState<MarketQuote | null>(null);
   const [gold, setGold]         = useState<MarketQuote | null>(null);
+  const [usdInr, setUsdInr]     = useState<MarketQuote | null>(null);
   const [marketLoading, setMarketLoading] = useState(true);
   const [marketTime, setMarketTime]       = useState('');
 
@@ -132,14 +140,16 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadMarket() {
       setMarketLoading(true);
-      // ^NSEI = Nifty 50 | XAUINR=X = Gold spot in INR per troy oz
-      const [n, g] = await Promise.all([
+      // ^NSEI = Nifty 50 | XAUINR=X = Gold in INR/troy oz | USDINR=X = USD/INR
+      const [n, g, u] = await Promise.all([
         fetchYahoo('^NSEI'),
         fetchYahoo('XAUINR=X'),
+        fetchYahoo('USDINR=X'),
       ]);
       setNifty(n);
       // Convert troy oz → per 10 grams (1 troy oz = 31.1035 g)
       if (g) setGold({ ...g, price: (g.price / 31.1035) * 10, change: (g.change / 31.1035) * 10 });
+      setUsdInr(u);
       setMarketTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
       setMarketLoading(false);
     }
@@ -233,6 +243,23 @@ export default function Dashboard() {
                     <span className="text-base font-bold text-slate-800">₹{fmtIndex(gold.price)}</span>
                     <span className={`text-xs font-semibold ${gold.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                       {gold.change >= 0 ? '+' : ''}₹{fmtIndex(gold.change)} ({gold.change >= 0 ? '+' : ''}{gold.changePct.toFixed(2)}%)
+                    </span>
+                  </div>
+                ) : <span className="text-sm text-slate-400">N/A</span>}
+              </div>
+            </div>
+
+            <div className="w-px h-8 bg-slate-100 hidden sm:block" />
+
+            {/* USD/INR */}
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">USD/INR</p>
+                {usdInr ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-slate-800">₹{fmtIndex(usdInr.price)}</span>
+                    <span className={`text-xs font-semibold ${usdInr.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {usdInr.change >= 0 ? '+' : ''}{fmtIndex(usdInr.change)} ({usdInr.change >= 0 ? '+' : ''}{usdInr.changePct.toFixed(2)}%)
                     </span>
                   </div>
                 ) : <span className="text-sm text-slate-400">N/A</span>}
