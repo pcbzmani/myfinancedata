@@ -156,16 +156,23 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadMarket() {
       setMarketLoading(true);
-      // ^NSEI = Nifty 50 | XAUINR=X = Gold in INR/troy oz | USDINR=X = USD/INR
-      const [n, g, u] = await Promise.all([
+      // ^NSEI = Nifty 50 | GC=F = Gold futures (USD/troy oz) | INR=X = USD/INR rate
+      const [n, goldUsd, usd] = await Promise.all([
         fetchYahoo('^NSEI'),
-        fetchYahoo('XAUINR=X'),
-        fetchYahoo('USDINR=X'),
+        fetchYahoo('GC=F'),
+        fetchYahoo('INR=X'),
       ]);
       setNifty(n);
-      // Convert troy oz → per 10 grams (1 troy oz = 31.1035 g)
-      if (g) setGold({ ...g, price: (g.price / 31.1035) * 10, change: (g.change / 31.1035) * 10 });
-      setUsdInr(u);
+      // Convert gold: USD/troy oz → INR/10g  (1 troy oz = 31.1035 g)
+      if (goldUsd && usd) {
+        const rate = usd.price;
+        setGold({
+          price:     (goldUsd.price  * rate / 31.1035) * 10,
+          change:    (goldUsd.change * rate / 31.1035) * 10,
+          changePct: goldUsd.changePct,
+        });
+      }
+      setUsdInr(usd);
       setMarketTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
       setMarketLoading(false);
     }
