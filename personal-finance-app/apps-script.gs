@@ -30,6 +30,9 @@ function doGet(e) {
       result = addRow(ss, sheetName, data);
     } else if (action === 'delete') {
       result = deleteRow(ss, sheetName, e.parameter.id);
+    } else if (action === 'fixFormulas') {
+      fixAllFormulas();
+      result = { ok: true, message: 'Formulas refreshed' };
     } else {
       result = { error: 'Unknown action: ' + action };
     }
@@ -129,11 +132,24 @@ function addRow(ss, name, data) {
  */
 function fixAllFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('investments');
-  if (!sheet || sheet.getLastRow() < 2) return;
+
+  // Find investments sheet case-insensitively
+  var sheet = null;
+  var allSheets = ss.getSheets();
+  for (var s = 0; s < allSheets.length; s++) {
+    if (allSheets[s].getName().toLowerCase() === 'investments') {
+      sheet = allSheets[s];
+      break;
+    }
+  }
+  if (!sheet || sheet.getLastRow() < 2) {
+    Logger.log('fixAllFormulas: investments sheet not found or empty');
+    return;
+  }
 
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  Logger.log('fixAllFormulas: headers = ' + JSON.stringify(headers));
 
   var typeCol         = headers.indexOf('type');
   var symbolCol       = headers.indexOf('symbol');
@@ -141,13 +157,21 @@ function fixAllFormulas() {
   var amountCol       = headers.indexOf('amountInvested');
   var currentValueCol = headers.indexOf('currentValue');
 
-  if (typeCol < 0 || symbolCol < 0 || unitsCol < 0 || currentValueCol < 0) return;
+  if (typeCol < 0 || symbolCol < 0 || unitsCol < 0 || currentValueCol < 0) {
+    Logger.log('fixAllFormulas: missing required columns. typeCol=' + typeCol +
+               ' symbolCol=' + symbolCol + ' unitsCol=' + unitsCol +
+               ' currentValueCol=' + currentValueCol);
+    return;
+  }
 
+  var fixed = 0;
   for (var i = 1; i < data.length; i++) {
-    var rowNum  = i + 1; // 1-based sheet row
-    var type    = String(data[i][typeCol]).trim();
-    var symbol  = String(data[i][symbolCol]).trim();
+    var rowNum   = i + 1;
+    var type     = String(data[i][typeCol]).trim();
+    var symbol   = String(data[i][symbolCol]).trim();
     var invested = Number(data[i][amountCol]) || 0;
+
+    Logger.log('Row ' + rowNum + ': type=' + type + ' symbol=' + symbol);
 
     if (!symbol || (type !== 'stocks' && type !== 'mutual_fund')) continue;
 
@@ -169,9 +193,12 @@ function fixAllFormulas() {
     }
 
     if (formula) {
+      Logger.log('Row ' + rowNum + ': setting formula → ' + formula);
       sheet.getRange(rowNum, currentValueCol + 1).setFormula(formula);
+      fixed++;
     }
   }
+  Logger.log('fixAllFormulas: done. Fixed ' + fixed + ' row(s).');
 }
 
 /**
