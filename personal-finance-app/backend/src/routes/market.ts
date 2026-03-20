@@ -32,12 +32,17 @@ router.get('/price', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No price data available for this symbol' });
     }
 
+    const price = meta.regularMarketPrice;
+    const prev  = meta.chartPreviousClose ?? meta.previousClose ?? price;
+    const change = price - prev;
     res.json({
-      symbol: meta.symbol,
-      price: meta.regularMarketPrice,
-      currency: meta.currency || 'INR',
-      exchange: meta.exchangeName || '',
-      name: meta.longName || meta.shortName || symbol,
+      symbol:    meta.symbol,
+      price,
+      change,
+      changePct: prev > 0 ? (change / prev) * 100 : 0,
+      currency:  meta.currency || 'INR',
+      exchange:  meta.exchangeName || '',
+      name:      meta.longName || meta.shortName || symbol,
     });
   } catch (e: any) {
     if (e?.name === 'TimeoutError') {

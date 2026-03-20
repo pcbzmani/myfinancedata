@@ -10,26 +10,19 @@ interface MarketQuote {
   changePct: number;
 }
 
-async function fetchYahoo(symbol: string): Promise<MarketQuote | null> {
-  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
-    `https://corsproxy.io/?${encodeURIComponent(base)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(base)}`,
-  ];
-  for (const proxy of proxies) {
-    try {
-      const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-      if (!r.ok) continue;
-      const data = await r.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      if (!meta?.regularMarketPrice) continue;
-      const price = meta.regularMarketPrice;
-      const prev  = meta.chartPreviousClose ?? meta.previousClose ?? price;
-      return { price, change: price - prev, changePct: prev > 0 ? ((price - prev) / prev) * 100 : 0 };
-    } catch { continue; }
-  }
-  return null;
+const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
+
+async function fetchMarket(symbol: string): Promise<MarketQuote | null> {
+  try {
+    const r = await fetch(
+      `${API_BASE}/api/v1/market/price?symbol=${encodeURIComponent(symbol)}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!data.price) return null;
+    return { price: data.price, change: data.change ?? 0, changePct: data.changePct ?? 0 };
+  } catch { return null; }
 }
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -158,9 +151,9 @@ export default function Dashboard() {
       setMarketLoading(true);
       // ^NSEI = Nifty 50 | GC=F = Gold futures (USD/troy oz) | INR=X = USD/INR rate
       const [n, goldUsd, usd] = await Promise.all([
-        fetchYahoo('^NSEI'),
-        fetchYahoo('GC=F'),
-        fetchYahoo('INR=X'),
+        fetchMarket('^NSEI'),
+        fetchMarket('GC=F'),
+        fetchMarket('INR=X'),
       ]);
       setNifty(n);
       // Convert gold: USD/troy oz → INR/10g  (1 troy oz = 31.1035 g)
