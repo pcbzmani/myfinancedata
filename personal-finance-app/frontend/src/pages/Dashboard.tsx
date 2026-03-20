@@ -113,12 +113,28 @@ function StatCard({ label, value, sub, color, iconBg, icon }: {
   );
 }
 
+function buildMonthOptions() {
+  const opts: { key: string; label: string }[] = [];
+  const d = new Date();
+  for (let i = 0; i < 24; i++) {
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    opts.push({ key, label });
+    d.setMonth(d.getMonth() - 1);
+  }
+  return opts;
+}
+const MONTH_OPTIONS = buildMonthOptions();
+
 export default function Dashboard() {
   const [txns, setTxns] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
   const [insurance, setInsurance] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const initMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(initMonth);
 
   // Market data
   const [nifty, setNifty]       = useState<MarketQuote | null>(null);
@@ -173,11 +189,11 @@ export default function Dashboard() {
   );
 
   const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const monthTxns = txns.filter(t => {
     if (!t.date) return false;
     const d = new Date(t.date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === thisMonth;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
   });
 
   const totalIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
@@ -282,22 +298,56 @@ export default function Dashboard() {
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        {totalIncome > 0 && (
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border flex-shrink-0 ${
-            savingsRate >= 20 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-            : savingsRate >= 0 ? 'bg-amber-50 border-amber-200 text-amber-700'
-            : 'bg-rose-50 border-rose-200 text-rose-600'
-          }`}>
-            <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings Rate</span>
-            <span>{savingsRate}%</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Month picker */}
+          <button
+            onClick={() => {
+              const idx = MONTH_OPTIONS.findIndex(o => o.key === selectedMonth);
+              if (idx < MONTH_OPTIONS.length - 1) setSelectedMonth(MONTH_OPTIONS[idx + 1].key);
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+            disabled={MONTH_OPTIONS.findIndex(o => o.key === selectedMonth) >= MONTH_OPTIONS.length - 1}
+          >‹</button>
+          <select
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="text-sm font-medium text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            {MONTH_OPTIONS.map(o => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              const idx = MONTH_OPTIONS.findIndex(o => o.key === selectedMonth);
+              if (idx > 0) setSelectedMonth(MONTH_OPTIONS[idx - 1].key);
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+            disabled={MONTH_OPTIONS.findIndex(o => o.key === selectedMonth) <= 0}
+          >›</button>
+          {selectedMonth !== currentMonthKey && (
+            <button
+              onClick={() => setSelectedMonth(currentMonthKey)}
+              className="text-xs text-violet-600 hover:text-violet-700 font-medium px-2 py-1 rounded-lg border border-violet-200 hover:bg-violet-50"
+            >Today</button>
+          )}
+          {totalIncome > 0 && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${
+              savingsRate >= 20 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : savingsRate >= 0 ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-rose-50 border-rose-200 text-rose-600'
+            }`}>
+              <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings</span>
+              <span>{savingsRate}%</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Income (This Month)" value={fmt(totalIncome)} color="text-emerald-600" iconBg="bg-emerald-100" icon={<ArrowUpIcon />} />
-        <StatCard label="Expenses (This Month)" value={fmt(totalExpense)} color="text-rose-500" iconBg="bg-rose-100" icon={<ArrowDownIcon />} />
-        <StatCard label="Net Savings (This Month)" value={fmt(netSavings)} sub={netSavings >= 0 ? 'Surplus' : 'Deficit'}
+        <StatCard label="Income" value={fmt(totalIncome)} color="text-emerald-600" iconBg="bg-emerald-100" icon={<ArrowUpIcon />} />
+        <StatCard label="Expenses" value={fmt(totalExpense)} color="text-rose-500" iconBg="bg-rose-100" icon={<ArrowDownIcon />} />
+        <StatCard label="Net Savings" value={fmt(netSavings)} sub={netSavings >= 0 ? 'Surplus' : 'Deficit'}
           color={netSavings >= 0 ? 'text-violet-600' : 'text-rose-500'} iconBg={netSavings >= 0 ? 'bg-violet-100' : 'bg-rose-100'} icon={<WalletIcon />} />
         <StatCard label="Portfolio" value={fmt(currentPortfolio)} sub={`${gainPct} gain/loss`} color="text-blue-600" iconBg="bg-blue-100" icon={<BarChartIcon />} />
       </div>
@@ -329,7 +379,7 @@ export default function Dashboard() {
 
         <div className="lg:col-span-2 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold text-slate-800 mb-1">Expenses by Category</h2>
-          <p className="text-xs text-slate-400 mb-3">This month</p>
+          <p className="text-xs text-slate-400 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'}</p>
           {pieData.length === 0 ? (
             <div className="h-[200px] flex flex-col items-center justify-center text-slate-300">
               <p className="text-3xl mb-2">📊</p><p className="text-sm">No expenses yet</p>
