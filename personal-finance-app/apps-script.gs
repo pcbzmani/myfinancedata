@@ -83,30 +83,40 @@ function addRow(ss, name, data) {
     const lastRow = sheet.getLastRow();
     const currentValueCol = headerRow.indexOf('currentValue') + 1; // 1-based
     const unitsCol = headerRow.indexOf('units') + 1;
+    const symbolCol = headerRow.indexOf('symbol') + 1;
 
-    if (currentValueCol > 0 && unitsCol > 0) {
-      const ticker = yahooToGoogleTicker(data.symbol);
+    if (currentValueCol > 0 && unitsCol > 0 && symbolCol > 0) {
+      const symbolCell = colLetter(symbolCol) + lastRow;
       const unitsCell = colLetter(unitsCol) + lastRow;
-      // =IFERROR(GOOGLEFINANCE("NSE:INFY","price") * units_cell, amountInvested)
-      const formula = '=IFERROR(GOOGLEFINANCE("' + ticker + '","price")*' + unitsCell + ',' + (data.amountInvested || 0) + ')';
-      sheet.getRange(lastRow, currentValueCol).setFormula(formula);
+      var formula;
+
+      if (data.type === 'stocks') {
+        // Build the Google Finance ticker from the stored symbol.
+        // Symbols may arrive in Yahoo Finance format (INFY.NS / 500325.BO) or
+        // as plain NSE tickers (INFY). Convert to NSE:INFY or BOM:500325.
+        var sym = String(data.symbol).trim().toUpperCase();
+        var gfTicker;
+        if (sym.endsWith('.BO')) {
+          gfTicker = 'BOM:' + sym.slice(0, -3);
+        } else {
+          // .NS suffix or no suffix → NSE
+          gfTicker = 'NSE:' + (sym.endsWith('.NS') ? sym.slice(0, -3) : sym);
+        }
+        // =IFERROR(GOOGLEFINANCE("NSE:INFY","price") * units_cell, amountInvested)
+        formula = '=IFERROR(GOOGLEFINANCE("' + gfTicker + '","price")*' + unitsCell + ',' + (data.amountInvested || 0) + ')';
+      } else if (data.type === 'mutual_fund') {
+        // For mutual funds the symbol should be a Google Finance ISIN/ticker.
+        // =IFERROR(GOOGLEFINANCE(symbol_cell) * units_cell, amountInvested)
+        formula = '=IFERROR(GOOGLEFINANCE(' + symbolCell + ')*' + unitsCell + ',' + (data.amountInvested || 0) + ')';
+      }
+
+      if (formula) {
+        sheet.getRange(lastRow, currentValueCol).setFormula(formula);
+      }
     }
   }
 
   return { success: true };
-}
-
-/**
- * Converts a Yahoo Finance symbol to a Google Finance ticker.
- *   INFY.NS   → NSE:INFY
- *   RELIANCE.NS → NSE:RELIANCE
- *   500325.BO → BOM:500325
- *   AAPL      → AAPL  (US stocks work as-is)
- */
-function yahooToGoogleTicker(symbol) {
-  if (symbol.endsWith('.NS')) return 'NSE:' + symbol.slice(0, -3);
-  if (symbol.endsWith('.BO')) return 'BOM:' + symbol.slice(0, -3);
-  return symbol;
 }
 
 /** Convert a 1-based column index to a spreadsheet letter (1→A, 27→AA, etc.) */
