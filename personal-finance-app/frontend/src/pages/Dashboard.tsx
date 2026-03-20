@@ -162,8 +162,16 @@ export default function Dashboard() {
     </div>
   );
 
-  const totalIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
-  const totalExpense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthTxns = txns.filter(t => {
+    if (!t.date) return false;
+    const d = new Date(t.date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === thisMonth;
+  });
+
+  const totalIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const totalExpense = monthTxns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
   const netSavings = totalIncome - totalExpense;
   const totalInvested = investments.reduce((s, i) => s + Number(i.amountInvested || 0), 0);
   const currentPortfolio = investments.reduce((s, i) => s + Number(i.currentValue || 0), 0);
@@ -175,7 +183,7 @@ export default function Dashboard() {
   const monthly = buildMonthly(txns);
   const recent = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
   const pieData = Object.entries(
-    txns.filter(t => t.type === 'expense').reduce((acc: Record<string, number>, t) => {
+    monthTxns.filter(t => t.type === 'expense').reduce((acc: Record<string, number>, t) => {
       acc[t.category] = (acc[t.category] || 0) + Number(t.amount || 0); return acc;
     }, {})
   ).map(([name, value]) => ({ name, value }));
@@ -260,9 +268,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Income" value={fmt(totalIncome)} color="text-emerald-600" iconBg="bg-emerald-100" icon={<ArrowUpIcon />} />
-        <StatCard label="Total Expenses" value={fmt(totalExpense)} color="text-rose-500" iconBg="bg-rose-100" icon={<ArrowDownIcon />} />
-        <StatCard label="Net Savings" value={fmt(netSavings)} sub={netSavings >= 0 ? 'Surplus' : 'Deficit'}
+        <StatCard label="Income (This Month)" value={fmt(totalIncome)} color="text-emerald-600" iconBg="bg-emerald-100" icon={<ArrowUpIcon />} />
+        <StatCard label="Expenses (This Month)" value={fmt(totalExpense)} color="text-rose-500" iconBg="bg-rose-100" icon={<ArrowDownIcon />} />
+        <StatCard label="Net Savings (This Month)" value={fmt(netSavings)} sub={netSavings >= 0 ? 'Surplus' : 'Deficit'}
           color={netSavings >= 0 ? 'text-violet-600' : 'text-rose-500'} iconBg={netSavings >= 0 ? 'bg-violet-100' : 'bg-rose-100'} icon={<WalletIcon />} />
         <StatCard label="Portfolio" value={fmt(currentPortfolio)} sub={`${gainPct} gain/loss`} color="text-blue-600" iconBg="bg-blue-100" icon={<BarChartIcon />} />
       </div>
@@ -294,7 +302,7 @@ export default function Dashboard() {
 
         <div className="lg:col-span-2 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold text-slate-800 mb-1">Expenses by Category</h2>
-          <p className="text-xs text-slate-400 mb-3">All time</p>
+          <p className="text-xs text-slate-400 mb-3">This month</p>
           {pieData.length === 0 ? (
             <div className="h-[200px] flex flex-col items-center justify-center text-slate-300">
               <p className="text-3xl mb-2">📊</p><p className="text-sm">No expenses yet</p>
