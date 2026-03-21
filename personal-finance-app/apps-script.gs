@@ -124,42 +124,43 @@ function updateRow(ss, name, id, updates) {
 
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][idCol]) === String(id)) {
-      var rowNum          = i + 1;
-      var unitsCol        = headers.indexOf('units');
-      var buyPriceCol     = headers.indexOf('buyPrice');
-      var amountCol       = headers.indexOf('amountInvested');
-      var currentValueCol = headers.indexOf('currentValue');
-      var typeCol         = headers.indexOf('type');
-      var symbolCol       = headers.indexOf('symbol');
-
-      // Build an updated copy of the row from the cached values array,
-      // then write it back in one setValues call (avoids read-after-write issues).
+      var rowNum = i + 1;
       var updatedRow = values[i].slice(); // shallow copy
 
-      ['name', 'units', 'buyPrice', 'currentValue'].forEach(function(key) {
-        if (updates[key] !== undefined) {
-          var col = headers.indexOf(key);
-          if (col >= 0) updatedRow[col] = updates[key];
-        }
+      // Generic: update any field in updates that exists as a header (never overwrite id)
+      Object.keys(updates).forEach(function(key) {
+        if (key === 'id') return;
+        var col = headers.indexOf(key);
+        if (col >= 0) updatedRow[col] = updates[key];
       });
 
-      // Recompute amountInvested from the updated values
-      var units          = Number(updatedRow[unitsCol]);
-      var buyPrice       = Number(updatedRow[buyPriceCol]);
-      var amountInvested = units * buyPrice;
-      if (amountCol >= 0) updatedRow[amountCol] = amountInvested;
+      // Investment-specific: recompute amountInvested from units * buyPrice
+      var unitsCol    = headers.indexOf('units');
+      var buyPriceCol = headers.indexOf('buyPrice');
+      var amountCol   = headers.indexOf('amountInvested');
+      if (unitsCol >= 0 && buyPriceCol >= 0 && amountCol >= 0) {
+        var units     = Number(updatedRow[unitsCol]);
+        var buyPrice  = Number(updatedRow[buyPriceCol]);
+        if (units > 0 && buyPrice > 0) updatedRow[amountCol] = units * buyPrice;
+      }
 
-      // Write the entire row back in one shot (reliable, no caching issues)
+      // Write the entire row back in one shot
       sheet.getRange(rowNum, 1, 1, updatedRow.length).setValues([updatedRow]);
 
-      // Re-stamp GOOGLEFINANCE formula for stocks/MF (units may have changed)
-      var type   = String(values[i][typeCol] || '').trim();
-      var symbol = String(values[i][symbolCol] || '').trim();
-      if (currentValueCol >= 0 && (type === 'stocks' || type === 'mutual_fund') && symbol) {
-        var unitsCell  = colLetter(unitsCol + 1) + rowNum;
-        var symbolCell = colLetter(symbolCol + 1) + rowNum;
-        var formula = buildFormula(type, symbol, unitsCell, symbolCell, amountInvested);
-        if (formula) sheet.getRange(rowNum, currentValueCol + 1).setFormula(formula);
+      // Investment-specific: re-stamp GOOGLEFINANCE formula for stocks/MF
+      var typeCol         = headers.indexOf('type');
+      var symbolCol       = headers.indexOf('symbol');
+      var currentValueCol = headers.indexOf('currentValue');
+      if (typeCol >= 0 && symbolCol >= 0 && currentValueCol >= 0) {
+        var type   = String(values[i][typeCol] || '').trim();
+        var symbol = String(values[i][symbolCol] || '').trim();
+        if ((type === 'stocks' || type === 'mutual_fund') && symbol) {
+          var amountInvested = amountCol >= 0 ? Number(updatedRow[amountCol]) : 0;
+          var unitsCell  = colLetter(unitsCol + 1) + rowNum;
+          var symbolCell = colLetter(symbolCol + 1) + rowNum;
+          var formula = buildFormula(type, symbol, unitsCell, symbolCell, amountInvested);
+          if (formula) sheet.getRange(rowNum, currentValueCol + 1).setFormula(formula);
+        }
       }
 
       return { success: true };
