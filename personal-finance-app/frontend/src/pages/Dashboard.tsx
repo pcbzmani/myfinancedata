@@ -71,7 +71,11 @@ import {
 } from 'recharts';
 
 const PIE_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', QAR: 'QAR', USD: '$', EUR: '€', GBP: '£', AED: 'AED', SAR: 'SAR' };
+const currSym = (code: string) => CURRENCY_SYMBOLS[code] ?? code;
+const normCur = (t: any): string => (t.currency && String(t.currency).trim()) || 'QAR';
+const fmt = (n: number, currency = 'INR') =>
+  `${currSym(currency)} ${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -102,28 +106,6 @@ function buildMonthly(txns: any[]) {
   }));
 }
 
-function ArrowUpIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
-    </svg>
-  );
-}
-function ArrowDownIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
-    </svg>
-  );
-}
-function WalletIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" /><path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
-      <circle cx="18" cy="12" r="2" />
-    </svg>
-  );
-}
 function BarChartIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -216,6 +198,16 @@ export default function Dashboard() {
     const d = new Date(t.date);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
   });
+
+  // Per-currency totals for the selected month (mirrors Transactions page)
+  const byCurrency = monthTxns.reduce((acc: Record<string, { income: number; expense: number }>, t) => {
+    const cur = normCur(t);
+    if (!acc[cur]) acc[cur] = { income: 0, expense: 0 };
+    if (t.type === 'income') acc[cur].income += Number(t.amount) || 0;
+    else acc[cur].expense += Number(t.amount) || 0;
+    return acc;
+  }, {});
+  const dashSummaryRows = Object.entries(byCurrency).map(([cur, v]) => ({ cur, ...v }));
 
   const totalIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
   const totalExpense = monthTxns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
@@ -325,11 +317,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Income" value={fmt(totalIncome)} color="text-emerald-600" iconBg="bg-emerald-100" icon={<ArrowUpIcon />} />
-        <StatCard label="Expenses" value={fmt(totalExpense)} color="text-rose-500" iconBg="bg-rose-100" icon={<ArrowDownIcon />} />
-        <StatCard label="Net Savings" value={fmt(netSavings)} sub={netSavings >= 0 ? 'Surplus' : 'Deficit'}
-          color={netSavings >= 0 ? 'text-violet-600' : 'text-rose-500'} iconBg={netSavings >= 0 ? 'bg-violet-100' : 'bg-rose-100'} icon={<WalletIcon />} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {dashSummaryRows.length === 0 ? (
+          <div className="col-span-full sm:col-span-2 lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center justify-center text-slate-300 text-sm min-h-[96px]">
+            No transactions this month
+          </div>
+        ) : dashSummaryRows.map(({ cur, income, expense }) => (
+          <div key={cur} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+            <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-3">{cur}</p>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 flex items-center gap-1"><span className="text-emerald-500 text-xs">↑</span> Income</span>
+                <span className="font-semibold text-emerald-600">{fmt(income, cur)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 flex items-center gap-1"><span className="text-rose-400 text-xs">↓</span> Expenses</span>
+                <span className="font-semibold text-rose-500">{fmt(expense, cur)}</span>
+              </div>
+              <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50">
+                <span className="text-slate-500 font-medium">Net</span>
+                <span className={`font-bold ${income - expense >= 0 ? 'text-violet-600' : 'text-rose-500'}`}>
+                  {fmt(income - expense, cur)}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
         <StatCard label="Portfolio" value={fmt(currentPortfolio)} sub={`${gainPct} gain/loss`} color="text-blue-600" iconBg="bg-blue-100" icon={<BarChartIcon />} />
       </div>
 
@@ -405,7 +418,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
+                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
                     </p>
                     <p className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                   </div>

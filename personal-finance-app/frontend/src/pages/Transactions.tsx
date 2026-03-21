@@ -25,6 +25,9 @@ export default function Transactions() {
   const [editCurId, setEditCurId]       = useState<string | null>(null);
   const [editCurVal, setEditCurVal]     = useState('');
   const [editCurCustom, setEditCurCustom] = useState('');
+  const [editId, setEditId]             = useState<string | null>(null);
+  const [editForm, setEditForm]         = useState(EMPTY_FORM);
+  const [editCustomCurrency, setEditCustomCurrency] = useState('');
 
   const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -70,6 +73,45 @@ export default function Transactions() {
   const handleDelete = async (id: string) => {
     try { await deleteRow('transactions', id); load(); }
     catch (e: any) { setError(e.message); }
+  };
+
+  // ── edit transaction ───────────────────────────────────────────────────────
+  const startEdit = (t: any) => {
+    const cur = normCur(t);
+    const isCustom = !PRESET_CURRENCIES.includes(cur);
+    setEditId(t.id);
+    setEditForm({
+      type: t.type || 'expense',
+      category: CATEGORIES.includes(t.category) ? t.category : 'Other',
+      amount: String(t.amount || ''),
+      description: t.description || '',
+      date: t.date || '',
+      currency: isCustom ? '__custom__' : cur,
+    });
+    setEditCustomCurrency(isCustom ? cur : '');
+    setShowForm(false);
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editId) return;
+    setSaving(true);
+    const currency = editForm.currency === '__custom__'
+      ? (editCustomCurrency.toUpperCase().trim() || 'QAR')
+      : editForm.currency;
+    try {
+      await updateRow('transactions', editId, {
+        type: editForm.type,
+        category: editForm.category,
+        amount: Number(editForm.amount),
+        description: editForm.description,
+        date: editForm.date,
+        currency,
+      });
+      setEditId(null);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
   };
 
   // ── edit currency ──────────────────────────────────────────────────────────
@@ -255,6 +297,83 @@ export default function Transactions() {
         </div>
       )}
 
+      {/* Edit form */}
+      {editId && (
+        <div className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-50 bg-violet-50/50 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-700">Edit Transaction</h3>
+            <button onClick={() => setEditId(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+          </div>
+          <form onSubmit={saveEdit} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
+              <div className="flex gap-2 mt-1.5">
+                {['income', 'expense'].map(t => (
+                  <button key={t} type="button" onClick={() => setEditForm({ ...editForm, type: t })}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                      editForm.type === t
+                        ? t === 'income' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-rose-400 bg-rose-50 text-rose-600'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}>
+                    {t === 'income' ? '↑ Income' : '↓ Expense'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Category</label>
+              <select value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Currency</label>
+              <select value={editForm.currency} onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{currSym(c)} {c}</option>)}
+                <option value="__custom__">Other (custom)…</option>
+              </select>
+              {editForm.currency === '__custom__' && (
+                <input
+                  placeholder="e.g. CHF, KWD, BHD"
+                  value={editCustomCurrency}
+                  onChange={e => setEditCustomCurrency(e.target.value.toUpperCase())}
+                  maxLength={5}
+                  className="w-full mt-2 border border-violet-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              )}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                Amount ({editForm.currency === '__custom__' ? (editCustomCurrency || '?') : editForm.currency})
+              </label>
+              <input type="number" min="0" step="0.01" placeholder="0.00" value={editForm.amount}
+                onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" required />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date</label>
+              <input type="date" value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Note (optional)</label>
+              <input placeholder="What was this for?" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+            </div>
+            <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
+              <button type="button" onClick={() => setEditId(null)}
+                className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+              <button type="submit" disabled={saving}
+                className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
+                {saving ? 'Saving…' : 'Update Transaction'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Transaction list */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
@@ -291,7 +410,7 @@ export default function Transactions() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(t => (
-                  <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={t.id} className={`hover:bg-slate-50/50 transition-colors group ${editId === t.id ? 'bg-violet-50/40' : ''}`}>
                     <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">
                       {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
@@ -330,8 +449,13 @@ export default function Transactions() {
                       {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <button onClick={() => handleDelete(t.id)}
-                        className="text-slate-200 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-base font-bold">×</button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => editId === t.id ? setEditId(null) : startEdit(t)}
+                          className={`transition-colors opacity-0 group-hover:opacity-100 text-sm px-1 ${editId === t.id ? 'text-violet-500 opacity-100' : 'text-slate-300 hover:text-violet-500'}`}
+                          title="Edit">✎</button>
+                        <button onClick={() => handleDelete(t.id)}
+                          className="text-slate-200 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-base font-bold" title="Delete">×</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -373,10 +497,12 @@ export default function Transactions() {
                       <p className="text-xs text-slate-400">{t.description || new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
                       {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
                     </p>
+                    <button onClick={() => editId === t.id ? setEditId(null) : startEdit(t)}
+                      className={`text-base px-1 transition-colors ${editId === t.id ? 'text-violet-500' : 'text-slate-300 hover:text-violet-500'}`} title="Edit">✎</button>
                     <button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-rose-400 transition-colors text-lg font-bold px-1">×</button>
                   </div>
                 </div>
