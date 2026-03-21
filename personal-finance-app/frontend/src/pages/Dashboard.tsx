@@ -4,25 +4,65 @@ import { getRows } from '../lib/api';
 
 // ── Market data helpers ───────────────────────────────────────────────────────
 
-interface MarketQuote {
-  price: number;
-  change: number;
-  changePct: number;
+interface MarketQuote { price: number; change: number; changePct: number; }
+interface Rates {
+  nifty50: MarketQuote | null; bankNifty: MarketQuote | null;
+  nasdaq: MarketQuote | null;  sp500: MarketQuote | null;
+  shanghai: MarketQuote | null; hangSeng: MarketQuote | null;
+  nikkei: MarketQuote | null;  kospi: MarketQuote | null;
+  usdInr: MarketQuote | null;  qarInr: MarketQuote | null;
+  goldInr: MarketQuote | null; goldQar: MarketQuote | null;
 }
+const EMPTY_RATES: Rates = {
+  nifty50: null, bankNifty: null, nasdaq: null, sp500: null,
+  shanghai: null, hangSeng: null, nikkei: null, kospi: null,
+  usdInr: null, qarInr: null, goldInr: null, goldQar: null,
+};
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
 
-async function fetchMarket(symbol: string): Promise<MarketQuote | null> {
+async function fetchRates(): Promise<Rates> {
   try {
-    const r = await fetch(
-      `${API_BASE}/api/v1/market/price?symbol=${encodeURIComponent(symbol)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!r.ok) return null;
-    const data = await r.json();
-    if (!data.price) return null;
-    return { price: data.price, change: data.change ?? 0, changePct: data.changePct ?? 0 };
-  } catch { return null; }
+    const r = await fetch(`${API_BASE}/api/v1/market/rates`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return EMPTY_RATES;
+    return { ...EMPTY_RATES, ...(await r.json()) };
+  } catch { return EMPTY_RATES; }
+}
+
+const INDICES = [
+  { key: 'nifty50'  as const, label: 'Nifty 50'   },
+  { key: 'bankNifty'as const, label: 'Bank Nifty' },
+  { key: 'nasdaq'   as const, label: 'Nasdaq 100' },
+  { key: 'sp500'    as const, label: 'S&P 500'    },
+  { key: 'shanghai' as const, label: 'SSE'         },
+  { key: 'hangSeng' as const, label: 'Hang Seng'  },
+  { key: 'nikkei'   as const, label: 'Nikkei 225' },
+  { key: 'kospi'    as const, label: 'KOSPI'       },
+];
+const FX_GOLD = [
+  { key: 'usdInr'  as const, label: 'USD/INR',     prefix: '₹'   },
+  { key: 'qarInr'  as const, label: 'QAR/INR',     prefix: '₹'   },
+  { key: 'goldInr' as const, label: 'Gold ₹/10g',  prefix: '₹'   },
+  { key: 'goldQar' as const, label: 'Gold QAR/10g', prefix: 'QAR ' },
+];
+
+function TickerCell({ label, quote, prefix = '' }: { label: string; quote: MarketQuote | null; prefix?: string }) {
+  const fmtN = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  return (
+    <div className="flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors min-w-[110px]">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">{label}</p>
+      {quote ? (
+        <div className="flex items-baseline gap-1 mt-0.5">
+          <span className="text-sm font-bold text-slate-800 whitespace-nowrap">{prefix}{fmtN(quote.price)}</span>
+          <span className={`text-[10px] font-semibold whitespace-nowrap ${quote.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+            {quote.change >= 0 ? '+' : ''}{quote.changePct.toFixed(2)}%
+          </span>
+        </div>
+      ) : (
+        <span className="text-xs text-slate-300 mt-0.5 block">—</span>
+      )}
+    </div>
+  );
 }
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -130,9 +170,7 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(initMonth);
 
   // Market data
-  const [nifty, setNifty]       = useState<MarketQuote | null>(null);
-  const [gold, setGold]         = useState<MarketQuote | null>(null);
-  const [usdInr, setUsdInr]     = useState<MarketQuote | null>(null);
+  const [rates, setRates]               = useState<Rates>(EMPTY_RATES);
   const [marketLoading, setMarketLoading] = useState(true);
   const [marketTime, setMarketTime]       = useState('');
 
@@ -147,29 +185,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    async function loadMarket() {
-      setMarketLoading(true);
-      // ^NSEI = Nifty 50 | GC=F = Gold futures (USD/troy oz) | INR=X = USD/INR rate
-      const [n, goldUsd, usd] = await Promise.all([
-        fetchMarket('^NSEI'),
-        fetchMarket('GC=F'),
-        fetchMarket('INR=X'),
-      ]);
-      setNifty(n);
-      // Convert gold: USD/troy oz → INR/10g  (1 troy oz = 31.1035 g)
-      if (goldUsd && usd) {
-        const rate = usd.price;
-        setGold({
-          price:     (goldUsd.price  * rate / 31.1035) * 10,
-          change:    (goldUsd.change * rate / 31.1035) * 10,
-          changePct: goldUsd.changePct,
-        });
-      }
-      setUsdInr(usd);
+    fetchRates().then(r => {
+      setRates(r);
       setMarketTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
       setMarketLoading(false);
-    }
-    loadMarket();
+    });
   }, []);
 
   if (loading) return (
@@ -214,77 +234,37 @@ export default function Dashboard() {
     }, {})
   ).map(([name, value]) => ({ name, value }));
 
-  // ── Market ticker helpers ──────────────────────────────────────────────────
-  const fmtIndex = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  const fmtChg   = (n: number, pct: number) => {
-    const sign = n >= 0 ? '+' : '';
-    return `${sign}${fmtIndex(n)} (${sign}${pct.toFixed(2)}%)`;
-  };
-
   return (
     <div className="space-y-6">
 
-      {/* ── Market ticker strip ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap items-center gap-4 md:gap-8">
+      {/* ── Market ticker ────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         {marketLoading ? (
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-slate-400 px-4 py-3">
             <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
             Fetching live market data…
           </div>
         ) : (
           <>
-            {/* Nifty 50 */}
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Nifty 50</p>
-                {nifty ? (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-base font-bold text-slate-800">{fmtIndex(nifty.price)}</span>
-                    <span className={`text-xs font-semibold ${nifty.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {fmtChg(nifty.change, nifty.changePct)}
-                    </span>
-                  </div>
-                ) : <span className="text-sm text-slate-400">N/A</span>}
-              </div>
+            {/* Row 1 — Indices */}
+            <div className="flex items-center overflow-x-auto scrollbar-none border-b border-slate-50 px-2 py-1">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest px-2 flex-shrink-0">Indices</span>
+              <div className="w-px h-6 bg-slate-100 mx-1 flex-shrink-0" />
+              {INDICES.map(item => (
+                <TickerCell key={item.key} label={item.label} quote={rates[item.key]} />
+              ))}
             </div>
-
-            <div className="w-px h-8 bg-slate-100 hidden sm:block" />
-
-            {/* Gold per 10g */}
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Gold (10g)</p>
-                {gold ? (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-base font-bold text-slate-800">₹{fmtIndex(gold.price)}</span>
-                    <span className={`text-xs font-semibold ${gold.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {gold.change >= 0 ? '+' : ''}₹{fmtIndex(gold.change)} ({gold.change >= 0 ? '+' : ''}{gold.changePct.toFixed(2)}%)
-                    </span>
-                  </div>
-                ) : <span className="text-sm text-slate-400">N/A</span>}
+            {/* Row 2 — FX & Gold */}
+            <div className="flex items-center overflow-x-auto scrollbar-none px-2 py-1">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest px-2 flex-shrink-0">FX & Gold</span>
+              <div className="w-px h-6 bg-slate-100 mx-1 flex-shrink-0" />
+              {FX_GOLD.map(item => (
+                <TickerCell key={item.key} label={item.label} quote={rates[item.key]} prefix={item.prefix} />
+              ))}
+              <div className="ml-auto pl-4 flex items-center gap-1.5 text-xs text-slate-400 flex-shrink-0 pr-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live · {marketTime}
               </div>
-            </div>
-
-            <div className="w-px h-8 bg-slate-100 hidden sm:block" />
-
-            {/* USD/INR */}
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">USD/INR</p>
-                {usdInr ? (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-base font-bold text-slate-800">₹{fmtIndex(usdInr.price)}</span>
-                    <span className={`text-xs font-semibold ${usdInr.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {usdInr.change >= 0 ? '+' : ''}{fmtIndex(usdInr.change)} ({usdInr.change >= 0 ? '+' : ''}{usdInr.changePct.toFixed(2)}%)
-                    </span>
-                  </div>
-                ) : <span className="text-sm text-slate-400">N/A</span>}
-              </div>
-            </div>
-
-            <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Live · {marketTime}
             </div>
           </>
         )}

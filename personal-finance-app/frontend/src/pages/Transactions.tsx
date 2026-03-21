@@ -2,8 +2,16 @@ import { useEffect, useState } from 'react';
 import { getRows, addRow, deleteRow } from '../lib/api';
 
 const CATEGORIES = ['Salary', 'Freelance', 'Food', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
-const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
-const EMPTY_FORM = { type: 'expense', category: 'Food', amount: '', description: '', date: '' };
+const CURRENCIES = [
+  { code: 'INR', symbol: '₹' },
+  { code: 'QAR', symbol: 'QAR' },
+  { code: 'USD', symbol: '$' },
+  { code: 'EUR', symbol: '€' },
+  { code: 'GBP', symbol: '£' },
+];
+const currSymbol = (code: string) => CURRENCIES.find(c => c.code === code)?.symbol ?? code;
+const fmt = (n: number, currency = 'INR') => `${currSymbol(currency)}${Math.abs(n).toLocaleString('en-IN')}`;
+const EMPTY_FORM = { type: 'expense', category: 'Food', amount: '', description: '', date: '', currency: 'INR' };
 
 export default function Transactions() {
   const [items, setItems] = useState<any[]>([]);
@@ -106,7 +114,14 @@ export default function Transactions() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount (₹)</label>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Currency</label>
+              <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount ({form.currency})</label>
               <input type="number" min="0" step="0.01" placeholder="0.00" value={form.amount}
                 onChange={e => setForm({ ...form, amount: e.target.value })}
                 className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" required />
@@ -179,7 +194,7 @@ export default function Transactions() {
                     </td>
                     <td className="px-6 py-3.5 text-slate-400 text-xs max-w-xs truncate">{t.description || '—'}</td>
                     <td className={`px-6 py-3.5 text-right font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
+                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), t.currency)}
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       <button onClick={() => handleDelete(t.id)}
@@ -206,7 +221,7 @@ export default function Transactions() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount))}
+                        {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), t.currency)}
                       </p>
                       <p className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                     </div>
