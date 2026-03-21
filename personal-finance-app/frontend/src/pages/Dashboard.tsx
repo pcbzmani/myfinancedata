@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getRows } from '../lib/api';
+import { getRows, getScriptUrl } from '../lib/api';
 
 // ── Market data helpers ───────────────────────────────────────────────────────
 
@@ -19,13 +19,14 @@ const EMPTY_RATES: Rates = {
   usdInr: null, qarInr: null, goldInr: null, goldQar: null,
 };
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-
 async function fetchRates(): Promise<Rates> {
+  const scriptUrl = getScriptUrl();
+  if (!scriptUrl) return EMPTY_RATES;
   try {
-    const r = await fetch(`${API_BASE}/api/v1/market/rates`, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(`${scriptUrl}?action=readMarket`, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return EMPTY_RATES;
-    return { ...EMPTY_RATES, ...(await r.json()) };
+    const json = await r.json();
+    return { ...EMPTY_RATES, ...(json.data || {}) };
   } catch { return EMPTY_RATES; }
 }
 

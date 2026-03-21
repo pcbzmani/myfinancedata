@@ -36,6 +36,11 @@ function doGet(e) {
     } else if (action === 'fixFormulas') {
       fixAllFormulas();
       result = { ok: true, message: 'Formulas refreshed' };
+    } else if (action === 'setupMarket') {
+      setupMarketSheet(ss);
+      result = { ok: true, message: 'market_rates sheet ready' };
+    } else if (action === 'readMarket') {
+      result = readMarketRates(ss);
     } else {
       result = { error: 'Unknown action: ' + action };
     }
@@ -289,4 +294,120 @@ function deleteRow(ss, name, id) {
     }
   }
   return { error: 'Row not found' };
+}
+
+/**
+ * Creates (or resets) the 'market_rates' sheet with GOOGLEFINANCE formulas.
+ * Run once manually: Apps Script editor → select setupMarketSheet → Run
+ * Or call via ?action=setupMarket from the app's Settings page.
+ */
+function setupMarketSheet(ss) {
+  var name = 'market_rates';
+  var sheet = ss.getSheetByName(name);
+  if (sheet) ss.deleteSheet(sheet);          // recreate fresh each time
+  sheet = ss.insertSheet(name);
+
+  // ── Headers ────────────────────────────────────────────────────────────────
+  var hdr = sheet.getRange(1, 1, 1, 4);
+  hdr.setValues([['key', 'price', 'change', 'changePct']]);
+  hdr.setFontWeight('bold').setBackground('#7c3aed').setFontColor('#ffffff');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, 4, 160);
+
+  // ── Row keys (column A) ────────────────────────────────────────────────────
+  var keys = [
+    ['nifty50'], ['bankNifty'], ['nasdaq'], ['sp500'],
+    ['shanghai'], ['hangSeng'], ['nikkei'], ['kospi'],
+    ['usdInr'], ['qarInr'], ['goldInr'], ['goldQar']
+  ];
+  sheet.getRange(2, 1, keys.length, 1).setValues(keys);
+
+  // ── GOOGLEFINANCE formulas (columns B, C, D) ───────────────────────────────
+  // changepct from GOOGLEFINANCE is already in % points (e.g. 0.49 means 0.49%)
+  var f = [
+    // Indices
+    ['=GOOGLEFINANCE("INDEXNSE:NIFTY_50","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXNSE:NIFTY_50","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXNSE:NIFTY_50","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("INDEXNSE:NIFTY_BANK","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXNSE:NIFTY_BANK","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXNSE:NIFTY_BANK","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("INDEXNASDAQ:NDX","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXNASDAQ:NDX","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXNASDAQ:NDX","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("INDEXSP:.INX","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXSP:.INX","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXSP:.INX","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("SHA:000001","price")',
+     '=IFERROR(GOOGLEFINANCE("SHA:000001","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("SHA:000001","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("INDEXHANGSENG:HSI","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXHANGSENG:HSI","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXHANGSENG:HSI","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("INDEXNIKKEI:NI225","price")',
+     '=IFERROR(GOOGLEFINANCE("INDEXNIKKEI:NI225","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("INDEXNIKKEI:NI225","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("KRX:KOSPI","price")',
+     '=IFERROR(GOOGLEFINANCE("KRX:KOSPI","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("KRX:KOSPI","changepct"),0)'],
+
+    // Currencies
+    ['=GOOGLEFINANCE("CURRENCY:USDINR")',
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:USDINR","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:USDINR","changepct"),0)'],
+
+    ['=GOOGLEFINANCE("CURRENCY:QARINR")',
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:QARINR","change"),0)',
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:QARINR","changepct"),0)'],
+
+    // Gold in INR per 10g  =GLD * 10 * USDINR / 31.1035
+    ['=(GOOGLEFINANCE("GLD")*10*GOOGLEFINANCE("CURRENCY:USDINR"))/31.1035',
+     '=(IFERROR(GOOGLEFINANCE("GLD","change"),0)*10*GOOGLEFINANCE("CURRENCY:USDINR"))/31.1035',
+     '=IFERROR(GOOGLEFINANCE("GLD","changepct"),0)'],
+
+    // Gold in QAR per 10g  =GLD * 10 * USDQAR / 31.1035
+    ['=(GOOGLEFINANCE("GLD")*10*GOOGLEFINANCE("CURRENCY:USDQAR"))/31.1035',
+     '=(IFERROR(GOOGLEFINANCE("GLD","change"),0)*10*GOOGLEFINANCE("CURRENCY:USDQAR"))/31.1035',
+     '=IFERROR(GOOGLEFINANCE("GLD","changepct"),0)']
+  ];
+
+  sheet.getRange(2, 2, f.length, 3).setFormulas(f);
+  Logger.log('setupMarketSheet: done — ' + f.length + ' rows written.');
+}
+
+/**
+ * Reads the market_rates sheet and returns all rows as a key→{price,change,changePct} map.
+ * Creates the sheet automatically if it doesn't exist yet.
+ */
+function readMarketRates(ss) {
+  var sheet = ss.getSheetByName('market_rates');
+  if (!sheet) {
+    setupMarketSheet(ss);
+    sheet = ss.getSheetByName('market_rates');
+  }
+  if (!sheet || sheet.getLastRow() < 2) return { data: {} };
+
+  var values = sheet.getDataRange().getValues(); // computed values, not formula strings
+  var data = {};
+  for (var i = 1; i < values.length; i++) {
+    var key       = String(values[i][0]).trim();
+    var price     = values[i][1];
+    var change    = values[i][2];
+    var changePct = values[i][3];
+    if (key && typeof price === 'number' && !isNaN(price) && price > 0) {
+      data[key] = {
+        price:     price,
+        change:    typeof change    === 'number' ? change    : 0,
+        changePct: typeof changePct === 'number' ? changePct : 0
+      };
+    }
+  }
+  return { data: data };
 }
