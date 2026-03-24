@@ -12,6 +12,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.dark body {
+  background: #0f172a;
+}
+
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

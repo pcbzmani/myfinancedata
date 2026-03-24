@@ -129,8 +129,8 @@ export default function Insurance() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Insurance</h1>
-          <p className="text-sm text-slate-400 mt-0.5">All your policies in one place</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Insurance</h1>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">All your policies in one place</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -141,7 +141,7 @@ export default function Insurance() {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           {error}
           <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-600 ml-4">✕</button>
         </div>
@@ -149,17 +149,17 @@ export default function Insurance() {
 
       {/* Upcoming payments alert */}
       {upcomingPayments.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
-          <p className="text-sm font-semibold text-amber-800 mb-2">Payments due this week</p>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl px-5 py-4">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">Payments due this week</p>
           <div className="space-y-1.5">
             {upcomingPayments.map(({ p, next }) => {
               const daysUntil = Math.ceil((next!.getTime() - Date.now()) / 86400000);
               return (
                 <div key={p.id} className="flex items-center justify-between text-sm">
-                  <span className="text-amber-700">
+                  <span className="text-amber-700 dark:text-amber-300">
                     {TYPE_META[p.type]?.emoji} <strong>{p.provider}</strong> — {fmt(Number(p.premium))}/{p.frequency}
                   </span>
-                  <span className="text-amber-600 font-semibold text-xs">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">
                     {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
                   </span>
                 </div>
@@ -171,33 +171,33 @@ export default function Insurance() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Policies</p>
-          <p className="text-2xl font-bold text-slate-700 mt-1.5">{items.length}</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Policies</p>
+          <p className="text-2xl font-bold text-slate-700 dark:text-slate-200 mt-1.5">{items.length}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Annual Premium</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Annual Premium</p>
           <p className="text-2xl font-bold text-amber-600 mt-1.5">{fmt(totalAnnualPremium)}</p>
-          <p className="text-xs text-slate-400 mt-1">All converted to yearly</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All converted to yearly</p>
         </div>
-        <div className={`rounded-2xl border shadow-sm p-5 ${expiringSoon.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Expiring Soon</p>
-          <p className={`text-2xl font-bold mt-1.5 ${expiringSoon.length > 0 ? 'text-amber-600' : 'text-slate-700'}`}>
+        <div className={`rounded-2xl border shadow-sm p-5 ${expiringSoon.length > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Expiring Soon</p>
+          <p className={`text-2xl font-bold mt-1.5 ${expiringSoon.length > 0 ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
             {expiringSoon.length} {expiringSoon.length > 0 ? '⚠️' : '✓'}
           </p>
-          <p className="text-xs text-slate-400 mt-1">Within 90 days</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Within 90 days</p>
         </div>
       </div>
 
       {/* Frequency filter */}
       {items.length > 0 && (
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1 w-fit">
           {(['all', 'monthly', 'quarterly', 'yearly'] as FreqFilter[]).map(f => (
             <button key={f} onClick={() => setFreqFilter(f)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
               {f === 'all' ? 'All' : f}
               {f !== 'all' && (
-                <span className="ml-1 text-slate-400">
+                <span className="ml-1 text-slate-400 dark:text-slate-500">
                   ({items.filter(p => p.frequency === f).length})
                 </span>
               )}
@@ -208,37 +208,37 @@ export default function Insurance() {
 
       {/* Add Form */}
       {showForm && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
-            <h3 className="font-semibold text-slate-700">Add Insurance Policy</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 dark:bg-slate-700/30">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200">Add Insurance Policy</h3>
           </div>
           <form onSubmit={handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</label>
               <select
                 value={form.type}
                 onChange={e => setForm({ ...form, type: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
                 {TYPES.map(t => <option key={t} value={t}>{TYPE_META[t].emoji} {t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Provider</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Provider</label>
               <input
                 placeholder="e.g. LIC, HDFC ERGO, Star Health"
                 value={form.provider}
                 onChange={e => setForm({ ...form, provider: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Payment Frequency</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Payment Frequency</label>
               <select
                 value={form.frequency}
                 onChange={e => setForm({ ...form, frequency: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
                 <option value="monthly">Monthly</option>
                 <option value="quarterly">Quarterly</option>
@@ -246,14 +246,14 @@ export default function Insurance() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Premium (₹ per {form.frequency === 'monthly' ? 'month' : form.frequency === 'quarterly' ? 'quarter' : 'year'})
               </label>
               <input
                 type="number" min="0" step="0.01" placeholder="0.00"
                 value={form.premium}
                 onChange={e => setForm({ ...form, premium: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 required
               />
               {form.premium && form.frequency !== 'yearly' && (
@@ -263,46 +263,46 @@ export default function Insurance() {
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Sum Assured (₹)</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sum Assured (₹)</label>
               <input
                 type="number" min="0" step="1" placeholder="0"
                 value={form.sumAssured}
                 onChange={e => setForm({ ...form, sumAssured: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Policy Number (optional)</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Policy Number (optional)</label>
               <input
                 placeholder="e.g. LIC/2024/001234"
                 value={form.policyNumber}
                 onChange={e => setForm({ ...form, policyNumber: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Start Date</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Start Date</label>
               <input
                 type="date"
                 value={form.startDate}
                 onChange={e => setForm({ ...form, startDate: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">End / Renewal Date</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">End / Renewal Date</label>
               <input
                 type="date"
                 value={form.endDate}
                 onChange={e => setForm({ ...form, endDate: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 required
               />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
-              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); }} className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); }} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving…' : 'Save Policy'}
               </button>
@@ -313,10 +313,10 @@ export default function Insurance() {
 
       {/* Policy Cards */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm py-16 text-center">
           <p className="text-4xl mb-3">🛡️</p>
-          <p className="text-slate-500 font-medium">{items.length === 0 ? 'No policies yet' : `No ${freqFilter} policies`}</p>
-          <p className="text-sm text-slate-400 mt-1">{items.length === 0 ? 'Click "Add Policy" to track your insurance' : 'Try a different frequency filter'}</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">{items.length === 0 ? 'No policies yet' : `No ${freqFilter} policies`}</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">{items.length === 0 ? 'Click "Add Policy" to track your insurance' : 'Try a different frequency filter'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -333,7 +333,7 @@ export default function Insurance() {
                     <span className="text-2xl">{meta.emoji}</span>
                     <div>
                       <p className={`font-semibold text-sm ${meta.color}`}>{p.provider}</p>
-                      <p className="text-xs text-slate-500 capitalize">{p.type} insurance</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{p.type} insurance</p>
                     </div>
                   </div>
                   <button
@@ -344,29 +344,29 @@ export default function Insurance() {
 
                 <div className="space-y-2 text-sm mt-4">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Premium</span>
-                    <span className="font-semibold text-slate-800">{fmt(Number(p.premium))} / {p.frequency}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Premium</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.premium))} / {p.frequency}</span>
                   </div>
                   {p.frequency !== 'yearly' && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Annual equivalent</span>
+                      <span className="text-slate-500 dark:text-slate-400">Annual equivalent</span>
                       <span className="font-medium text-violet-700 text-xs">{fmt(annual)} / yr</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Sum Assured</span>
-                    <span className="font-semibold text-slate-800">{fmt(Number(p.sumAssured))}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Sum Assured</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.sumAssured))}</span>
                   </div>
                   {p.policyNumber && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Policy #</span>
-                      <span className="font-medium text-xs text-slate-600">{p.policyNumber}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Policy #</span>
+                      <span className="font-medium text-xs text-slate-600 dark:text-slate-300">{p.policyNumber}</span>
                     </div>
                   )}
                   {next && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Next payment</span>
-                      <span className={`font-medium text-xs ${daysUntilNext !== null && daysUntilNext <= 7 ? 'text-amber-600 font-semibold' : 'text-slate-600'}`}>
+                      <span className="text-slate-500 dark:text-slate-400">Next payment</span>
+                      <span className={`font-medium text-xs ${daysUntilNext !== null && daysUntilNext <= 7 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}>
                         {next.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         {daysUntilNext !== null && daysUntilNext <= 7 && (
                           <span className="ml-1">({daysUntilNext === 0 ? 'today' : `${daysUntilNext}d`})</span>
@@ -375,8 +375,8 @@ export default function Insurance() {
                     </div>
                   )}
                   <div className="flex justify-between pt-1 border-t border-black/5">
-                    <span className="text-slate-500">Expires</span>
-                    <span className={`font-medium text-xs ${daysLeft <= 90 ? 'text-amber-600 font-semibold' : 'text-slate-600'}`}>
+                    <span className="text-slate-500 dark:text-slate-400">Expires</span>
+                    <span className={`font-medium text-xs ${daysLeft <= 90 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}>
                       {new Date(p.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       {daysLeft <= 90 && daysLeft > 0 && <span className="ml-1 text-amber-600">({daysLeft}d left)</span>}
                     </span>

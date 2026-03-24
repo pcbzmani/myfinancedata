@@ -149,8 +149,8 @@ export default function Transactions() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Transactions</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Track your income and expenses</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Transactions</h1>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Track your income and expenses</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setShowForm(!showForm)}
@@ -161,7 +161,7 @@ export default function Transactions() {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           {error}
           <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-600 ml-4">✕</button>
         </div>
@@ -169,10 +169,10 @@ export default function Transactions() {
 
       {/* Currency tabs (only show when >1 currency in data) */}
       {availableCurs.length > 2 && (
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit overflow-x-auto">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1 w-fit overflow-x-auto">
           {availableCurs.map(c => (
             <button key={c} onClick={() => setCurFilter(c)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${curFilter === c ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${curFilter === c ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
               {c === 'all' ? 'All currencies' : c}
             </button>
           ))}
@@ -182,19 +182,19 @@ export default function Transactions() {
       {/* Totals — grouped by currency */}
       <div className={`grid gap-3 md:gap-4 ${summaryRows.length === 1 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
         {summaryRows.map(({ cur, income, expense }) => (
-          <div key={cur} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <div key={cur} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
             <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-3">{cur}</p>
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Income</span>
+                <span className="text-slate-400 dark:text-slate-500">Income</span>
                 <span className="font-semibold text-emerald-600">{fmt(income, cur)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Expenses</span>
+                <span className="text-slate-400 dark:text-slate-500">Expenses</span>
                 <span className="font-semibold text-rose-500">{fmt(expense, cur)}</span>
               </div>
               <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50">
-                <span className="text-slate-500 font-medium">Net</span>
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Net</span>
                 <span className={`font-bold ${income - expense >= 0 ? 'text-violet-600' : 'text-rose-500'}`}>
                   {fmt(income - expense, cur)}
                 </span>
@@ -206,20 +206,20 @@ export default function Transactions() {
 
       {/* Add form */}
       {showForm && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
-            <h3 className="font-semibold text-slate-700">New Transaction</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 dark:bg-slate-700/30">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200">New Transaction</h3>
           </div>
           <form onSubmit={handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</label>
               <div className="flex gap-2 mt-1.5">
                 {['income', 'expense'].map(t => (
                   <button key={t} type="button" onClick={() => setForm({ ...form, type: t })}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
                       form.type === t
-                        ? t === 'income' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-rose-400 bg-rose-50 text-rose-600'
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        ? t === 'income' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700' : 'border-rose-400 bg-rose-50 dark:bg-rose-900/20 text-rose-600'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                     }`}>
                     {t === 'income' ? '↑ Income' : '↓ Expense'}
                   </button>
@@ -227,16 +227,16 @@ export default function Transactions() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Category</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</label>
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Currency</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>
               <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
                 {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{currSym(c)} {c}</option>)}
                 <option value="__custom__">Other (custom)…</option>
               </select>
@@ -251,26 +251,26 @@ export default function Transactions() {
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Amount ({form.currency === '__custom__' ? (customCurrency || '?') : form.currency})
               </label>
               <input type="number" min="0" step="0.01" placeholder="0.00" value={form.amount}
                 onChange={e => setForm({ ...form, amount: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" required />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" required />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</label>
               <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Note (optional)</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Note (optional)</label>
               <input placeholder="What was this for?" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
               <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setCustomCurrency(''); }}
-                className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+                className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving}
                 className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving…' : 'Save Transaction'}
@@ -282,21 +282,21 @@ export default function Transactions() {
 
       {/* Edit form */}
       {editId && (
-        <div ref={editFormRef} className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 bg-violet-50/50 flex items-center justify-between">
-            <h3 className="font-semibold text-slate-700">Edit Transaction</h3>
-            <button onClick={() => setEditId(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+        <div ref={editFormRef} className="bg-white dark:bg-slate-800 rounded-2xl border border-violet-200 dark:border-violet-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-50 bg-violet-50/50 dark:bg-violet-900/20 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200">Edit Transaction</h3>
+            <button onClick={() => setEditId(null)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-lg leading-none">✕</button>
           </div>
           <form onSubmit={saveEdit} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Type</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</label>
               <div className="flex gap-2 mt-1.5">
                 {['income', 'expense'].map(t => (
                   <button key={t} type="button" onClick={() => setEditForm({ ...editForm, type: t })}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
                       editForm.type === t
-                        ? t === 'income' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-rose-400 bg-rose-50 text-rose-600'
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        ? t === 'income' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700' : 'border-rose-400 bg-rose-50 dark:bg-rose-900/20 text-rose-600'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                     }`}>
                     {t === 'income' ? '↑ Income' : '↓ Expense'}
                   </button>
@@ -304,16 +304,16 @@ export default function Transactions() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Category</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</label>
               <select value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Currency</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>
               <select value={editForm.currency} onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
                 {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{currSym(c)} {c}</option>)}
                 <option value="__custom__">Other (custom)…</option>
               </select>
@@ -328,26 +328,26 @@ export default function Transactions() {
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Amount ({editForm.currency === '__custom__' ? (editCustomCurrency || '?') : editForm.currency})
               </label>
               <input type="number" min="0" step="0.01" placeholder="0.00" value={editForm.amount}
                 onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" required />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" required />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</label>
               <input type="date" value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Note (optional)</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Note (optional)</label>
               <input placeholder="What was this for?" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
               <button type="button" onClick={() => setEditId(null)}
-                className="px-5 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+                className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving}
                 className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving…' : 'Update Transaction'}
@@ -358,13 +358,13 @@ export default function Transactions() {
       )}
 
       {/* Transaction list */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-          <p className="text-sm text-slate-500">{filtered.length} records</p>
-          <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400">{filtered.length} records</p>
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
             {(['all', 'income', 'expense'] as const).map(f => (
               <button key={f} onClick={() => setTypeFilter(f)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${typeFilter === f ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${typeFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
                 {f}
               </button>
             ))}
@@ -374,42 +374,42 @@ export default function Transactions() {
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-4xl mb-3">💳</p>
-            <p className="text-slate-500 font-medium">No transactions yet</p>
-            <p className="text-sm text-slate-400 mt-1">Click "Add Transaction" to get started</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">No transactions yet</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Click "Add Transaction" to get started</p>
           </div>
         ) : (
           <>
             {/* Desktop table */}
             <table className="hidden sm:table w-full text-sm">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Note</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Currency</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
+                <tr className="bg-slate-50/80 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Note</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Currency</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Amount</th>
                   <th className="px-5 py-3 w-8" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                 {filtered.map(t => (
-                  <tr key={t.id} className={`hover:bg-slate-50/50 transition-colors group ${editId === t.id ? 'bg-violet-50/40' : ''}`}>
-                    <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">
+                  <tr key={t.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors group ${editId === t.id ? 'bg-violet-50/40 dark:bg-violet-900/20' : ''}`}>
+                    <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
                       {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-500' : 'bg-rose-400'}`} />
-                        <span className="font-medium text-slate-700">{t.category}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{t.category}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>{t.type}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-400 text-xs max-w-xs truncate">{t.description || '—'}</td>
+                    <td className="px-5 py-3.5 text-slate-400 dark:text-slate-500 text-xs max-w-xs truncate">{t.description || '—'}</td>
                     <td className="px-5 py-3.5">
                       {editCurId === t.id ? (
                         <div className="flex items-center gap-1">
                           <select value={editCurVal} onChange={e => setEditCurVal(e.target.value)}
-                            className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-violet-400">
+                            className="border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 text-xs bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-violet-400">
                             {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                             <option value="__custom__">Other…</option>
                           </select>
@@ -423,7 +423,7 @@ export default function Transactions() {
                         </div>
                       ) : (
                         <button onClick={() => startEditCur(t)}
-                          className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700 transition-colors">
+                          className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-400 transition-colors">
                           {normCur(t)}
                         </button>
                       )}
@@ -446,25 +446,25 @@ export default function Transactions() {
             </table>
 
             {/* Mobile card list */}
-            <div className="sm:hidden divide-y divide-slate-50">
+            <div className="sm:hidden divide-y divide-slate-50 dark:divide-slate-700">
               {filtered.map(t => (
-                <div key={t.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60">
+                <div key={t.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-700/60">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-100' : 'bg-rose-100'}`}>
                       <span className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>{t.type === 'income' ? '↑' : '↓'}</span>
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-slate-700 truncate">{t.category}</p>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{t.category}</p>
                         <button onClick={() => startEditCur(t)}
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-violet-100 hover:text-violet-600 flex-shrink-0">
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 flex-shrink-0">
                           {normCur(t)}
                         </button>
                       </div>
                       {editCurId === t.id && (
                         <div className="flex items-center gap-1 mt-1">
                           <select value={editCurVal} onChange={e => setEditCurVal(e.target.value)}
-                            className="border border-slate-200 rounded px-1.5 py-1 text-xs bg-white">
+                            className="border border-slate-200 dark:border-slate-600 rounded px-1.5 py-1 text-xs bg-white dark:bg-slate-700 dark:text-slate-100">
                             {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                             <option value="__custom__">Other…</option>
                           </select>
@@ -477,7 +477,7 @@ export default function Transactions() {
                           <button onClick={() => setEditCurId(null)} className="text-slate-400 text-xs">✕</button>
                         </div>
                       )}
-                      <p className="text-xs text-slate-400">{t.description || new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{t.description || new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
