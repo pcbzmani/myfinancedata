@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import { useDarkMode } from './hooks/useDarkMode';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Investments from './pages/Investments';
@@ -7,10 +8,11 @@ import Insurance from './pages/Insurance';
 import Settings from './pages/Settings';
 
 export default function App() {
+  const { dark, toggle } = useDarkMode();
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<Layout dark={dark} onToggleDark={toggle} />}>
           <Route index element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="investments" element={<Investments />} />

@@ -50,17 +50,17 @@ const FX_GOLD = [
 function TickerCell({ label, quote, prefix = '' }: { label: string; quote: MarketQuote | null; prefix?: string }) {
   const fmtN = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
   return (
-    <div className="flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors min-w-[110px]">
-      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">{label}</p>
+    <div className="flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors min-w-[110px]">
+      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">{label}</p>
       {quote ? (
         <div className="flex items-baseline gap-1 mt-0.5">
-          <span className="text-sm font-bold text-slate-800 whitespace-nowrap">{prefix}{fmtN(quote.price)}</span>
+          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{prefix}{fmtN(quote.price)}</span>
           <span className={`text-[10px] font-semibold whitespace-nowrap ${quote.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
             {quote.change >= 0 ? '+' : ''}{quote.changePct.toFixed(2)}%
           </span>
         </div>
       ) : (
-        <span className="text-xs text-slate-300 mt-0.5 block">—</span>
+        <span className="text-xs text-slate-300 dark:text-slate-600 mt-0.5 block">—</span>
       )}
     </div>
   );
@@ -118,13 +118,13 @@ function StatCard({ label, value, sub, color, iconBg, icon }: {
   label: string; value: string; sub?: string; color: string; iconBg: string; icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow duration-200">
       <div className={`inline-flex items-center justify-center w-9 h-9 rounded-xl mb-3 ${iconBg}`}>
         <span className={color}>{icon}</span>
       </div>
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -182,10 +182,10 @@ export default function Dashboard() {
   );
 
   if (error) return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-      <p className="font-semibold text-amber-800 mb-1">⚠️ Cannot load data</p>
-      <p className="text-sm text-amber-700 mb-3">{error}</p>
-      <p className="text-sm text-amber-600">
+    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-6">
+      <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">⚠️ Cannot load data</p>
+      <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">{error}</p>
+      <p className="text-sm text-amber-600 dark:text-amber-400">
         Go to <Link to="/settings" className="font-semibold underline">Settings</Link> and configure your Google Sheets URL first.
       </p>
     </div>
@@ -231,9 +231,9 @@ export default function Dashboard() {
     <div className="space-y-6">
 
       {/* ── Market ticker ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         {marketLoading ? (
-          <div className="flex items-center gap-2 text-xs text-slate-400 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 px-4 py-3">
             <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
             Fetching live market data…
           </div>
@@ -241,20 +241,20 @@ export default function Dashboard() {
           <>
             {/* Row 1 — Indices */}
             <div className="flex items-center overflow-x-auto scrollbar-none border-b border-slate-50 px-2 py-1">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest px-2 flex-shrink-0">Indices</span>
-              <div className="w-px h-6 bg-slate-100 mx-1 flex-shrink-0" />
+              <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-widest px-2 flex-shrink-0">Indices</span>
+              <div className="w-px h-6 bg-slate-100 dark:bg-slate-700 mx-1 flex-shrink-0" />
               {INDICES.map(item => (
                 <TickerCell key={item.key} label={item.label} quote={rates[item.key]} />
               ))}
             </div>
             {/* Row 2 — FX & Gold */}
             <div className="flex items-center overflow-x-auto scrollbar-none px-2 py-1">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest px-2 flex-shrink-0">FX & Gold</span>
-              <div className="w-px h-6 bg-slate-100 mx-1 flex-shrink-0" />
+              <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-widest px-2 flex-shrink-0">FX & Gold</span>
+              <div className="w-px h-6 bg-slate-100 dark:bg-slate-700 mx-1 flex-shrink-0" />
               {FX_GOLD.map(item => (
                 <TickerCell key={item.key} label={item.label} quote={rates[item.key]} prefix={item.prefix} />
               ))}
-              <div className="ml-auto pl-4 flex items-center gap-1.5 text-xs text-slate-400 flex-shrink-0 pr-3">
+              <div className="ml-auto pl-4 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 flex-shrink-0 pr-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Live · {marketTime}
               </div>
@@ -265,9 +265,9 @@ export default function Dashboard() {
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm text-slate-400">{getGreeting()} 👋</p>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-800 mt-0.5">Financial Overview</h1>
-          <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
+          <p className="text-sm text-slate-400 dark:text-slate-500">{getGreeting()} 👋</p>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">Financial Overview</h1>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 hidden sm:block">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
@@ -278,13 +278,13 @@ export default function Dashboard() {
               const idx = MONTH_OPTIONS.findIndex(o => o.key === selectedMonth);
               if (idx < MONTH_OPTIONS.length - 1) setSelectedMonth(MONTH_OPTIONS[idx + 1].key);
             }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30"
             disabled={MONTH_OPTIONS.findIndex(o => o.key === selectedMonth) >= MONTH_OPTIONS.length - 1}
           >‹</button>
           <select
             value={selectedMonth}
             onChange={e => setSelectedMonth(e.target.value)}
-            className="text-sm font-medium text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+            className="text-sm font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-700"
           >
             {MONTH_OPTIONS.map(o => (
               <option key={o.key} value={o.key}>{o.label}</option>
@@ -295,20 +295,20 @@ export default function Dashboard() {
               const idx = MONTH_OPTIONS.findIndex(o => o.key === selectedMonth);
               if (idx > 0) setSelectedMonth(MONTH_OPTIONS[idx - 1].key);
             }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30"
             disabled={MONTH_OPTIONS.findIndex(o => o.key === selectedMonth) <= 0}
           >›</button>
           {selectedMonth !== currentMonthKey && (
             <button
               onClick={() => setSelectedMonth(currentMonthKey)}
-              className="text-xs text-violet-600 hover:text-violet-700 font-medium px-2 py-1 rounded-lg border border-violet-200 hover:bg-violet-50"
+              className="text-xs text-violet-600 hover:text-violet-700 font-medium px-2 py-1 rounded-lg border border-violet-200 dark:border-violet-700 hover:bg-violet-50 dark:bg-violet-900/20"
             >Today</button>
           )}
           {totalIncome > 0 && (
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${
-              savingsRate >= 20 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : savingsRate >= 0 ? 'bg-amber-50 border-amber-200 text-amber-700'
-              : 'bg-rose-50 border-rose-200 text-rose-600'
+              savingsRate >= 20 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 text-emerald-700'
+              : savingsRate >= 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+              : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-700 text-rose-600'
             }`}>
               <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings</span>
               <span>{savingsRate}%</span>
@@ -319,23 +319,23 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {dashSummaryRows.length === 0 ? (
-          <div className="col-span-full sm:col-span-2 lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center justify-center text-slate-300 text-sm min-h-[96px]">
+          <div className="col-span-full sm:col-span-2 lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-300 dark:text-slate-600 text-sm min-h-[96px]">
             No transactions this month
           </div>
         ) : dashSummaryRows.map(({ cur, income, expense }) => (
-          <div key={cur} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div key={cur} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
             <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-3">{cur}</p>
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400 flex items-center gap-1"><span className="text-emerald-500 text-xs">↑</span> Income</span>
+                <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1"><span className="text-emerald-500 text-xs">↑</span> Income</span>
                 <span className="font-semibold text-emerald-600">{fmt(income, cur)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400 flex items-center gap-1"><span className="text-rose-400 text-xs">↓</span> Expenses</span>
+                <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1"><span className="text-rose-400 text-xs">↓</span> Expenses</span>
                 <span className="font-semibold text-rose-500">{fmt(expense, cur)}</span>
               </div>
               <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50">
-                <span className="text-slate-500 font-medium">Net</span>
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Net</span>
                 <span className={`font-bold ${income - expense >= 0 ? 'text-violet-600' : 'text-rose-500'}`}>
                   {fmt(income - expense, cur)}
                 </span>
@@ -347,10 +347,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-4 mb-5">
-            <div><h2 className="font-semibold text-slate-800">Cash Flow</h2><p className="text-xs text-slate-400">Last 6 months</p></div>
-            <div className="ml-auto flex gap-4 text-xs text-slate-500">
+            <div><h2 className="font-semibold text-slate-800 dark:text-slate-100">Cash Flow</h2><p className="text-xs text-slate-400 dark:text-slate-500">Last 6 months</p></div>
+            <div className="ml-auto flex gap-4 text-xs text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-violet-500" />Income</span>
               <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-rose-400" />Expense</span>
             </div>
@@ -371,11 +371,11 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="font-semibold text-slate-800 mb-1">Expenses by Category</h2>
-          <p className="text-xs text-slate-400 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'}</p>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">Expenses by Category</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'}</p>
           {pieData.length === 0 ? (
-            <div className="h-[200px] flex flex-col items-center justify-center text-slate-300">
+            <div className="h-[200px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
               <p className="text-3xl mb-2">📊</p><p className="text-sm">No expenses yet</p>
             </div>
           ) : (
@@ -385,7 +385,7 @@ export default function Dashboard() {
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v: number) => [fmt(v), '']} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Legend iconType="circle" iconSize={7} formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
+                <Legend iconType="circle" iconSize={7} formatter={(v) => <span className="text-xs text-slate-600 dark:text-slate-300">{v}</span>} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -393,34 +393,34 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="font-semibold text-slate-800">Recent Transactions</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Recent Transactions</h2>
             <Link to="/transactions" className="text-xs text-violet-600 hover:text-violet-700 font-medium">View all →</Link>
           </div>
           {recent.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-3xl mb-2">💳</p><p className="text-sm text-slate-400">No transactions yet</p>
+              <p className="text-3xl mb-2">💳</p><p className="text-sm text-slate-400 dark:text-slate-500">No transactions yet</p>
               <Link to="/transactions" className="text-xs text-violet-600 hover:underline mt-1 inline-block">Add your first →</Link>
             </div>
           ) : (
             <div className="divide-y divide-slate-50">
               {recent.map((t: any) => (
-                <div key={t.id} className="flex items-center justify-between px-6 py-3 hover:bg-slate-50/60 transition-colors">
+                <div key={t.id} className="flex items-center justify-between px-6 py-3 hover:bg-slate-50/60 dark:hover:bg-slate-700/60 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-100' : 'bg-rose-100'}`}>
                       <span className={`text-xs font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>{t.type === 'income' ? '↑' : '↓'}</span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-700">{t.category}</p>
-                      {t.description && <p className="text-xs text-slate-400">{t.description}</p>}
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t.category}</p>
+                      {t.description && <p className="text-xs text-slate-400 dark:text-slate-500">{t.description}</p>}
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
                       {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
                     </p>
-                    <p className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                   </div>
                 </div>
               ))}
@@ -429,14 +429,14 @@ export default function Dashboard() {
         </div>
 
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-800">Investments</h2>
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">Investments</h2>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${portfolioGain >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'}`}>{gainPct}</span>
             </div>
             <div className="space-y-2.5">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Invested</span><span className="font-semibold text-slate-700">{fmt(totalInvested)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Current Value</span><span className="font-semibold text-blue-600">{fmt(currentPortfolio)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Invested</span><span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(totalInvested)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Current Value</span><span className="font-semibold text-blue-600">{fmt(currentPortfolio)}</span></div>
               <div className={`flex justify-between text-sm font-semibold ${portfolioGain >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                 <span>P&L</span><span>{portfolioGain >= 0 ? '+' : ''}{fmt(portfolioGain)}</span>
               </div>
@@ -444,11 +444,11 @@ export default function Dashboard() {
             <Link to="/investments" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">View portfolio →</Link>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h2 className="font-semibold text-slate-800 mb-3">Insurance</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Insurance</h2>
             <div className="space-y-2.5">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Active Policies</span><span className="font-semibold text-slate-700">{activePolicies}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Annual Premium</span><span className="font-semibold text-amber-600">{fmt(totalPremium)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Active Policies</span><span className="font-semibold text-slate-700 dark:text-slate-200">{activePolicies}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Annual Premium</span><span className="font-semibold text-amber-600">{fmt(totalPremium)}</span></div>
             </div>
             <Link to="/insurance" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">Manage policies →</Link>
           </div>

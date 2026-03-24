@@ -47,6 +47,26 @@ function CogIcon() {
   );
 }
 
+function SunIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
 const nav = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon },
   { to: '/transactions', label: 'Transactions', Icon: CreditCardIcon },
@@ -55,13 +75,32 @@ const nav = [
   { to: '/settings', label: 'Settings', Icon: CogIcon },
 ];
 
-export default function Layout() {
+interface LayoutProps {
+  dark: boolean;
+  onToggleDark: () => void;
+}
+
+export default function Layout({ dark, onToggleDark }: LayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const activeClass = 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-200/50';
+  const inactiveClass = 'text-slate-500 dark:text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-400';
+
+  const ThemeToggle = () => (
+    <button
+      onClick={onToggleDark}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      aria-label="Toggle dark mode"
+    >
+      {dark ? <SunIcon /> : <MoonIcon />}
+      <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+    </button>
+  );
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex w-60 flex-shrink-0 bg-white border-r border-slate-100 flex-col">
+      <aside className="hidden md:flex w-60 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex-col">
         {/* Brand */}
         <div className="px-5 pt-6 pb-5">
           <div className="flex items-center gap-3">
@@ -69,13 +108,13 @@ export default function Layout() {
               ₹
             </div>
             <div>
-              <p className="font-bold text-slate-800 text-sm leading-none">MyFinance</p>
-              <p className="text-xs text-slate-400 mt-0.5">Personal Finance</p>
+              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">MyFinance</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>
             </div>
           </div>
         </div>
 
-        <div className="mx-4 h-px bg-slate-100" />
+        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
@@ -86,9 +125,7 @@ export default function Layout() {
               end={to === '/'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-200/50'
-                    : 'text-slate-500 hover:bg-violet-50 hover:text-violet-700'
+                  isActive ? activeClass : inactiveClass
                 }`
               }
             >
@@ -98,16 +135,17 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="mx-4 h-px bg-slate-100" />
+        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
 
-        {/* Sync status */}
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-2">
+        {/* Footer: sync status + theme toggle */}
+        <div className="px-4 py-4 space-y-2">
+          <ThemeToggle />
+          <div className="flex items-center gap-2 px-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <p className="text-xs text-slate-400">Synced to Google Sheets</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
           </div>
         </div>
       </aside>
@@ -121,25 +159,25 @@ export default function Layout() {
       )}
 
       {/* ── Mobile Drawer ── */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 flex flex-col transform transition-transform duration-200 md:hidden ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex flex-col transform transition-transform duration-200 md:hidden ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-5 pt-6 pb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-700 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-lg shadow-violet-200">
               ₹
             </div>
             <div>
-              <p className="font-bold text-slate-800 text-sm leading-none">MyFinance</p>
-              <p className="text-xs text-slate-400 mt-0.5">Personal Finance</p>
+              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">MyFinance</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>
             </div>
           </div>
-          <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+          <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        <div className="mx-4 h-px bg-slate-100" />
+        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
 
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {nav.map(({ to, label, Icon }) => (
@@ -150,9 +188,7 @@ export default function Layout() {
               onClick={() => setDrawerOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-200/50'
-                    : 'text-slate-500 hover:bg-violet-50 hover:text-violet-700'
+                  isActive ? activeClass : inactiveClass
                 }`
               }
             >
@@ -162,14 +198,15 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="mx-4 h-px bg-slate-100" />
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-2">
+        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
+        <div className="px-4 py-4 space-y-2">
+          <ThemeToggle />
+          <div className="flex items-center gap-2 px-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <p className="text-xs text-slate-400">Synced to Google Sheets</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
           </div>
         </div>
       </aside>
@@ -177,10 +214,10 @@ export default function Layout() {
       {/* ── Main area ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Mobile top header */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100 flex-shrink-0">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
           <button
             onClick={() => setDrawerOpen(true)}
-            className="p-2 -ml-2 text-slate-500 hover:text-slate-700"
+            className="p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             aria-label="Open menu"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -191,9 +228,15 @@ export default function Layout() {
             <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow">
               ₹
             </div>
-            <p className="font-bold text-slate-800 text-sm">MyFinance</p>
+            <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">MyFinance</p>
           </div>
-          <div className="w-9" />
+          <button
+            onClick={onToggleDark}
+            className="p-2 -mr-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? <SunIcon /> : <MoonIcon />}
+          </button>
         </header>
 
         {/* Page content */}
@@ -205,7 +248,7 @@ export default function Layout() {
       </div>
 
       {/* ── Mobile Bottom Tab Bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-100 flex md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex md:hidden">
         {nav.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -213,13 +256,13 @@ export default function Layout() {
             end={to === '/'}
             className={({ isActive }) =>
               `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-violet-600' : 'text-slate-400'
+                isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={`p-1 rounded-lg transition-colors ${isActive ? 'bg-violet-50' : ''}`}>
+                <span className={`p-1 rounded-lg transition-colors ${isActive ? 'bg-violet-50 dark:bg-violet-900/30' : ''}`}>
                   <Icon />
                 </span>
                 <span className="hidden xs:block">{label}</span>

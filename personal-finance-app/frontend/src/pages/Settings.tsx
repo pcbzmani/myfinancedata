@@ -368,11 +368,11 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
-        <p className="text-sm text-slate-400 mt-0.5">Connect your Google Sheets database</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Connect your Google Sheets database</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="px-6 py-4 bg-violet-600">
           <h2 className="font-semibold text-white">📊 Google Sheets Setup</h2>
           <p className="text-violet-200 text-xs mt-0.5">One-time setup — your data lives in YOUR Google Sheet</p>
@@ -389,8 +389,8 @@ export default function Settings() {
               <div key={n} className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex-shrink-0 flex items-center justify-center">{n}</span>
                 <div>
-                  <p className="text-sm font-medium text-slate-700">{text}</p>
-                  {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{text}</p>
+                  {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
                 </div>
               </div>
             ))}
@@ -398,10 +398,10 @@ export default function Settings() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Apps Script Code</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Apps Script Code</p>
               <button
                 onClick={copyCode}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${copied ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${copied ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
               >
                 {copied ? '✓ Copied!' : '📋 Copy Code'}
               </button>
@@ -413,17 +413,17 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <h2 className="font-semibold text-slate-800 mb-4">Web App URL</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">Web App URL</h2>
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Google Apps Script URL</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Google Apps Script URL</label>
             <input
               type="url"
               placeholder="https://script.google.com/macros/s/.../exec"
               value={url}
               onChange={e => setUrl(e.target.value)}
-              className="w-full mt-1.5 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-mono dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 dark:focus:ring-violet-700"
             />
           </div>
           <div className="flex gap-3">
@@ -438,27 +438,27 @@ export default function Settings() {
               type="button"
               onClick={handleTest}
               disabled={!url || testing}
-              className="px-5 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
             >
               {testing ? 'Testing…' : 'Test Connection'}
             </button>
           </div>
           {testResult === 'ok' && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-700 rounded-xl px-4 py-3 text-sm">
               ✓ Connection successful! Google Sheets is ready.
             </div>
           )}
           {testResult === 'fail' && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-sm">
+            <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm">
               ✗ Connection failed. Check the URL and make sure the script is deployed with "Anyone" access.
             </div>
           )}
         </form>
       </div>
 
-      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
-        <h3 className="font-medium text-slate-700 mb-2">🔒 Privacy</h3>
-        <ul className="text-sm text-slate-500 space-y-1.5">
+      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-600 p-5">
+        <h3 className="font-medium text-slate-700 dark:text-slate-200 mb-2">🔒 Privacy</h3>
+        <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
           <li>• Your data is stored in <strong>your own</strong> Google Sheet — we never see it</li>
           <li>• The Apps Script runs under your Google account</li>
           <li>• No third-party tracking or analytics</li>
