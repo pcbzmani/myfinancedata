@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f App.js main.js lib/api.js components/Layout.js components/AIChat.js components/ExportButtons.js pages/Dashboard.js pages/Transactions.js pages/Investments.js pages/Insurance.js pages/Settings.js)",
+      "Bash(rm -f ../vercel.json)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\pcbzm\\.claude\\skills",
+      "C:\\Users\\pcbzm\\.claude\\commands"
+    ]
+  }
+}

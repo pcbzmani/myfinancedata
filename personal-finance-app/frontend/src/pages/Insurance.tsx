@@ -9,15 +9,82 @@ const TYPE_META: Record<string, { emoji: string; color: string; border: string; 
   home:    { emoji: '🏠', color: 'text-purple-700',  border: 'border-purple-200',  bg: 'bg-purple-50' },
   term:    { emoji: '📋', color: 'text-rose-700',    border: 'border-rose-200',    bg: 'bg-rose-50' },
 };
+
 const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
 const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', frequency: 'yearly', sumAssured: '', startDate: '', endDate: '' };
 
+const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1 };
+const toAnnual = (premium: number, frequency: string) => premium * (FREQ_MULTIPLIER[frequency] ?? 1);
+
+/** Returns the next payment due date, or null if policy has expired */
+function nextDueDate(p: any): Date | null {
+  if (!p.startDate || !p.endDate) return null;
+  const start = new Date(p.startDate + 'T00:00:00');
+  const end   = new Date(p.endDate   + 'T00:00:00');
+  const now   = new Date(); now.setHours(0, 0, 0, 0);
+  if (now >= end) return null;
+
+  const freq = p.frequency || 'yearly';
+  let next = new Date(start);
+  while (next <= now) {
+    if (freq === 'monthly')        next.setMonth(next.getMonth() + 1);
+    else if (freq === 'quarterly') next.setMonth(next.getMonth() + 3);
+    else                           next.setFullYear(next.getFullYear() + 1);
+  }
+  return next <= end ? next : null;
+}
+
+/** Downloads a .ics calendar file with 7-day and 3-day reminders */
+function downloadICS(p: any) {
+  const next = nextDueDate(p);
+  if (!next) return;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const dtDate = `${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`;
+  const uid = `${p.id || Date.now()}@personal-finance-app`;
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//PersonalFinanceApp//EN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTART;VALUE=DATE:${dtDate}`,
+    `DTEND;VALUE=DATE:${dtDate}`,
+    `SUMMARY:Insurance Payment: ${p.provider} (${p.type})`,
+    `DESCRIPTION:Premium: ${fmt(Number(p.premium))}/${p.frequency}\\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency))}\\nPolicy#: ${p.policyNumber || 'N/A'}`,
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'TRIGGER:-P7D',
+    `DESCRIPTION:7 days until ${p.provider} insurance payment`,
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'TRIGGER:-P3D',
+    `DESCRIPTION:3 days until ${p.provider} insurance payment`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `${p.provider.replace(/\s+/g, '-')}-reminder.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+type FreqFilter = 'all' | 'monthly' | 'quarterly' | 'yearly';
+
 export default function Insurance() {
-  const [items, setItems] = useState<any[]>([]);
-  const [form, setForm] = useState(EMPTY);
+  const [items, setItems]       = useState<any[]>([]);
+  const [form, setForm]         = useState(EMPTY);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [freqFilter, setFreqFilter] = useState<FreqFilter>('all');
 
   const load = () => getRows('insurance').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -45,11 +112,18 @@ export default function Insurance() {
     catch (e: any) { setError(e.message); }
   };
 
-  const totalPremium = items.reduce((s, p) => s + Number(p.premium), 0);
+  const totalAnnualPremium = items.reduce((s, p) => s + toAnnual(Number(p.premium), p.frequency), 0);
   const expiringSoon = items.filter(p => {
     const days = (new Date(p.endDate).getTime() - Date.now()) / 86400000;
     return days <= 90 && days > 0;
   });
+
+  const upcomingPayments = items
+    .map(p => ({ p, next: nextDueDate(p) }))
+    .filter(({ next }) => next !== null && (next!.getTime() - Date.now()) / 86400000 <= 7)
+    .sort((a, b) => a.next!.getTime() - b.next!.getTime());
+
+  const filtered = freqFilter === 'all' ? items : items.filter(p => p.frequency === freqFilter);
 
   return (
     <div className="space-y-6">
@@ -73,6 +147,28 @@ export default function Insurance() {
         </div>
       )}
 
+      {/* Upcoming payments alert */}
+      {upcomingPayments.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+          <p className="text-sm font-semibold text-amber-800 mb-2">Payments due this week</p>
+          <div className="space-y-1.5">
+            {upcomingPayments.map(({ p, next }) => {
+              const daysUntil = Math.ceil((next!.getTime() - Date.now()) / 86400000);
+              return (
+                <div key={p.id} className="flex items-center justify-between text-sm">
+                  <span className="text-amber-700">
+                    {TYPE_META[p.type]?.emoji} <strong>{p.provider}</strong> — {fmt(Number(p.premium))}/{p.frequency}
+                  </span>
+                  <span className="text-amber-600 font-semibold text-xs">
+                    {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -81,7 +177,8 @@ export default function Insurance() {
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Annual Premium</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1.5">{fmt(totalPremium)}</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1.5">{fmt(totalAnnualPremium)}</p>
+          <p className="text-xs text-slate-400 mt-1">All converted to yearly</p>
         </div>
         <div className={`rounded-2xl border shadow-sm p-5 ${expiringSoon.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Expiring Soon</p>
@@ -91,6 +188,23 @@ export default function Insurance() {
           <p className="text-xs text-slate-400 mt-1">Within 90 days</p>
         </div>
       </div>
+
+      {/* Frequency filter */}
+      {items.length > 0 && (
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+          {(['all', 'monthly', 'quarterly', 'yearly'] as FreqFilter[]).map(f => (
+            <button key={f} onClick={() => setFreqFilter(f)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              {f === 'all' ? 'All' : f}
+              {f !== 'all' && (
+                <span className="ml-1 text-slate-400">
+                  ({items.filter(p => p.frequency === f).length})
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Add Form */}
       {showForm && (
@@ -120,16 +234,6 @@ export default function Insurance() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Premium (₹)</label>
-              <input
-                type="number" min="0" step="0.01" placeholder="0.00"
-                value={form.premium}
-                onChange={e => setForm({ ...form, premium: e.target.value })}
-                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-                required
-              />
-            </div>
-            <div>
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Payment Frequency</label>
               <select
                 value={form.frequency}
@@ -140,6 +244,23 @@ export default function Insurance() {
                 <option value="quarterly">Quarterly</option>
                 <option value="yearly">Yearly</option>
               </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                Premium (₹ per {form.frequency === 'monthly' ? 'month' : form.frequency === 'quarterly' ? 'quarter' : 'year'})
+              </label>
+              <input
+                type="number" min="0" step="0.01" placeholder="0.00"
+                value={form.premium}
+                onChange={e => setForm({ ...form, premium: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                required
+              />
+              {form.premium && form.frequency !== 'yearly' && (
+                <p className="text-xs text-violet-600 mt-1">
+                  = {fmt(toAnnual(Number(form.premium), form.frequency))} / year
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Sum Assured (₹)</label>
@@ -191,17 +312,20 @@ export default function Insurance() {
       )}
 
       {/* Policy Cards */}
-      {items.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <p className="text-4xl mb-3">🛡️</p>
-          <p className="text-slate-500 font-medium">No policies yet</p>
-          <p className="text-sm text-slate-400 mt-1">Click "Add Policy" to track your insurance</p>
+          <p className="text-slate-500 font-medium">{items.length === 0 ? 'No policies yet' : `No ${freqFilter} policies`}</p>
+          <p className="text-sm text-slate-400 mt-1">{items.length === 0 ? 'Click "Add Policy" to track your insurance' : 'Try a different frequency filter'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map(p => {
+          {filtered.map(p => {
             const daysLeft = Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000);
             const meta = TYPE_META[p.type] || TYPE_META.health;
+            const annual = toAnnual(Number(p.premium), p.frequency);
+            const next = nextDueDate(p);
+            const daysUntilNext = next ? Math.ceil((next.getTime() - Date.now()) / 86400000) : null;
             return (
               <div key={p.id} className={`rounded-2xl border shadow-sm p-5 hover:shadow-md transition-shadow group ${meta.bg} ${meta.border}`}>
                 <div className="flex items-start justify-between mb-3">
@@ -223,6 +347,12 @@ export default function Insurance() {
                     <span className="text-slate-500">Premium</span>
                     <span className="font-semibold text-slate-800">{fmt(Number(p.premium))} / {p.frequency}</span>
                   </div>
+                  {p.frequency !== 'yearly' && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Annual equivalent</span>
+                      <span className="font-medium text-violet-700 text-xs">{fmt(annual)} / yr</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Sum Assured</span>
                     <span className="font-semibold text-slate-800">{fmt(Number(p.sumAssured))}</span>
@@ -233,6 +363,17 @@ export default function Insurance() {
                       <span className="font-medium text-xs text-slate-600">{p.policyNumber}</span>
                     </div>
                   )}
+                  {next && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Next payment</span>
+                      <span className={`font-medium text-xs ${daysUntilNext !== null && daysUntilNext <= 7 ? 'text-amber-600 font-semibold' : 'text-slate-600'}`}>
+                        {next.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {daysUntilNext !== null && daysUntilNext <= 7 && (
+                          <span className="ml-1">({daysUntilNext === 0 ? 'today' : `${daysUntilNext}d`})</span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between pt-1 border-t border-black/5">
                     <span className="text-slate-500">Expires</span>
                     <span className={`font-medium text-xs ${daysLeft <= 90 ? 'text-amber-600 font-semibold' : 'text-slate-600'}`}>
@@ -241,6 +382,17 @@ export default function Insurance() {
                     </span>
                   </div>
                 </div>
+
+                {next && (
+                  <button
+                    onClick={() => downloadICS(p)}
+                    className="mt-3 w-full text-xs py-1.5 rounded-lg border border-current opacity-60 hover:opacity-100 transition-opacity font-medium flex items-center justify-center gap-1.5"
+                    style={{ color: 'inherit' }}
+                    title="Download .ics reminder for Google Calendar / Apple Calendar / Outlook"
+                  >
+                    📅 Add reminder to calendar
+                  </button>
+                )}
               </div>
             );
           })}

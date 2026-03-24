@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { getRows } from '../sheets';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 function toCSV(headers: string[], rows: (string | number)[][]): string {
   const escape = (v: string | number) => {
@@ -12,46 +11,72 @@ function toCSV(headers: string[], rows: (string | number)[][]): string {
   return [headers, ...rows].map(row => row.map(escape).join(',')).join('\n');
 }
 
+const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1 };
+
 router.get('/transactions.csv', async (_req: Request, res: Response) => {
-  const data = await prisma.transaction.findMany({ orderBy: { date: 'desc' } });
-  const csv = toCSV(
-    ['Date', 'Type', 'Category', 'Amount', 'Description'],
-    data.map(t => [new Date(t.date).toLocaleDateString('en-IN'), t.type, t.category, t.amount, t.description || ''])
-  );
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
-  res.send(csv);
+  try {
+    const data = await getRows('transactions');
+    const csv = toCSV(
+      ['Date', 'Type', 'Category', 'Currency', 'Amount', 'Description'],
+      data.map((t: any) => [t.date || '', t.type || '', t.category || '', t.currency || 'QAR', t.amount || 0, t.description || ''])
+    );
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
+    res.send(csv);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/investments.csv', async (_req: Request, res: Response) => {
-  const data = await prisma.investment.findMany();
-  const csv = toCSV(
-    ['Name', 'Type', 'Amount Invested', 'Current Value', 'Gain/Loss', 'Units', 'Buy Price', 'Date'],
-    data.map(i => [i.name, i.type, i.amountInvested, i.currentValue, i.currentValue - i.amountInvested, i.units ?? '', i.buyPrice ?? '', new Date(i.date).toLocaleDateString('en-IN')])
-  );
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="investments.csv"');
-  res.send(csv);
+  try {
+    const data = await getRows('investments');
+    const csv = toCSV(
+      ['Name', 'Type', 'Symbol', 'Amount Invested', 'Current Value', 'Gain/Loss', 'Units', 'Buy Price', 'Date'],
+      data.map((i: any) => [
+        i.name || '', i.type || '', i.symbol || '',
+        i.amountInvested || 0, i.currentValue || 0,
+        Number(i.currentValue || 0) - Number(i.amountInvested || 0),
+        i.units || '', i.buyPrice || '', i.date || '',
+      ])
+    );
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="investments.csv"');
+    res.send(csv);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/insurance.csv', async (_req: Request, res: Response) => {
-  const data = await prisma.insurance.findMany();
-  const csv = toCSV(
-    ['Provider', 'Type', 'Premium', 'Frequency', 'Sum Assured', 'Start Date', 'End Date'],
-    data.map(p => [p.provider, p.type, p.premium, p.frequency, p.sumAssured, new Date(p.startDate).toLocaleDateString('en-IN'), new Date(p.endDate).toLocaleDateString('en-IN')])
-  );
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="insurance.csv"');
-  res.send(csv);
+  try {
+    const data = await getRows('insurance');
+    const csv = toCSV(
+      ['Provider', 'Type', 'Premium', 'Frequency', 'Annual Premium', 'Sum Assured', 'Policy Number', 'Start Date', 'End Date'],
+      data.map((p: any) => {
+        const annual = Number(p.premium || 0) * (FREQ_MULTIPLIER[p.frequency] ?? 1);
+        return [p.provider || '', p.type || '', p.premium || 0, p.frequency || 'yearly', annual, p.sumAssured || 0, p.policyNumber || '', p.startDate || '', p.endDate || ''];
+      })
+    );
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="insurance.csv"');
+    res.send(csv);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/all', async (_req: Request, res: Response) => {
-  const [transactions, investments, insurance] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: 'desc' } }),
-    prisma.investment.findMany(),
-    prisma.insurance.findMany(),
-  ]);
-  res.json({ transactions, investments, insurance });
+  try {
+    const [transactions, investments, insurance] = await Promise.all([
+      getRows('transactions'),
+      getRows('investments'),
+      getRows('insurance'),
+    ]);
+    res.json({ transactions, investments, insurance });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;
