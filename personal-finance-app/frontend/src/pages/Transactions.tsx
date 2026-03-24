@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
 
 const CATEGORIES = ['Salary', 'Freelance', 'Food', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
@@ -18,7 +18,6 @@ export default function Transactions() {
   const [customCurrency, setCustomCurrency] = useState('');
   const [showForm, setShowForm]         = useState(false);
   const [saving, setSaving]             = useState(false);
-  const [fixing, setFixing]             = useState(false);
   const [error, setError]               = useState('');
   const [typeFilter, setTypeFilter]     = useState<'all' | 'income' | 'expense'>('all');
   const [curFilter, setCurFilter]       = useState('all');
@@ -28,23 +27,12 @@ export default function Transactions() {
   const [editId, setEditId]             = useState<string | null>(null);
   const [editForm, setEditForm]         = useState(EMPTY_FORM);
   const [editCustomCurrency, setEditCustomCurrency] = useState('');
+  const editFormRef = useRef<HTMLDivElement>(null);
 
   const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
 
   // ── helpers ────────────────────────────────────────────────────────────────
-  const missingCur = items.filter(t => !t.currency || !String(t.currency).trim());
-
-  const handleFixMissing = async () => {
-    setFixing(true);
-    try {
-      for (const t of missingCur) {
-        await updateRow('transactions', t.id, { currency: 'QAR' });
-      }
-      load();
-    } catch (e: any) { setError(e.message); }
-    finally { setFixing(false); }
-  };
 
   // ── add ────────────────────────────────────────────────────────────────────
   const handleAdd = async (e: React.FormEvent) => {
@@ -90,6 +78,7 @@ export default function Transactions() {
     });
     setEditCustomCurrency(isCustom ? cur : '');
     setShowForm(false);
+    setTimeout(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -164,12 +153,6 @@ export default function Transactions() {
           <p className="text-sm text-slate-400 mt-0.5">Track your income and expenses</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {missingCur.length > 0 && (
-            <button onClick={handleFixMissing} disabled={fixing}
-              className="text-xs px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors">
-              {fixing ? 'Fixing…' : `Fix ${missingCur.length} missing currency → QAR`}
-            </button>
-          )}
           <button onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm">
             + Add Transaction
@@ -299,7 +282,7 @@ export default function Transactions() {
 
       {/* Edit form */}
       {editId && (
-        <div className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+        <div ref={editFormRef} className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-50 bg-violet-50/50 flex items-center justify-between">
             <h3 className="font-semibold text-slate-700">Edit Transaction</h3>
             <button onClick={() => setEditId(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
