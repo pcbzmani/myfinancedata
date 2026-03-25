@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { getRows, addRow, deleteRow } from '../lib/api';
 
 const TYPES = ['health', 'life', 'vehicle', 'home', 'term'];
-const TYPE_META: Record<string, { emoji: string; color: string; border: string; bg: string }> = {
-  health:  { emoji: '🏥', color: 'text-emerald-700', border: 'border-emerald-200', bg: 'bg-emerald-50' },
-  life:    { emoji: '💙', color: 'text-blue-700',    border: 'border-blue-200',    bg: 'bg-blue-50' },
-  vehicle: { emoji: '🚗', color: 'text-amber-700',   border: 'border-amber-200',   bg: 'bg-amber-50' },
-  home:    { emoji: '🏠', color: 'text-purple-700',  border: 'border-purple-200',  bg: 'bg-purple-50' },
-  term:    { emoji: '📋', color: 'text-rose-700',    border: 'border-rose-200',    bg: 'bg-rose-50' },
+const TYPE_META: Record<string, { emoji: string; color: string; darkColor: string; border: string; darkBorder: string; bg: string; darkBg: string }> = {
+  health:  { emoji: '🏥', color: 'text-emerald-700', darkColor: 'dark:text-emerald-400', border: 'border-emerald-200', darkBorder: 'dark:border-emerald-700', bg: 'bg-emerald-50',  darkBg: 'dark:bg-emerald-900/20' },
+  life:    { emoji: '💙', color: 'text-blue-700',    darkColor: 'dark:text-blue-400',    border: 'border-blue-200',    darkBorder: 'dark:border-blue-700',    bg: 'bg-blue-50',    darkBg: 'dark:bg-blue-900/20' },
+  vehicle: { emoji: '🚗', color: 'text-amber-700',   darkColor: 'dark:text-amber-400',   border: 'border-amber-200',   darkBorder: 'dark:border-amber-700',   bg: 'bg-amber-50',   darkBg: 'dark:bg-amber-900/20' },
+  home:    { emoji: '🏠', color: 'text-purple-700',  darkColor: 'dark:text-purple-400',  border: 'border-purple-200',  darkBorder: 'dark:border-purple-700',  bg: 'bg-purple-50',  darkBg: 'dark:bg-purple-900/20' },
+  term:    { emoji: '📋', color: 'text-rose-700',    darkColor: 'dark:text-rose-400',    border: 'border-rose-200',    darkBorder: 'dark:border-rose-700',    bg: 'bg-rose-50',    darkBg: 'dark:bg-rose-900/20' },
 };
 
 const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
@@ -327,12 +327,12 @@ export default function Insurance() {
             const next = nextDueDate(p);
             const daysUntilNext = next ? Math.ceil((next.getTime() - Date.now()) / 86400000) : null;
             return (
-              <div key={p.id} className={`rounded-2xl border shadow-sm p-5 hover:shadow-md transition-shadow group ${meta.bg} ${meta.border}`}>
+              <div key={p.id} className={`rounded-2xl border shadow-sm p-5 hover:shadow-md transition-shadow group ${meta.bg} ${meta.darkBg} ${meta.border} ${meta.darkBorder}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2.5">
                     <span className="text-2xl">{meta.emoji}</span>
                     <div>
-                      <p className={`font-semibold text-sm ${meta.color}`}>{p.provider}</p>
+                      <p className={`font-semibold text-sm ${meta.color} ${meta.darkColor}`}>{p.provider}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{p.type} insurance</p>
                     </div>
                   </div>
@@ -350,7 +350,7 @@ export default function Insurance() {
                   {p.frequency !== 'yearly' && (
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-slate-400">Annual equivalent</span>
-                      <span className="font-medium text-violet-700 text-xs">{fmt(annual)} / yr</span>
+                      <span className="font-medium text-violet-700 dark:text-violet-400 text-xs">{fmt(annual)} / yr</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -374,7 +374,7 @@ export default function Insurance() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-1 border-t border-black/5">
+                  <div className="flex justify-between pt-1 border-t border-black/5 dark:border-white/10">
                     <span className="text-slate-500 dark:text-slate-400">Expires</span>
                     <span className={`font-medium text-xs ${daysLeft <= 90 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}`}>
                       {new Date(p.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
