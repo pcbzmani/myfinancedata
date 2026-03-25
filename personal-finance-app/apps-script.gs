@@ -110,6 +110,7 @@ function addRow(ss, name, data) {
     }
   }
 
+  SpreadsheetApp.flush();
   return { success: true };
 }
 
@@ -131,7 +132,16 @@ function updateRow(ss, name, id, updates) {
       Object.keys(updates).forEach(function(key) {
         if (key === 'id') return;
         var col = headers.indexOf(key);
-        if (col >= 0) updatedRow[col] = updates[key];
+        if (col < 0) return;
+        var val = updates[key];
+        // If the original cell was a Date and the incoming value is a YYYY-MM-DD string,
+        // convert it back to a Date object so Google Sheets keeps the date format.
+        if (val && typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val) &&
+            updatedRow[col] instanceof Date) {
+          var parts = val.split('-');
+          val = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        }
+        updatedRow[col] = val;
       });
 
       // Investment-specific: recompute amountInvested from units * buyPrice
@@ -163,6 +173,10 @@ function updateRow(ss, name, id, updates) {
         }
       }
 
+      // Flush ensures the write is committed before returning success.
+      // Without this, Apps Script may buffer the write and a subsequent
+      // read from the frontend could return stale (pre-update) data.
+      SpreadsheetApp.flush();
       return { success: true };
     }
   }
@@ -291,6 +305,7 @@ function deleteRow(ss, name, id) {
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][idCol]) === String(id)) {
       sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
       return { success: true };
     }
   }
