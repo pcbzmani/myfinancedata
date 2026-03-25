@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
+import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
 
 const CATEGORIES = ['Salary', 'Freelance', 'Food', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
 const PRESET_CURRENCIES = ['QAR', 'INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'];
@@ -37,10 +37,23 @@ export default function Transactions() {
   const [editId, setEditId]             = useState<string | null>(null);
   const [editForm, setEditForm]         = useState(EMPTY_FORM);
   const [editCustomCurrency, setEditCustomCurrency] = useState('');
+  const [displayCurrency, setDisplayCurrency] = useState<'original' | 'QAR' | 'INR' | 'USD'>('original');
+  const [fxRates, setFxRates]           = useState<{ qarInr: number; usdInr: number } | null>(null);
   const editFormRef = useRef<HTMLDivElement>(null);
 
   const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+    // Fetch live exchange rates via Google Finance (Apps Script)
+    getMarketRates()
+      .then(d => {
+        if (d.qarInr?.price && d.usdInr?.price) {
+          setFxRates({ qarInr: d.qarInr.price, usdInr: d.usdInr.price });
+        }
+      })
+      .catch(() => {}); // silently fail — toggle just won't appear
+  }, []);
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -151,6 +164,28 @@ export default function Transactions() {
   const summaryRows = curFilter === 'all'
     ? Object.entries(byCurrency).map(([cur, v]) => ({ cur, ...v }))
     : [{ cur: curFilter, ...(byCurrency[curFilter] || { income: 0, expense: 0 }) }];
+
+  // ── currency conversion ─────────────────────────────────────────────────────
+  function convertAmount(amount: number, fromCur: string, toCur: string): number | null {
+    if (!fxRates || fromCur === toCur) return null;
+    // Pivot through INR
+    let inr: number;
+    if (fromCur === 'INR')      inr = amount;
+    else if (fromCur === 'QAR') inr = amount * fxRates.qarInr;
+    else if (fromCur === 'USD') inr = amount * fxRates.usdInr;
+    else return null;
+    if (toCur === 'INR') return inr;
+    if (toCur === 'QAR') return inr / fxRates.qarInr;
+    if (toCur === 'USD') return inr / fxRates.usdInr;
+    return null;
+  }
+
+  const fmtConverted = (amount: number, fromCur: string): string | null => {
+    if (displayCurrency === 'original' || displayCurrency === fromCur) return null;
+    const v = convertAmount(amount, fromCur, displayCurrency);
+    if (v === null) return null;
+    return `≈ ${fmt(v, displayCurrency)}`;
+  };
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
@@ -369,15 +404,34 @@ export default function Transactions() {
 
       {/* Transaction list */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-b border-slate-50 dark:border-slate-700">
           <p className="text-sm text-slate-500 dark:text-slate-400">{filtered.length} records</p>
-          <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
-            {(['all', 'income', 'expense'] as const).map(f => (
-              <button key={f} onClick={() => setTypeFilter(f)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${typeFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                {f}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View-in currency toggle */}
+            {fxRates && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-400 dark:text-slate-500 mr-1">View in:</span>
+                {(['original', 'QAR', 'INR', 'USD'] as const).map(c => (
+                  <button key={c} onClick={() => setDisplayCurrency(c)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                      displayCurrency === c
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}>
+                    {c === 'original' ? 'Original' : c}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Type filter */}
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+              {(['all', 'income', 'expense'] as const).map(f => (
+                <button key={f} onClick={() => setTypeFilter(f)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${typeFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -440,6 +494,7 @@ export default function Transactions() {
                     </td>
                     <td className={`px-5 py-3.5 text-right font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
                       {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
+                      {(() => { const c = fmtConverted(Number(t.amount), normCur(t)); return c ? <div className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-0.5">{c}</div> : null; })()}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -491,9 +546,12 @@ export default function Transactions() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
-                    </p>
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {t.type === 'income' ? '+' : '-'}{fmt(Number(t.amount), normCur(t))}
+                      </p>
+                      {(() => { const c = fmtConverted(Number(t.amount), normCur(t)); return c ? <p className="text-[10px] text-slate-400 dark:text-slate-500">{c}</p> : null; })()}
+                    </div>
                     <button onClick={() => editId === t.id ? setEditId(null) : startEdit(t)}
                       className={`text-base px-1 transition-colors ${editId === t.id ? 'text-violet-500' : 'text-slate-300 hover:text-violet-500'}`} title="Edit">✎</button>
                     <button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-rose-400 transition-colors text-lg font-bold px-1">×</button>

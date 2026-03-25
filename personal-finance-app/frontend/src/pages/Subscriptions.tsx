@@ -63,6 +63,7 @@ export default function Subscriptions() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [customCurrency, setCustomCurrency] = useState('');
   const [freqFilter, setFreqFilter] = useState<'all' | Frequency>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
   const formRef = useRef<HTMLDivElement>(null);
@@ -89,13 +90,16 @@ export default function Subscriptions() {
       setError('Name, cost and start date are required.'); return;
     }
     setSaving(true);
+    const currency = form.currency === '__custom__'
+      ? (customCurrency.toUpperCase().trim() || 'QAR')
+      : form.currency;
     try {
       const row = {
         id: Date.now().toString(),
         name: form.name.trim(),
         category: form.category,
         cost: parseFloat(form.cost),
-        currency: form.currency,
+        currency,
         frequency: form.frequency,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -107,6 +111,7 @@ export default function Subscriptions() {
       await addRow('subscriptions', row);
       setItems(prev => [row, ...prev]);
       setForm(EMPTY);
+      setCustomCurrency('');
       setShowForm(false);
       setError('');
     } catch (e: any) {
@@ -135,7 +140,7 @@ export default function Subscriptions() {
     }
   }
 
-  const activeItems = items.filter(i => i.status !== 'cancelled');
+  const activeItems = items.filter(i => i.status === 'active');
   const filtered = items.filter(i => {
     if (freqFilter !== 'all' && i.frequency !== freqFilter) return false;
     if (statusFilter !== 'all' && i.status !== statusFilter) return false;
@@ -263,7 +268,17 @@ export default function Subscriptions() {
                 <select value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value }))}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
                   {CURRENCIES.map(c => <option key={c}>{c}</option>)}
+                  <option value="__custom__">Other (custom)…</option>
                 </select>
+                {form.currency === '__custom__' && (
+                  <input
+                    placeholder="e.g. AED, SAR, CHF"
+                    value={customCurrency}
+                    onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                    maxLength={5}
+                    className="w-full mt-2 px-3 py-2 rounded-lg border border-violet-300 dark:border-violet-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  />
+                )}
               </div>
             </div>
             <div>
@@ -300,7 +315,7 @@ export default function Subscriptions() {
                 className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white py-2 rounded-xl text-sm font-medium transition-colors">
                 {saving ? 'Saving…' : 'Add Subscription'}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setError(''); }}
+              <button type="button" onClick={() => { setShowForm(false); setCustomCurrency(''); setError(''); }}
                 className="px-6 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                 Cancel
               </button>
