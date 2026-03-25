@@ -138,10 +138,26 @@ function updateRow(ss, name, id, updates) {
   var idCol = headers.indexOf('id');
   if (idCol < 0) return { error: 'No id column' };
 
+  // Auto-add any columns from updates that don't exist in the sheet yet.
+  // e.g. currency column missing from sheets created before the feature.
+  var newKeys = Object.keys(updates).filter(function(k) {
+    return k !== 'id' && headers.indexOf(k) < 0;
+  });
+  if (newKeys.length > 0) {
+    var newStartCol = headers.length + 1;
+    var newHeaderRange = sheet.getRange(1, newStartCol, 1, newKeys.length);
+    newHeaderRange.setValues([newKeys]);
+    newHeaderRange.setFontWeight('bold').setBackground('#7c3aed').setFontColor('#ffffff');
+    sheet.setColumnWidths(newStartCol, newKeys.length, 150);
+    newKeys.forEach(function(k) { headers.push(k); });
+  }
+
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][idCol]) === String(id)) {
       var rowNum = i + 1;
       var updatedRow = values[i].slice(); // shallow copy
+      // Pad with empty strings for any newly-added columns
+      while (updatedRow.length < headers.length) { updatedRow.push(''); }
 
       // Generic: update any field in updates that exists as a header (never overwrite id)
       Object.keys(updates).forEach(function(key) {
