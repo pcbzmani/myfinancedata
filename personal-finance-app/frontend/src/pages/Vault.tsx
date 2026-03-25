@@ -44,7 +44,7 @@ function generatePassword(opts: { length: number; upper: boolean; numbers: boole
 /* ─── Pin lock screen ─── */
 function PinScreen({ mode, onSubmit }: { mode: 'setup' | 'enter'; onSubmit: (pin: string) => void }) {
   const [pin, setPin] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [err, setErr] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +53,7 @@ function PinScreen({ mode, onSubmit }: { mode: 'setup' | 'enter'; onSubmit: (pin
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (pin.length < 4) { setErr('PIN must be at least 4 characters.'); return; }
-    if (mode === 'setup' && pin !== confirm) { setErr('PINs do not match.'); return; }
+    if (mode === 'setup' && pin !== confirmPin) { setErr('PINs do not match.'); return; }
     setErr('');
     onSubmit(pin);
   }
@@ -98,8 +98,8 @@ function PinScreen({ mode, onSubmit }: { mode: 'setup' | 'enter'; onSubmit: (pin
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Confirm PIN</label>
               <input
                 type="password"
-                value={confirm}
-                onChange={e => setConfirm(e.target.value)}
+                value={confirmPin}
+                onChange={e => setConfirmPin(e.target.value)}
                 placeholder="Re-enter PIN"
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
                 autoComplete="off"
