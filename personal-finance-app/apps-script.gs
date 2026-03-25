@@ -85,6 +85,21 @@ function addRow(ss, name, data) {
     const lastCol = sheet.getLastColumn();
     if (lastCol === 0) return { error: 'Sheet has no columns' };
     headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    // If data has keys not yet in the sheet, add them as new columns.
+    // This handles cases like the transactions sheet being created before
+    // the currency field was introduced.
+    const newKeys = Object.keys(data).filter(function(k) {
+      return k && headerRow.indexOf(k) < 0;
+    });
+    if (newKeys.length > 0) {
+      const newStartCol = headerRow.length + 1;
+      const newHeaderRange = sheet.getRange(1, newStartCol, 1, newKeys.length);
+      newHeaderRange.setValues([newKeys]);
+      newHeaderRange.setFontWeight('bold').setBackground('#7c3aed').setFontColor('#ffffff');
+      sheet.setColumnWidths(newStartCol, newKeys.length, 150);
+      headerRow = headerRow.concat(newKeys);
+    }
   }
 
   const row = headerRow.map(function(h) {
