@@ -12,6 +12,16 @@ const normCur = (t: any): string => (t.currency && String(t.currency).trim()) ||
 
 const EMPTY_FORM = { type: 'expense', category: 'Food', amount: '', description: '', date: '', currency: 'QAR' };
 
+/** Normalize any date value (Date object, locale string, ISO string) to YYYY-MM-DD for <input type="date"> */
+const toDateInput = (d: any): string => {
+  if (!d) return '';
+  if (d instanceof Date) return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+  const s = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const p = new Date(s);
+  return isNaN(p.getTime()) ? '' : p.toISOString().split('T')[0];
+};
+
 export default function Transactions() {
   const [items, setItems]               = useState<any[]>([]);
   const [form, setForm]                 = useState(EMPTY_FORM);
@@ -73,7 +83,7 @@ export default function Transactions() {
       category: CATEGORIES.includes(t.category) ? t.category : 'Other',
       amount: String(t.amount || ''),
       description: t.description || '',
-      date: t.date || '',
+      date: toDateInput(t.date),
       currency: isCustom ? '__custom__' : cur,
     });
     setEditCustomCurrency(isCustom ? cur : '');
