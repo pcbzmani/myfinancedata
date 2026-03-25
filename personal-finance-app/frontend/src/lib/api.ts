@@ -42,3 +42,8 @@ export async function ping(): Promise<boolean> {
   catch { return false; }
 }
 
+export async function getMarketRates(): Promise<Record<string, { price: number; change: number; changePct: number }>> {
+  const r = await call({ action: 'readMarket' });
+  return r.data || {};
+}
+
