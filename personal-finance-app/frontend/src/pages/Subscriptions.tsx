@@ -66,6 +66,7 @@ export default function Subscriptions() {
   const [customCurrency, setCustomCurrency] = useState('');
   const [freqFilter, setFreqFilter] = useState<'all' | Frequency>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
+  const [editId, setEditId] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,6 +122,49 @@ export default function Subscriptions() {
     }
   }
 
+  function startEdit(item: any) {
+    const cur = String(item.currency || 'QAR');
+    const isCustom = !CURRENCIES.includes(cur);
+    setEditId(item.id);
+    setForm({
+      name: item.name || '',
+      category: (CATEGORIES.includes(item.category) ? item.category : 'other') as Category,
+      cost: String(item.cost || ''),
+      currency: isCustom ? '__custom__' : cur,
+      frequency: (FREQUENCIES.includes(item.frequency) ? item.frequency : 'monthly') as Frequency,
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      website: item.website || '',
+      notes: item.notes || '',
+    });
+    setCustomCurrency(isCustom ? cur : '');
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.cost || !form.startDate) {
+      setError('Name, cost and start date are required.'); return;
+    }
+    setSaving(true);
+    const currency = form.currency === '__custom__'
+      ? (customCurrency.toUpperCase().trim() || 'QAR')
+      : form.currency;
+    try {
+      const updates = {
+        name: form.name.trim(), category: form.category,
+        cost: parseFloat(form.cost), currency,
+        frequency: form.frequency, startDate: form.startDate,
+        endDate: form.endDate, website: form.website, notes: form.notes,
+      };
+      await updateRow('subscriptions', editId!, updates);
+      setItems(prev => prev.map(i => i.id === editId ? { ...i, ...updates } : i));
+      setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(false); setError('');
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
   async function handleStatusChange(id: string, status: Status) {
     try {
       await updateRow('subscriptions', id, { status });
@@ -163,7 +207,7 @@ export default function Subscriptions() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Track your recurring services & memberships</p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+          onClick={() => { setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -238,10 +282,10 @@ export default function Subscriptions() {
       {showForm && (
         <div ref={formRef} className="mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">New Subscription</h2>
-            <button onClick={() => { setShowForm(false); setError(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">✕</button>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{editId ? 'Edit Subscription' : 'New Subscription'}</h2>
+            <button onClick={() => { setShowForm(false); setEditId(null); setError(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">✕</button>
           </div>
-          <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={editId ? handleUpdate : handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Service Name *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
@@ -313,9 +357,9 @@ export default function Subscriptions() {
             <div className="sm:col-span-2 flex gap-3 pt-1">
               <button type="submit" disabled={saving}
                 className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white py-2 rounded-xl text-sm font-medium transition-colors">
-                {saving ? 'Saving…' : 'Add Subscription'}
+                {saving ? 'Saving…' : editId ? 'Update Subscription' : 'Add Subscription'}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setCustomCurrency(''); setError(''); }}
+              <button type="button" onClick={() => { setShowForm(false); setEditId(null); setCustomCurrency(''); setError(''); }}
                 className="px-6 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                 Cancel
               </button>
@@ -407,6 +451,14 @@ export default function Subscriptions() {
                     </a>
                   )}
                   <div className="flex items-center gap-1 ml-auto">
+                    {/* Edit button */}
+                    <button onClick={() => startEdit(item)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                      title="Edit">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
                     {/* Status toggle */}
                     <select value={item.status}
                       onChange={e => handleStatusChange(item.id, e.target.value as Status)}
