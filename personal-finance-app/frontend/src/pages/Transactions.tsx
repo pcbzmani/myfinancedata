@@ -39,6 +39,9 @@ export default function Transactions() {
   const [editCustomCurrency, setEditCustomCurrency] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState<'original' | 'QAR' | 'INR' | 'USD'>('original');
   const [fxRates, setFxRates]           = useState<{ qarInr: number; usdInr: number } | null>(null);
+  const [dateFilter, setDateFilter]     = useState<'month' | 'lastMonth' | 'year' | 'custom'>('month');
+  const [customFrom, setCustomFrom]     = useState('');
+  const [customTo, setCustomTo]         = useState('');
   const editFormRef = useRef<HTMLDivElement>(null);
 
   const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
@@ -148,12 +151,33 @@ export default function Transactions() {
   // ── derived data ───────────────────────────────────────────────────────────
   const availableCurs = ['all', ...Array.from(new Set(items.map(normCur))).sort()];
 
-  const filtered = items
+  // date filter
+  const now = new Date();
+  const dateFiltered = items.filter(t => {
+    if (!t.date) return true;
+    const d = new Date(String(t.date));
+    if (isNaN(d.getTime())) return true;
+    if (dateFilter === 'month')
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (dateFilter === 'lastMonth') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
+    }
+    if (dateFilter === 'year')
+      return d.getFullYear() === now.getFullYear();
+    if (dateFilter === 'custom') {
+      if (customFrom && d < new Date(customFrom)) return false;
+      if (customTo   && d > new Date(customTo))   return false;
+    }
+    return true;
+  });
+
+  const filtered = dateFiltered
     .filter(t => typeFilter === 'all' || t.type === typeFilter)
     .filter(t => curFilter === 'all' || normCur(t) === curFilter);
 
-  // totals grouped by currency
-  const byCurrency = items.reduce((acc: Record<string, { income: number; expense: number }>, t) => {
+  // totals grouped by currency (respects date filter)
+  const byCurrency = dateFiltered.reduce((acc: Record<string, { income: number; expense: number }>, t) => {
     const cur = normCur(t);
     if (!acc[cur]) acc[cur] = { income: 0, expense: 0 };
     if (t.type === 'income') acc[cur].income += Number(t.amount) || 0;
@@ -223,6 +247,32 @@ export default function Transactions() {
           ))}
         </div>
       )}
+
+      {/* Date filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+          {([
+            { key: 'month',     label: 'This Month' },
+            { key: 'lastMonth', label: 'Last Month' },
+            { key: 'year',      label: 'This Year'  },
+            { key: 'custom',    label: 'Custom'      },
+          ] as const).map(({ key, label }) => (
+            <button key={key} onClick={() => setDateFilter(key)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${dateFilter === key ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {dateFilter === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+              className="border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-xs bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
+            <span className="text-xs text-slate-400">to</span>
+            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+              className="border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-xs bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
+          </div>
+        )}
+      </div>
 
       {/* Totals — grouped by currency */}
       <div className={`grid gap-3 md:gap-4 ${summaryRows.length === 1 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
