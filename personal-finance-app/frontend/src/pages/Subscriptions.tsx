@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
+import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
 
 const FREQUENCIES = ['monthly', 'quarterly', 'yearly'] as const;
 const CATEGORIES = ['productivity', 'entertainment', 'tools', 'cloud', 'ai', 'other'] as const;
@@ -67,10 +67,16 @@ export default function Subscriptions() {
   const [freqFilter, setFreqFilter] = useState<'all' | Frequency>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
   const [editId, setEditId] = useState<string | null>(null);
+  const [fxRates, setFxRates] = useState<{ qarInr: number; usdInr: number } | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<'original' | 'QAR' | 'INR' | 'USD'>('original');
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadItems();
+    getMarketRates().then(d => {
+      if (d.qarInr?.price && d.usdInr?.price)
+        setFxRates({ qarInr: d.qarInr.price, usdInr: d.usdInr.price });
+    }).catch(() => {});
   }, []);
 
   async function loadItems() {
@@ -191,9 +197,41 @@ export default function Subscriptions() {
     return true;
   });
 
-  const totalMonthly = activeItems.reduce((s, i) => s + toMonthly(Number(i.cost) || 0, i.frequency), 0);
-  const totalAnnual  = activeItems.reduce((s, i) => s + toAnnual(Number(i.cost) || 0, i.frequency), 0);
   const upcoming = activeItems.filter(i => { const d = nextRenewal(i); return d && diffDays(d) <= 7; });
+
+  // Per-currency breakdown for active subscriptions
+  const byCurrencyStats = activeItems.reduce((acc: Record<string, { monthly: number; annual: number }>, i) => {
+    const cur = String(i.currency || 'QAR');
+    if (!acc[cur]) acc[cur] = { monthly: 0, annual: 0 };
+    acc[cur].monthly += toMonthly(Number(i.cost) || 0, i.frequency);
+    acc[cur].annual  += toAnnual(Number(i.cost) || 0, i.frequency);
+    return acc;
+  }, {});
+
+  // Currency conversion (pivot through INR)
+  function convertAmount(amount: number, fromCur: string, toCur: string): number | null {
+    if (!fxRates || fromCur === toCur) return amount;
+    let inr: number;
+    if (fromCur === 'INR')      inr = amount;
+    else if (fromCur === 'QAR') inr = amount * fxRates.qarInr;
+    else if (fromCur === 'USD') inr = amount * fxRates.usdInr;
+    else return null;
+    if (toCur === 'INR') return inr;
+    if (toCur === 'QAR') return inr / fxRates.qarInr;
+    if (toCur === 'USD') return inr / fxRates.usdInr;
+    return null;
+  }
+
+  // Consolidated totals (only meaningful when displayCurrency != 'original')
+  const consolidatedStats = displayCurrency !== 'original' && fxRates
+    ? Object.entries(byCurrencyStats).reduce(
+        (acc, [cur, v]) => ({
+          monthly: acc.monthly + (convertAmount(v.monthly, cur, displayCurrency) ?? 0),
+          annual:  acc.annual  + (convertAmount(v.annual,  cur, displayCurrency) ?? 0),
+        }),
+        { monthly: 0, annual: 0 }
+      )
+    : null;
 
   const curSym: Record<string, string> = { QAR: 'QR', INR: '₹', USD: '$', EUR: '€', GBP: '£' };
   const fmtCost = (cost: number, currency: string) => `${curSym[currency] || currency}${cost.toLocaleString()}`;
@@ -244,18 +282,66 @@ export default function Subscriptions() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        {[
-          { label: 'Monthly Cost', value: `QR ${totalMonthly.toFixed(0)}`, sub: 'active subs combined', color: 'text-violet-600 dark:text-violet-400' },
-          { label: 'Annual Cost', value: `QR ${totalAnnual.toFixed(0)}`, sub: 'estimated yearly spend', color: 'text-rose-600 dark:text-rose-400' },
-          { label: 'Active', value: activeItems.filter(i => i.status === 'active').length, sub: `of ${items.length} total`, color: 'text-emerald-600 dark:text-emerald-400' },
-        ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-4 shadow-sm">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide mb-1">{s.label}</p>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{s.sub}</p>
+      <div className="mb-6 space-y-3">
+        {/* Header row: active count + View-in toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Active</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeItems.length}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">of {items.length} total</p>
           </div>
-        ))}
+          {fxRates && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-slate-400 dark:text-slate-500 mr-1">View in:</span>
+              {(['original', 'QAR', 'INR', 'USD'] as const).map(c => (
+                <button key={c} onClick={() => setDisplayCurrency(c)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                    displayCurrency === c
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  }`}>
+                  {c === 'original' ? 'Original' : c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Per-currency breakdown */}
+        <div className={`grid gap-3 ${Object.keys(byCurrencyStats).length === 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
+          {Object.entries(byCurrencyStats).map(([cur, { monthly, annual }]) => (
+            <div key={cur} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-4 shadow-sm">
+              <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-2">{cur}</p>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400 dark:text-slate-500">Monthly</span>
+                  <span className="font-semibold text-violet-600 dark:text-violet-400">{curSym[cur] || cur} {monthly.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50 dark:border-slate-700">
+                  <span className="text-slate-400 dark:text-slate-500">Annual</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">{curSym[cur] || cur} {annual.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Consolidated card */}
+          {consolidatedStats && Object.keys(byCurrencyStats).length > 1 && (
+            <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl px-4 py-4 shadow-sm">
+              <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-2">All → {displayCurrency}</p>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Monthly</span>
+                  <span className="font-semibold text-violet-600 dark:text-violet-400">{curSym[displayCurrency] || displayCurrency} {consolidatedStats.monthly.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-1.5 border-t border-violet-100 dark:border-violet-800">
+                  <span className="text-slate-500 dark:text-slate-400">Annual</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">{curSym[displayCurrency] || displayCurrency} {consolidatedStats.annual.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
