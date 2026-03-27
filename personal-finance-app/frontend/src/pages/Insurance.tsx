@@ -22,6 +22,15 @@ const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', cur
 const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1 };
 const toAnnual = (premium: number, frequency: string) => premium * (FREQ_MULTIPLIER[frequency] ?? 1);
 
+/** Normalise any date value to YYYY-MM-DD for <input type="date"> */
+const toDateInput = (d: any): string => {
+  if (!d) return '';
+  const s = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const p = new Date(s);
+  return isNaN(p.getTime()) ? '' : p.toISOString().split('T')[0];
+};
+
 /** Returns the next payment due date, or null if policy has expired */
 function nextDueDate(p: any): Date | null {
   if (!p.startDate || !p.endDate) return null;
@@ -157,8 +166,8 @@ export default function Insurance() {
       currency: isCustom ? '__custom__' : cur,
       frequency: p.frequency || 'yearly',
       sumAssured: String(p.sumAssured || ''),
-      startDate: p.startDate || '',
-      endDate: p.endDate || '',
+      startDate: toDateInput(p.startDate),
+      endDate: toDateInput(p.endDate),
     });
     setCustomCurrency(isCustom ? cur : '');
     setShowForm(true);
