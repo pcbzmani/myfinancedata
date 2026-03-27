@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getRows, addRow, deleteRow } from '../lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
 
 const TYPES = ['health', 'life', 'vehicle', 'home', 'term'];
 const TYPE_META: Record<string, { emoji: string; color: string; darkColor: string; border: string; darkBorder: string; bg: string; darkBg: string }> = {
@@ -94,9 +94,13 @@ export default function Insurance() {
   const [error, setError]       = useState('');
   const [freqFilter, setFreqFilter]   = useState<FreqFilter>('all');
   const [curFilter, setCurFilter]     = useState('all');
+  const [editId, setEditId]           = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const load = () => getRows('insurance').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
+
+  const scrollToForm = () => setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +123,46 @@ export default function Insurance() {
       load();
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editId) return;
+    setSaving(true);
+    const currency = form.currency === '__custom__'
+      ? (customCurrency.toUpperCase().trim() || 'INR')
+      : form.currency;
+    try {
+      const updates = {
+        type: form.type, provider: form.provider, policyNumber: form.policyNumber,
+        premium: Number(form.premium), currency, frequency: form.frequency,
+        sumAssured: Number(form.sumAssured), startDate: form.startDate, endDate: form.endDate,
+      };
+      await updateRow('insurance', editId, updates);
+      setItems(prev => prev.map(i => i.id === editId ? { ...i, ...updates } : i));
+      setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(false); setError('');
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const startEdit = (p: any) => {
+    const cur = normCur(p);
+    const isCustom = !PRESET_CURRENCIES.includes(cur);
+    setEditId(p.id);
+    setForm({
+      type: p.type || 'health',
+      provider: p.provider || '',
+      policyNumber: p.policyNumber || '',
+      premium: String(p.premium || ''),
+      currency: isCustom ? '__custom__' : cur,
+      frequency: p.frequency || 'yearly',
+      sumAssured: String(p.sumAssured || ''),
+      startDate: p.startDate || '',
+      endDate: p.endDate || '',
+    });
+    setCustomCurrency(isCustom ? cur : '');
+    setShowForm(true);
+    scrollToForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -160,7 +204,7 @@ export default function Insurance() {
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">All your policies in one place</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(true); scrollToForm(); }}
           className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm"
         >
           + Add Policy
@@ -267,13 +311,14 @@ export default function Insurance() {
         </div>
       )}
 
-      {/* Add Form */}
+      {/* Add / Edit Form */}
       {showForm && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 dark:bg-slate-700/30">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200">Add Insurance Policy</h3>
+        <div ref={formRef} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 dark:bg-slate-700/30 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200">{editId ? 'Edit Policy' : 'Add Insurance Policy'}</h3>
+            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setError(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">✕</button>
           </div>
-          <form onSubmit={handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={editId ? handleUpdate : handleAdd} className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</label>
               <select
@@ -383,9 +428,9 @@ export default function Insurance() {
               />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
-              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); setCustomCurrency(''); }} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY); setCustomCurrency(''); }} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
-                {saving ? 'Saving…' : 'Save Policy'}
+                {saving ? 'Saving…' : editId ? 'Update Policy' : 'Save Policy'}
               </button>
             </div>
           </form>
@@ -425,10 +470,20 @@ export default function Insurance() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-400 transition-all text-lg font-bold"
-                  >×</button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button onClick={() => startEdit(p)}
+                      className="p-1 rounded-lg text-slate-400 hover:bg-white/80 dark:hover:bg-slate-700 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                      title="Edit">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="p-1 rounded-lg text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700 hover:text-rose-400 transition-colors text-lg font-bold leading-none"
+                      title="Delete"
+                    >×</button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm mt-4">
