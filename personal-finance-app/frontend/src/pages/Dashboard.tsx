@@ -146,6 +146,7 @@ export default function Dashboard() {
   const [txns, setTxns] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
   const [insurance, setInsurance] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -162,8 +163,9 @@ export default function Dashboard() {
       getRows('transactions'),
       getRows('investments'),
       getRows('insurance'),
-    ]).then(([t, inv, ins]) => {
-      setTxns(t); setInvestments(inv); setInsurance(ins); setLoading(false);
+      getRows('subscriptions'),
+    ]).then(([t, inv, ins, subs]) => {
+      setTxns(t); setInvestments(inv); setInsurance(ins); setSubscriptions(subs); setLoading(false);
     }).catch(e => { setError(e.message); setLoading(false); });
   }, []);
 
@@ -451,6 +453,27 @@ export default function Dashboard() {
               <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Annual Premium</span><span className="font-semibold text-amber-600">{fmt(totalPremium)}</span></div>
             </div>
             <Link to="/insurance" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">Manage policies →</Link>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Subscriptions</h2>
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 dark:text-slate-500">Active</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{subscriptions.filter(s => s.status === 'active').length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 dark:text-slate-500">Total</span>
+                <span className="font-semibold text-violet-600">{subscriptions.length} services</span>
+              </div>
+            </div>
+            <Link to="/subscriptions" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">Manage subscriptions →</Link>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Password Vault</h2>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Securely store and manage your credentials.</p>
+            <Link to="/vault" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">Open vault →</Link>
           </div>
         </div>
       </div>

@@ -288,7 +288,7 @@ export default function Transactions() {
                 <span className="text-slate-400 dark:text-slate-500">Expenses</span>
                 <span className="font-semibold text-rose-500">{fmt(expense, cur)}</span>
               </div>
-              <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50">
+              <div className="flex justify-between text-sm pt-1.5 border-t border-slate-50 dark:border-slate-700">
                 <span className="text-slate-500 dark:text-slate-400 font-medium">Net</span>
                 <span className={`font-bold ${income - expense >= 0 ? 'text-violet-600' : 'text-rose-500'}`}>
                   {fmt(income - expense, cur)}
@@ -297,6 +297,41 @@ export default function Transactions() {
             </div>
           </div>
         ))}
+
+        {/* Consolidated total card — shown when a display currency is chosen and fxRates are available */}
+        {displayCurrency !== 'original' && fxRates && summaryRows.length > 1 && (() => {
+          const totals = summaryRows.reduce(
+            (acc, { cur, income, expense }) => {
+              const inc = convertAmount(income, cur, displayCurrency) ?? 0;
+              const exp = convertAmount(expense, cur, displayCurrency) ?? 0;
+              return { income: acc.income + inc, expense: acc.expense + exp };
+            },
+            { income: 0, expense: 0 }
+          );
+          const net = totals.income - totals.expense;
+          return (
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-2xl p-5 border border-violet-200 dark:border-violet-700 shadow-sm">
+              <p className="text-xs font-bold text-violet-500 uppercase tracking-widest mb-1">All → {displayCurrency}</p>
+              <p className="text-[10px] text-violet-400 dark:text-violet-500 mb-3">Consolidated at live rates</p>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400 dark:text-slate-500">Income</span>
+                  <span className="font-semibold text-emerald-600">{fmt(totals.income, displayCurrency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400 dark:text-slate-500">Expenses</span>
+                  <span className="font-semibold text-rose-500">{fmt(totals.expense, displayCurrency)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-1.5 border-t border-violet-100 dark:border-violet-800">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Net</span>
+                  <span className={`font-bold ${net >= 0 ? 'text-violet-600' : 'text-rose-500'}`}>
+                    {fmt(net, displayCurrency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Add form */}
