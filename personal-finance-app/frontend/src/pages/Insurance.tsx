@@ -10,8 +10,14 @@ const TYPE_META: Record<string, { emoji: string; color: string; darkColor: strin
   term:    { emoji: '📋', color: 'text-rose-700',    darkColor: 'dark:text-rose-400',    border: 'border-rose-200',    darkBorder: 'dark:border-rose-700',    bg: 'bg-rose-50',    darkBg: 'dark:bg-rose-900/20' },
 };
 
-const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
-const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', frequency: 'yearly', sumAssured: '', startDate: '', endDate: '' };
+const PRESET_CURRENCIES = ['INR', 'QAR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'];
+const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', QAR: 'QAR ', USD: '$', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ' };
+const currSym = (c: string) => CURRENCY_SYMBOLS[c] ?? `${c} `;
+const normCur = (p: any): string => (p.currency && String(p.currency).trim()) || 'INR';
+const fmt = (n: number, currency = 'INR') =>
+  `${currSym(currency)}${Math.abs(n).toLocaleString('en-IN')}`;
+
+const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', currency: 'INR', frequency: 'yearly', sumAssured: '', startDate: '', endDate: '' };
 
 const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1 };
 const toAnnual = (premium: number, frequency: string) => premium * (FREQ_MULTIPLIER[frequency] ?? 1);
@@ -39,6 +45,7 @@ function downloadICS(p: any) {
   const next = nextDueDate(p);
   if (!next) return;
 
+  const cur = normCur(p);
   const pad = (n: number) => String(n).padStart(2, '0');
   const dtDate = `${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`;
   const uid = `${p.id || Date.now()}@personal-finance-app`;
@@ -52,7 +59,7 @@ function downloadICS(p: any) {
     `DTSTART;VALUE=DATE:${dtDate}`,
     `DTEND;VALUE=DATE:${dtDate}`,
     `SUMMARY:Insurance Payment: ${p.provider} (${p.type})`,
-    `DESCRIPTION:Premium: ${fmt(Number(p.premium))}/${p.frequency}\\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency))}\\nPolicy#: ${p.policyNumber || 'N/A'}`,
+    `DESCRIPTION:Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency), cur)}\\nPolicy#: ${p.policyNumber || 'N/A'}`,
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
     'TRIGGER:-P7D',
@@ -81,10 +88,12 @@ type FreqFilter = 'all' | 'monthly' | 'quarterly' | 'yearly';
 export default function Insurance() {
   const [items, setItems]       = useState<any[]>([]);
   const [form, setForm]         = useState(EMPTY);
+  const [customCurrency, setCustomCurrency] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
-  const [freqFilter, setFreqFilter] = useState<FreqFilter>('all');
+  const [freqFilter, setFreqFilter]   = useState<FreqFilter>('all');
+  const [curFilter, setCurFilter]     = useState('all');
 
   const load = () => getRows('insurance').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -92,16 +101,21 @@ export default function Insurance() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const currency = form.currency === '__custom__'
+      ? (customCurrency.toUpperCase().trim() || 'INR')
+      : form.currency;
     try {
       await addRow('insurance', {
         id: crypto.randomUUID(),
         ...form,
+        currency,
         premium: Number(form.premium),
         sumAssured: Number(form.sumAssured),
         status: 'active',
       });
       setShowForm(false);
       setForm(EMPTY);
+      setCustomCurrency('');
       load();
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
@@ -112,7 +126,16 @@ export default function Insurance() {
     catch (e: any) { setError(e.message); }
   };
 
-  const totalAnnualPremium = items.reduce((s, p) => s + toAnnual(Number(p.premium), p.frequency), 0);
+  // Available currencies in the data (for filter tabs)
+  const availableCurs = ['all', ...Array.from(new Set(items.map(normCur))).sort()];
+
+  // Per-currency annual premium totals (active policies only)
+  const annualByCurrency = items.reduce((acc: Record<string, number>, p) => {
+    const cur = normCur(p);
+    acc[cur] = (acc[cur] || 0) + toAnnual(Number(p.premium), p.frequency);
+    return acc;
+  }, {});
+
   const expiringSoon = items.filter(p => {
     const days = (new Date(p.endDate).getTime() - Date.now()) / 86400000;
     return days <= 90 && days > 0;
@@ -123,7 +146,11 @@ export default function Insurance() {
     .filter(({ next }) => next !== null && (next!.getTime() - Date.now()) / 86400000 <= 7)
     .sort((a, b) => a.next!.getTime() - b.next!.getTime());
 
-  const filtered = freqFilter === 'all' ? items : items.filter(p => p.frequency === freqFilter);
+  const filtered = items
+    .filter(p => freqFilter === 'all' || p.frequency === freqFilter)
+    .filter(p => curFilter === 'all' || normCur(p) === curFilter);
+
+  const formCur = form.currency === '__custom__' ? (customCurrency || '?') : form.currency;
 
   return (
     <div className="space-y-6">
@@ -157,7 +184,7 @@ export default function Insurance() {
               return (
                 <div key={p.id} className="flex items-center justify-between text-sm">
                   <span className="text-amber-700 dark:text-amber-300">
-                    {TYPE_META[p.type]?.emoji} <strong>{p.provider}</strong> — {fmt(Number(p.premium))}/{p.frequency}
+                    {TYPE_META[p.type]?.emoji} <strong>{p.provider}</strong> — {fmt(Number(p.premium), normCur(p))}/{p.frequency}
                   </span>
                   <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">
                     {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
@@ -175,11 +202,25 @@ export default function Insurance() {
           <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Policies</p>
           <p className="text-2xl font-bold text-slate-700 dark:text-slate-200 mt-1.5">{items.length}</p>
         </div>
+
+        {/* Annual premium per currency */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Annual Premium</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1.5">{fmt(totalAnnualPremium)}</p>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Annual Premium</p>
+          {Object.keys(annualByCurrency).length === 0 ? (
+            <p className="text-2xl font-bold text-amber-600 mt-1.5">—</p>
+          ) : (
+            <div className="space-y-1">
+              {Object.entries(annualByCurrency).map(([cur, total]) => (
+                <div key={cur} className="flex justify-between items-baseline">
+                  <span className="text-xs font-semibold text-violet-500 uppercase">{cur}</span>
+                  <span className="font-bold text-amber-600">{fmt(total, cur)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">All converted to yearly</p>
         </div>
+
         <div className={`rounded-2xl border shadow-sm p-5 ${expiringSoon.length > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
           <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Expiring Soon</p>
           <p className={`text-2xl font-bold mt-1.5 ${expiringSoon.length > 0 ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
@@ -189,20 +230,40 @@ export default function Insurance() {
         </div>
       </div>
 
-      {/* Frequency filter */}
+      {/* Filters */}
       {items.length > 0 && (
-        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1 w-fit">
-          {(['all', 'monthly', 'quarterly', 'yearly'] as FreqFilter[]).map(f => (
-            <button key={f} onClick={() => setFreqFilter(f)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-              {f === 'all' ? 'All' : f}
-              {f !== 'all' && (
-                <span className="ml-1 text-slate-400 dark:text-slate-500">
-                  ({items.filter(p => p.frequency === f).length})
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {/* Frequency filter */}
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+            {(['all', 'monthly', 'quarterly', 'yearly'] as FreqFilter[]).map(f => (
+              <button key={f} onClick={() => setFreqFilter(f)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                {f === 'all' ? 'All Freq' : f}
+                {f !== 'all' && (
+                  <span className="ml-1 text-slate-400 dark:text-slate-500">
+                    ({items.filter(p => p.frequency === f).length})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Currency filter — only shown when multiple currencies exist */}
+          {availableCurs.length > 2 && (
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+              {availableCurs.map(c => (
+                <button key={c} onClick={() => setCurFilter(c)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${curFilter === c ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                  {c === 'all' ? 'All Currencies' : c}
+                  {c !== 'all' && (
+                    <span className="ml-1 text-slate-400 dark:text-slate-500">
+                      ({items.filter(p => normCur(p) === c).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -246,8 +307,28 @@ export default function Insurance() {
               </select>
             </div>
             <div>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>
+              <select
+                value={form.currency}
+                onChange={e => setForm({ ...form, currency: e.target.value })}
+                className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+              >
+                {PRESET_CURRENCIES.map(c => <option key={c} value={c}>{currSym(c).trim()} {c}</option>)}
+                <option value="__custom__">Other (custom)…</option>
+              </select>
+              {form.currency === '__custom__' && (
+                <input
+                  placeholder="e.g. CHF, KWD, BHD"
+                  value={customCurrency}
+                  onChange={e => setCustomCurrency(e.target.value.toUpperCase())}
+                  maxLength={5}
+                  className="w-full mt-2 border border-violet-300 dark:border-violet-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              )}
+            </div>
+            <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Premium (₹ per {form.frequency === 'monthly' ? 'month' : form.frequency === 'quarterly' ? 'quarter' : 'year'})
+                Premium ({formCur} per {form.frequency === 'monthly' ? 'month' : form.frequency === 'quarterly' ? 'quarter' : 'year'})
               </label>
               <input
                 type="number" min="0" step="0.01" placeholder="0.00"
@@ -258,12 +339,12 @@ export default function Insurance() {
               />
               {form.premium && form.frequency !== 'yearly' && (
                 <p className="text-xs text-violet-600 mt-1">
-                  = {fmt(toAnnual(Number(form.premium), form.frequency))} / year
+                  = {fmt(toAnnual(Number(form.premium), form.frequency), formCur === '?' ? 'INR' : formCur)} / year
                 </p>
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sum Assured (₹)</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sum Assured ({formCur})</label>
               <input
                 type="number" min="0" step="1" placeholder="0"
                 value={form.sumAssured}
@@ -302,7 +383,7 @@ export default function Insurance() {
               />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
-              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); }} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY); setCustomCurrency(''); }} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving…' : 'Save Policy'}
               </button>
@@ -315,12 +396,17 @@ export default function Insurance() {
       {filtered.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm py-16 text-center">
           <p className="text-4xl mb-3">🛡️</p>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">{items.length === 0 ? 'No policies yet' : `No ${freqFilter} policies`}</p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">{items.length === 0 ? 'Click "Add Policy" to track your insurance' : 'Try a different frequency filter'}</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">
+            {items.length === 0 ? 'No policies yet' : `No ${curFilter !== 'all' ? curFilter + ' ' : ''}${freqFilter !== 'all' ? freqFilter : ''} policies`}
+          </p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
+            {items.length === 0 ? 'Click "Add Policy" to track your insurance' : 'Try a different filter'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(p => {
+            const cur = normCur(p);
             const daysLeft = Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000);
             const meta = TYPE_META[p.type] || TYPE_META.health;
             const annual = toAnnual(Number(p.premium), p.frequency);
@@ -333,7 +419,10 @@ export default function Insurance() {
                     <span className="text-2xl">{meta.emoji}</span>
                     <div>
                       <p className={`font-semibold text-sm ${meta.color} ${meta.darkColor}`}>{p.provider}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{p.type} insurance</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{p.type} insurance</p>
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-white/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300">{cur}</span>
+                      </div>
                     </div>
                   </div>
                   <button
@@ -345,17 +434,17 @@ export default function Insurance() {
                 <div className="space-y-2 text-sm mt-4">
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Premium</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.premium))} / {p.frequency}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.premium), cur)} / {p.frequency}</span>
                   </div>
                   {p.frequency !== 'yearly' && (
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-slate-400">Annual equivalent</span>
-                      <span className="font-medium text-violet-700 dark:text-violet-400 text-xs">{fmt(annual)} / yr</span>
+                      <span className="font-medium text-violet-700 dark:text-violet-400 text-xs">{fmt(annual, cur)} / yr</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Sum Assured</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.sumAssured))}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">{fmt(Number(p.sumAssured), cur)}</span>
                   </div>
                   {p.policyNumber && (
                     <div className="flex justify-between">
