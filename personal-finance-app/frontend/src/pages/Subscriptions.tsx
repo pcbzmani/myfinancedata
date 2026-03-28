@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
 
-const FREQUENCIES = ['monthly', 'quarterly', 'yearly'] as const;
+const FREQUENCIES = ['monthly', 'quarterly', 'half-yearly', 'yearly', 'custom'] as const;
 const CATEGORIES = ['productivity', 'entertainment', 'tools', 'cloud', 'ai', 'other'] as const;
 const CURRENCIES = ['QAR', 'INR', 'USD', 'EUR', 'GBP'];
 const STATUSES = ['active', 'paused', 'cancelled'] as const;
@@ -10,30 +10,41 @@ type Frequency = typeof FREQUENCIES[number];
 type Category = typeof CATEGORIES[number];
 type Status = typeof STATUSES[number];
 
-const FREQ_MULTIPLIER: Record<Frequency, number> = { monthly: 12, quarterly: 4, yearly: 1 };
+const FREQ_LABEL: Record<Frequency, string> = {
+  monthly: 'Monthly', quarterly: 'Quarterly', 'half-yearly': 'Half-Yearly', yearly: 'Yearly', custom: 'Custom',
+};
+// Payments per year (custom handled separately via customMonths)
+const FREQ_PER_YEAR: Record<Frequency, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1, custom: 0 };
+
+const toMonthly = (cost: number, freq: Frequency, customMonths = 1): number => {
+  if (freq === 'monthly') return cost;
+  if (freq === 'quarterly') return cost / 3;
+  if (freq === 'half-yearly') return cost / 6;
+  if (freq === 'custom') return customMonths > 0 ? cost / customMonths : 0;
+  return cost / 12;
+};
+const toAnnual = (cost: number, freq: Frequency, customMonths = 1): number => {
+  if (freq === 'custom') return customMonths > 0 ? cost * (12 / customMonths) : 0;
+  return cost * FREQ_PER_YEAR[freq];
+};
 
 /** Auto-calculate end date from start date + frequency */
-function calcEndDate(startDate: string, frequency: Frequency): string {
+function calcEndDate(startDate: string, frequency: Frequency, customMonths = 1): string {
   if (!startDate) return '';
   const d = new Date(startDate + 'T00:00:00');
   if (isNaN(d.getTime())) return '';
   if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
   else if (frequency === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (frequency === 'half-yearly') d.setMonth(d.getMonth() + 6);
+  else if (frequency === 'custom') d.setMonth(d.getMonth() + Math.max(1, customMonths));
   else d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().split('T')[0];
 }
 
 const getEmpty = () => {
   const sd = new Date().toISOString().split('T')[0];
-  return { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, startDate: sd, endDate: calcEndDate(sd, 'monthly'), website: '', notes: '' };
+  return { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, customMonths: '1', startDate: sd, endDate: calcEndDate(sd, 'monthly'), website: '', notes: '' };
 };
-
-const toMonthly = (cost: number, freq: Frequency) => {
-  if (freq === 'monthly') return cost;
-  if (freq === 'quarterly') return cost / 3;
-  return cost / 12;
-};
-const toAnnual = (cost: number, freq: Frequency) => cost * FREQ_MULTIPLIER[freq];
 
 const CAT_META: Record<Category, { emoji: string; color: string; bg: string; border: string }> = {
   productivity: { emoji: '⚡', color: 'text-blue-700 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-900/20',   border: 'border-blue-200 dark:border-blue-700' },
@@ -50,6 +61,14 @@ const STATUS_META: Record<Status, { label: string; color: string; bg: string }> 
   cancelled: { label: 'Cancelled', color: 'text-rose-700 dark:text-rose-400',       bg: 'bg-rose-50 dark:bg-rose-900/30' },
 };
 
+function advanceByFreq(d: Date, freq: Frequency, customMonths: number) {
+  if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (freq === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (freq === 'half-yearly') d.setMonth(d.getMonth() + 6);
+  else if (freq === 'custom') d.setMonth(d.getMonth() + Math.max(1, customMonths));
+  else d.setFullYear(d.getFullYear() + 1);
+}
+
 function nextRenewal(sub: any): Date | null {
   if (!sub.startDate) return null;
   const start = new Date(sub.startDate + 'T00:00:00');
@@ -58,12 +77,9 @@ function nextRenewal(sub: any): Date | null {
   if (end && now >= end) return null;
 
   const freq: Frequency = sub.frequency || 'monthly';
+  const cm = Number(sub.customMonths) || 1;
   let next = new Date(start);
-  while (next <= now) {
-    if (freq === 'monthly') next.setMonth(next.getMonth() + 1);
-    else if (freq === 'quarterly') next.setMonth(next.getMonth() + 3);
-    else next.setFullYear(next.getFullYear() + 1);
-  }
+  while (next <= now) advanceByFreq(next, freq, cm);
   return (!end || next <= end) ? next : null;
 }
 
@@ -84,6 +100,7 @@ export default function Subscriptions() {
   const [editId, setEditId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<{ qarInr: number; usdInr: number } | null>(null);
   const [displayCurrency, setDisplayCurrency] = useState<'original' | 'QAR' | 'INR' | 'USD'>('original');
+  const [search, setSearch] = useState('');
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,6 +140,7 @@ export default function Subscriptions() {
         cost: parseFloat(form.cost),
         currency,
         frequency: form.frequency,
+        customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
         website: form.website,
@@ -163,6 +181,7 @@ export default function Subscriptions() {
       cost: String(item.cost || ''),
       currency: isCustom ? '__custom__' : cur,
       frequency: (FREQUENCIES.includes(item.frequency) ? item.frequency : 'monthly') as Frequency,
+      customMonths: String(item.customMonths || '1'),
       startDate: item.startDate || '',
       endDate: item.endDate || '',
       website: item.website || '',
@@ -186,7 +205,9 @@ export default function Subscriptions() {
       const updates = {
         name: form.name.trim(), category: form.category,
         cost: parseFloat(form.cost), currency,
-        frequency: form.frequency, startDate: form.startDate,
+        frequency: form.frequency,
+        customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
+        startDate: form.startDate,
         endDate: form.endDate, website: form.website, notes: form.notes,
       };
       await updateRow('subscriptions', editId!, updates);
@@ -216,9 +237,11 @@ export default function Subscriptions() {
   }
 
   const activeItems = items.filter(i => i.status === 'active');
+  const q = search.toLowerCase();
   const filtered = items.filter(i => {
     if (freqFilter !== 'all' && i.frequency !== freqFilter) return false;
     if (statusFilter !== 'all' && i.status !== statusFilter) return false;
+    if (q && !`${i.name} ${i.category} ${i.notes}`.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -227,9 +250,10 @@ export default function Subscriptions() {
   // Per-currency breakdown for active subscriptions
   const byCurrencyStats = activeItems.reduce((acc: Record<string, { monthly: number; annual: number }>, i) => {
     const cur = String(i.currency || 'QAR');
+    const cm = Number(i.customMonths) || 1;
     if (!acc[cur]) acc[cur] = { monthly: 0, annual: 0 };
-    acc[cur].monthly += toMonthly(Number(i.cost) || 0, i.frequency);
-    acc[cur].annual  += toAnnual(Number(i.cost) || 0, i.frequency);
+    acc[cur].monthly += toMonthly(Number(i.cost) || 0, i.frequency, cm);
+    acc[cur].annual  += toAnnual(Number(i.cost) || 0, i.frequency, cm);
     return acc;
   }, {});
 
@@ -276,6 +300,16 @@ export default function Subscriptions() {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Add Subscription
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search subscriptions…"
+          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+        />
       </div>
 
       {/* Error */}
@@ -374,8 +408,8 @@ export default function Subscriptions() {
         <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
           {(['all', ...FREQUENCIES] as const).map(f => (
             <button key={f} onClick={() => setFreqFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${freqFilter === f ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-              {f === 'all' ? 'All' : f}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${freqFilter === f ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+              {f === 'all' ? 'All' : FREQ_LABEL[f as Frequency]}
             </button>
           ))}
         </div>
@@ -438,14 +472,23 @@ export default function Subscriptions() {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Billing Frequency *</label>
-              <select value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value as Frequency, endDate: calcEndDate(p.startDate, e.target.value as Frequency) }))}
+              <select value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value as Frequency, endDate: calcEndDate(p.startDate, e.target.value as Frequency, Number(p.customMonths) || 1) }))}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
-                {FREQUENCIES.map(f => <option key={f} value={f} className="capitalize">{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+                {FREQUENCIES.map(f => <option key={f} value={f}>{FREQ_LABEL[f]}</option>)}
               </select>
+              {form.frequency === 'custom' && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Every</label>
+                  <input type="number" min="1" max="24" value={form.customMonths}
+                    onChange={e => setForm(p => ({ ...p, customMonths: e.target.value, endDate: calcEndDate(p.startDate, 'custom', Number(e.target.value) || 1) }))}
+                    className="w-16 px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  <label className="text-xs text-slate-500 dark:text-slate-400">month(s)</label>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Start Date *</label>
-              <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value, endDate: calcEndDate(e.target.value, p.frequency) }))} required
+              <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value, endDate: calcEndDate(e.target.value, p.frequency, Number(p.customMonths) || 1) }))} required
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div>
