@@ -576,8 +576,7 @@ export default function Insurance() {
                 {next && (
                   <button
                     onClick={() => downloadICS(p)}
-                    className="mt-3 w-full text-xs py-1.5 rounded-lg border border-current opacity-60 hover:opacity-100 transition-opacity font-medium flex items-center justify-center gap-1.5"
-                    style={{ color: 'inherit' }}
+                    className="mt-3 w-full text-xs py-1.5 rounded-lg border border-slate-400 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:border-violet-500 dark:hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors font-medium flex items-center justify-center gap-1.5"
                     title="Download .ics reminder for Google Calendar / Apple Calendar / Outlook"
                   >
                     📅 Add reminder to calendar
