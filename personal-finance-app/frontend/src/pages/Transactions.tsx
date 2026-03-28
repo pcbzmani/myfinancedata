@@ -42,9 +42,50 @@ export default function Transactions() {
   const [dateFilter, setDateFilter]     = useState<'month' | 'lastMonth' | 'year' | 'custom'>('month');
   const [customFrom, setCustomFrom]     = useState('');
   const [customTo, setCustomTo]         = useState('');
+  const [carryForward, setCarryForward] = useState<{ cur: string; net: number }[]>([]);
   const editFormRef = useRef<HTMLDivElement>(null);
 
-  const load = () => getRows('transactions').then(setItems).catch(e => setError(e.message));
+  function computeCarryForward(allItems: any[]) {
+    const now = new Date();
+    const cfKey = `cf_dismissed_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (localStorage.getItem(cfKey)) return;
+
+    const lmYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const lmMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+
+    const lmItems = allItems.filter(t => {
+      if (!t.date) return false;
+      const d = new Date(String(t.date));
+      return d.getFullYear() === lmYear && d.getMonth() === lmMonth;
+    });
+    if (lmItems.length === 0) return;
+
+    // Skip if carry-forward already exists for this month
+    const alreadyDone = allItems.some(t => {
+      if (!t.date) return false;
+      const d = new Date(String(t.date));
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+        && String(t.description || '').startsWith('Carry Forward from');
+    });
+    if (alreadyDone) return;
+
+    const byCur: Record<string, number> = {};
+    for (const t of lmItems) {
+      const cur = normCur(t);
+      if (!byCur[cur]) byCur[cur] = 0;
+      if (t.type === 'income') byCur[cur] += Number(t.amount) || 0;
+      else byCur[cur] -= Number(t.amount) || 0;
+    }
+    const candidates = Object.entries(byCur)
+      .filter(([, net]) => net > 0.01)
+      .map(([cur, net]) => ({ cur, net }));
+    setCarryForward(candidates);
+  }
+
+  const load = () => getRows('transactions').then(data => {
+    setItems(data);
+    computeCarryForward(data);
+  }).catch(e => setError(e.message));
 
   useEffect(() => {
     load();
@@ -148,6 +189,34 @@ export default function Transactions() {
     } catch (e: any) { setError(e.message); }
   };
 
+  // ── carry forward ──────────────────────────────────────────────────────────
+  const handleCarryForward = async (cur: string, net: number) => {
+    const now = new Date();
+    const lmYear  = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const lmMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const lmName  = new Date(lmYear, lmMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+    const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    try {
+      await addRow('transactions', {
+        id: crypto.randomUUID(),
+        type: 'income',
+        category: 'Other',
+        amount: net,
+        currency: cur,
+        description: `Carry Forward from ${lmName}`,
+        date: firstOfMonth,
+      });
+      setCarryForward(prev => prev.filter(c => c.cur !== cur));
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const dismissCarryForward = () => {
+    const now = new Date();
+    localStorage.setItem(`cf_dismissed_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, '1');
+    setCarryForward([]);
+  };
+
   // ── derived data ───────────────────────────────────────────────────────────
   const availableCurs = ['all', ...Array.from(new Set(items.map(normCur))).sort()];
 
@@ -233,6 +302,32 @@ export default function Transactions() {
         <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           {error}
           <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-600 ml-4">✕</button>
+        </div>
+      )}
+
+      {/* Carry-forward banner */}
+      {carryForward.length > 0 && (
+        <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl px-4 py-3 text-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="font-semibold text-violet-800 dark:text-violet-300 mb-2">📅 Last month surplus — carry forward?</p>
+              <div className="space-y-2">
+                {carryForward.map(({ cur, net }) => (
+                  <div key={cur} className="flex flex-wrap items-center gap-3">
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Net surplus ({cur}): <span className="font-semibold text-emerald-600">{fmt(net, cur)}</span>
+                    </span>
+                    <button
+                      onClick={() => handleCarryForward(cur, net)}
+                      className="px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-medium transition-colors">
+                      + Add as income for this month
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button onClick={dismissCarryForward} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0 text-base">✕</button>
+          </div>
         </div>
       )}
 
