@@ -43,6 +43,7 @@ export default function Transactions() {
   const [customFrom, setCustomFrom]     = useState('');
   const [customTo, setCustomTo]         = useState('');
   const [carryForward, setCarryForward] = useState<{ cur: string; net: number }[]>([]);
+  const [search, setSearch] = useState('');
   const editFormRef = useRef<HTMLDivElement>(null);
 
   function computeCarryForward(allItems: any[]) {
@@ -241,9 +242,11 @@ export default function Transactions() {
     return true;
   });
 
+  const tq = search.toLowerCase();
   const filtered = dateFiltered
     .filter(t => typeFilter === 'all' || t.type === typeFilter)
-    .filter(t => curFilter === 'all' || normCur(t) === curFilter);
+    .filter(t => curFilter === 'all' || normCur(t) === curFilter)
+    .filter(t => !tq || `${t.description} ${t.category}`.toLowerCase().includes(tq));
 
   // totals grouped by currency (respects date filter)
   const byCurrency = dateFiltered.reduce((acc: Record<string, { income: number; expense: number }>, t) => {
@@ -296,6 +299,16 @@ export default function Transactions() {
             + Add Transaction
           </button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search transactions…"
+          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+        />
       </div>
 
       {error && (

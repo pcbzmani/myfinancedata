@@ -17,10 +17,14 @@ const normCur = (p: any): string => (p.currency && String(p.currency).trim()) ||
 const fmt = (n: number, currency = 'INR') =>
   `${currSym(currency)}${Math.abs(n).toLocaleString('en-IN')}`;
 
-const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', currency: 'INR', frequency: 'yearly', sumAssured: '', startDate: '', endDate: '' };
+const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', currency: 'INR', frequency: 'yearly', customMonths: '1', sumAssured: '', startDate: '', endDate: '' };
 
-const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, yearly: 1 };
-const toAnnual = (premium: number, frequency: string) => premium * (FREQ_MULTIPLIER[frequency] ?? 1);
+const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1 };
+const FREQ_LABEL: Record<string, string> = { monthly: 'Monthly', quarterly: 'Quarterly', 'half-yearly': 'Half-Yearly', yearly: 'Yearly', custom: 'Custom' };
+const toAnnual = (premium: number, frequency: string, customMonths = 1): number => {
+  if (frequency === 'custom') return customMonths > 0 ? premium * (12 / customMonths) : 0;
+  return premium * (FREQ_MULTIPLIER[frequency] ?? 1);
+};
 
 /** Normalise any date value to YYYY-MM-DD for <input type="date"> */
 const toDateInput = (d: any): string => {
@@ -40,11 +44,14 @@ function nextDueDate(p: any): Date | null {
   if (now >= end) return null;
 
   const freq = p.frequency || 'yearly';
+  const cm = Math.max(1, Number(p.customMonths) || 1);
   let next = new Date(start);
   while (next <= now) {
-    if (freq === 'monthly')        next.setMonth(next.getMonth() + 1);
-    else if (freq === 'quarterly') next.setMonth(next.getMonth() + 3);
-    else                           next.setFullYear(next.getFullYear() + 1);
+    if (freq === 'monthly')           next.setMonth(next.getMonth() + 1);
+    else if (freq === 'quarterly')    next.setMonth(next.getMonth() + 3);
+    else if (freq === 'half-yearly')  next.setMonth(next.getMonth() + 6);
+    else if (freq === 'custom')       next.setMonth(next.getMonth() + cm);
+    else                              next.setFullYear(next.getFullYear() + 1);
   }
   return next <= end ? next : null;
 }
@@ -92,7 +99,7 @@ function downloadICS(p: any) {
   URL.revokeObjectURL(url);
 }
 
-type FreqFilter = 'all' | 'monthly' | 'quarterly' | 'yearly';
+type FreqFilter = 'all' | 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | 'custom';
 
 export default function Insurance() {
   const [items, setItems]       = useState<any[]>([]);
@@ -103,6 +110,7 @@ export default function Insurance() {
   const [error, setError]       = useState('');
   const [freqFilter, setFreqFilter]   = useState<FreqFilter>('all');
   const [curFilter, setCurFilter]     = useState('all');
+  const [search, setSearch]           = useState('');
   const [editId, setEditId]           = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +131,7 @@ export default function Insurance() {
         ...form,
         currency,
         premium: Number(form.premium),
+        customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
         sumAssured: Number(form.sumAssured),
         status: 'active',
       });
@@ -145,6 +154,7 @@ export default function Insurance() {
       const updates = {
         type: form.type, provider: form.provider, policyNumber: form.policyNumber,
         premium: Number(form.premium), currency, frequency: form.frequency,
+        customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
         sumAssured: Number(form.sumAssured), startDate: form.startDate, endDate: form.endDate,
       };
       await updateRow('insurance', editId, updates);
@@ -165,6 +175,7 @@ export default function Insurance() {
       premium: String(p.premium || ''),
       currency: isCustom ? '__custom__' : cur,
       frequency: p.frequency || 'yearly',
+      customMonths: String(p.customMonths || '1'),
       sumAssured: String(p.sumAssured || ''),
       startDate: toDateInput(p.startDate),
       endDate: toDateInput(p.endDate),
@@ -185,7 +196,7 @@ export default function Insurance() {
   // Per-currency annual premium totals (active policies only)
   const annualByCurrency = items.reduce((acc: Record<string, number>, p) => {
     const cur = normCur(p);
-    acc[cur] = (acc[cur] || 0) + toAnnual(Number(p.premium), p.frequency);
+    acc[cur] = (acc[cur] || 0) + toAnnual(Number(p.premium), p.frequency, Number(p.customMonths) || 1);
     return acc;
   }, {});
 
@@ -199,9 +210,11 @@ export default function Insurance() {
     .filter(({ next }) => next !== null && (next!.getTime() - Date.now()) / 86400000 <= 7)
     .sort((a, b) => a.next!.getTime() - b.next!.getTime());
 
+  const q = search.toLowerCase();
   const filtered = items
     .filter(p => freqFilter === 'all' || p.frequency === freqFilter)
-    .filter(p => curFilter === 'all' || normCur(p) === curFilter);
+    .filter(p => curFilter === 'all' || normCur(p) === curFilter)
+    .filter(p => !q || `${p.provider} ${p.type} ${p.policyNumber}`.toLowerCase().includes(q));
 
   const formCur = form.currency === '__custom__' ? (customCurrency || '?') : form.currency;
 
@@ -283,15 +296,25 @@ export default function Insurance() {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search policies…"
+          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+        />
+      </div>
+
       {/* Filters */}
       {items.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {/* Frequency filter */}
           <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
-            {(['all', 'monthly', 'quarterly', 'yearly'] as FreqFilter[]).map(f => (
+            {(['all', 'monthly', 'quarterly', 'half-yearly', 'yearly', 'custom'] as FreqFilter[]).map(f => (
               <button key={f} onClick={() => setFreqFilter(f)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${freqFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                {f === 'all' ? 'All Freq' : f}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${freqFilter === f ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                {f === 'all' ? 'All' : FREQ_LABEL[f]}
                 {f !== 'all' && (
                   <span className="ml-1 text-slate-400 dark:text-slate-500">
                     ({items.filter(p => p.frequency === f).length})
@@ -355,10 +378,19 @@ export default function Insurance() {
                 onChange={e => setForm({ ...form, frequency: e.target.value })}
                 className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
+                {(['monthly', 'quarterly', 'half-yearly', 'yearly', 'custom'] as const).map(f => (
+                  <option key={f} value={f}>{FREQ_LABEL[f]}</option>
+                ))}
               </select>
+              {form.frequency === 'custom' && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Every</label>
+                  <input type="number" min="1" max="24" value={form.customMonths}
+                    onChange={e => setForm({ ...form, customMonths: e.target.value })}
+                    className="w-16 px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 dark:bg-slate-700 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  <label className="text-xs text-slate-500 dark:text-slate-400">month(s)</label>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>
@@ -382,7 +414,12 @@ export default function Insurance() {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Premium ({formCur} per {form.frequency === 'monthly' ? 'month' : form.frequency === 'quarterly' ? 'quarter' : 'year'})
+                Premium ({formCur} per {
+                  form.frequency === 'monthly' ? 'month' :
+                  form.frequency === 'quarterly' ? 'quarter' :
+                  form.frequency === 'half-yearly' ? '6 months' :
+                  form.frequency === 'custom' ? `${form.customMonths || 1} month(s)` : 'year'
+                })
               </label>
               <input
                 type="number" min="0" step="0.01" placeholder="0.00"
@@ -463,7 +500,7 @@ export default function Insurance() {
             const cur = normCur(p);
             const daysLeft = Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000);
             const meta = TYPE_META[p.type] || TYPE_META.health;
-            const annual = toAnnual(Number(p.premium), p.frequency);
+            const annual = toAnnual(Number(p.premium), p.frequency, Number(p.customMonths) || 1);
             const next = nextDueDate(p);
             const daysUntilNext = next ? Math.ceil((next.getTime() - Date.now()) / 86400000) : null;
             return (
