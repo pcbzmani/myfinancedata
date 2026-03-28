@@ -12,6 +12,22 @@ type Status = typeof STATUSES[number];
 
 const FREQ_MULTIPLIER: Record<Frequency, number> = { monthly: 12, quarterly: 4, yearly: 1 };
 
+/** Auto-calculate end date from start date + frequency */
+function calcEndDate(startDate: string, frequency: Frequency): string {
+  if (!startDate) return '';
+  const d = new Date(startDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (frequency === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+const getEmpty = () => {
+  const sd = new Date().toISOString().split('T')[0];
+  return { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, startDate: sd, endDate: calcEndDate(sd, 'monthly'), website: '', notes: '' };
+};
+
 const toMonthly = (cost: number, freq: Frequency) => {
   if (freq === 'monthly') return cost;
   if (freq === 'quarterly') return cost / 3;
@@ -54,7 +70,6 @@ function nextRenewal(sub: any): Date | null {
 const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const diffDays = (d: Date) => Math.ceil((d.getTime() - Date.now()) / 86400000);
 
-const EMPTY = { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, startDate: '', endDate: '', website: '', notes: '' };
 
 export default function Subscriptions() {
   const [items, setItems] = useState<any[]>([]);
@@ -62,7 +77,7 @@ export default function Subscriptions() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState(getEmpty());
   const [customCurrency, setCustomCurrency] = useState('');
   const [freqFilter, setFreqFilter] = useState<'all' | Frequency>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
@@ -116,8 +131,18 @@ export default function Subscriptions() {
         createdAt: new Date().toISOString(),
       };
       await addRow('subscriptions', row);
+      // Mirror subscription start as an expense transaction
+      await addRow('transactions', {
+        id: (Date.now() + 1).toString(),
+        type: 'expense',
+        category: 'Other',
+        amount: row.cost,
+        currency: row.currency,
+        description: `Subscription: ${row.name}`,
+        date: row.startDate,
+      });
       setItems(prev => [row, ...prev]);
-      setForm(EMPTY);
+      setForm(getEmpty());
       setCustomCurrency('');
       setShowForm(false);
       setError('');
@@ -166,7 +191,7 @@ export default function Subscriptions() {
       };
       await updateRow('subscriptions', editId!, updates);
       setItems(prev => prev.map(i => i.id === editId ? { ...i, ...updates } : i));
-      setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(false); setError('');
+      setEditId(null); setForm(getEmpty()); setCustomCurrency(''); setShowForm(false); setError('');
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
   }
@@ -245,7 +270,7 @@ export default function Subscriptions() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Track your recurring services & memberships</p>
         </div>
         <button
-          onClick={() => { setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+          onClick={() => { setEditId(null); setForm(getEmpty()); setCustomCurrency(''); setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -413,14 +438,14 @@ export default function Subscriptions() {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Billing Frequency *</label>
-              <select value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value as Frequency }))}
+              <select value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value as Frequency, endDate: calcEndDate(p.startDate, e.target.value as Frequency) }))}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
                 {FREQUENCIES.map(f => <option key={f} value={f} className="capitalize">{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Start Date *</label>
-              <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} required
+              <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value, endDate: calcEndDate(e.target.value, p.frequency) }))} required
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div>
