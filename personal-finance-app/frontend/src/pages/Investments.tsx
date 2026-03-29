@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
 
-const TYPES = ['stocks', 'mutual_fund', 'crypto', 'fd', 'ppf', 'other'];
+const TYPES = ['stocks', 'mutual_fund', 'crypto', 'fd', 'ppf', 'gold', 'land', 'other'];
 const MARKET_TYPES = ['stocks', 'mutual_fund'];
 const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   stocks:      { label: 'Stocks',      color: 'text-blue-700',    bg: 'bg-blue-100' },
@@ -9,8 +9,13 @@ const TYPE_META: Record<string, { label: string; color: string; bg: string }> = 
   crypto:      { label: 'Crypto',      color: 'text-amber-700',   bg: 'bg-amber-100' },
   fd:          { label: 'FD',          color: 'text-emerald-700', bg: 'bg-emerald-100' },
   ppf:         { label: 'PPF',         color: 'text-teal-700',    bg: 'bg-teal-100' },
+  gold:        { label: 'Gold',        color: 'text-yellow-700',  bg: 'bg-yellow-100' },
+  land:        { label: 'Land',        color: 'text-lime-700',    bg: 'bg-lime-100' },
   other:       { label: 'Other',       color: 'text-slate-600',   bg: 'bg-slate-100' },
 };
+
+const EMPTY_GOLD = { name: '', grams: '', amountInvested: '', purchaseDate: '', notes: '' };
+const EMPTY_LAND = { title: '', fields: [{ key: '', value: '' }] };
 
 // Popular NSE stocks — user picks from this list instead of typing tickers
 const POPULAR_STOCKS = [
@@ -402,6 +407,13 @@ export default function Investments() {
   const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
 
+  // Gold / Land modals
+  const [assetModal, setAssetModal] = useState<'gold' | 'land' | null>(null);
+  const [goldForm, setGoldForm] = useState(EMPTY_GOLD);
+  const [landForm, setLandForm] = useState<{ title: string; fields: { key: string; value: string }[] }>(EMPTY_LAND);
+  const [savingSpecial, setSavingSpecial] = useState(false);
+  const portfolioRef = useRef<HTMLDivElement>(null);
+
   const load = () => getRows('investments').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
 
@@ -463,6 +475,54 @@ export default function Investments() {
       load();
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
+  };
+
+  const handleAddGold = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSpecial(true);
+    try {
+      await addRow('investments', {
+        id: crypto.randomUUID(),
+        type: 'gold',
+        name: goldForm.name.trim() || 'Gold',
+        symbol: '',
+        units: Number(goldForm.grams) || 0,
+        buyPrice: goldForm.grams && goldForm.amountInvested
+          ? Number(goldForm.amountInvested) / Number(goldForm.grams)
+          : 0,
+        amountInvested: Number(goldForm.amountInvested) || 0,
+        currentValue: Number(goldForm.amountInvested) || 0,
+        date: goldForm.purchaseDate || new Date().toISOString().split('T')[0],
+        notes: goldForm.notes,
+      });
+      setAssetModal(null);
+      setGoldForm(EMPTY_GOLD);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setSavingSpecial(false); }
+  };
+
+  const handleAddLand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!landForm.title.trim()) return;
+    setSavingSpecial(true);
+    try {
+      await addRow('investments', {
+        id: crypto.randomUUID(),
+        type: 'land',
+        name: landForm.title.trim(),
+        symbol: JSON.stringify(landForm.fields.filter(f => f.key.trim())),
+        units: 0,
+        buyPrice: 0,
+        amountInvested: 0,
+        currentValue: 0,
+        date: new Date().toISOString().split('T')[0],
+      });
+      setAssetModal(null);
+      setLandForm(EMPTY_LAND);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setSavingSpecial(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -543,6 +603,188 @@ export default function Investments() {
           className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm"
         >+ Add</button>
       </div>
+
+      {/* ── Asset Hub ─────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* Gold */}
+        <button
+          onClick={() => { setAssetModal('gold'); setGoldForm(EMPTY_GOLD); }}
+          className="group flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-yellow-200 dark:border-yellow-700/50 bg-yellow-50 dark:bg-yellow-900/10 hover:border-yellow-400 dark:hover:border-yellow-500 hover:shadow-md transition-all"
+        >
+          <span className="text-3xl">🥇</span>
+          <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">Gold</span>
+        </button>
+
+        {/* Land */}
+        <button
+          onClick={() => { setAssetModal('land'); setLandForm(EMPTY_LAND); }}
+          className="group flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-lime-200 dark:border-lime-700/50 bg-lime-50 dark:bg-lime-900/10 hover:border-lime-400 dark:hover:border-lime-500 hover:shadow-md transition-all"
+        >
+          <span className="text-3xl">🏞️</span>
+          <span className="text-xs font-semibold text-lime-700 dark:text-lime-400">Land</span>
+        </button>
+
+        {/* Digital Assets */}
+        <button
+          onClick={() => {
+            setShowForm(true);
+            handleTypeChange('stocks');
+            setTimeout(() => portfolioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+          }}
+          className="group flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-blue-200 dark:border-blue-700/50 bg-blue-50 dark:bg-blue-900/10 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all"
+        >
+          <span className="text-3xl">💹</span>
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Digital Assets</span>
+        </button>
+      </div>
+
+      {/* ── Gold Modal ────────────────────────────────────────────────────────── */}
+      {assetModal === 'gold' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">🥇 Add Gold</h3>
+              <button onClick={() => setAssetModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
+            </div>
+            <form onSubmit={handleAddGold} className="p-6 space-y-4">
+              <p className="text-xs text-slate-400 dark:text-slate-500">All fields are optional — add only what you want to track.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Label / Description</label>
+                  <input
+                    placeholder="e.g. 22K Jewellery, Sovereign Gold Bond"
+                    value={goldForm.name}
+                    onChange={e => setGoldForm(p => ({ ...p, name: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weight (grams)</label>
+                  <input
+                    type="number" min="0" step="0.001" placeholder="0.000"
+                    value={goldForm.grams}
+                    onChange={e => setGoldForm(p => ({ ...p, grams: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount Invested (₹)</label>
+                  <input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={goldForm.amountInvested}
+                    onChange={e => setGoldForm(p => ({ ...p, amountInvested: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Purchase Date</label>
+                  <input
+                    type="date"
+                    value={goldForm.purchaseDate}
+                    onChange={e => setGoldForm(p => ({ ...p, purchaseDate: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Notes</label>
+                  <input
+                    placeholder="e.g. Stored in locker"
+                    value={goldForm.notes}
+                    onChange={e => setGoldForm(p => ({ ...p, notes: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-2 border-t border-slate-50 dark:border-slate-700">
+                <button type="button" onClick={() => setAssetModal(null)}
+                  className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+                <button type="submit" disabled={savingSpecial}
+                  className="bg-yellow-500 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-yellow-600 disabled:opacity-50 transition-colors">
+                  {savingSpecial ? 'Saving…' : 'Save Gold'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Land Modal ────────────────────────────────────────────────────────── */}
+      {assetModal === 'land' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">🏞️ Add Land / Property</h3>
+              <button onClick={() => setAssetModal(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
+            </div>
+            <form onSubmit={handleAddLand} className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Property Title *</label>
+                <input
+                  required
+                  placeholder="e.g. Plot #42 Whitefield, Chennai Flat"
+                  value={landForm.title}
+                  onChange={e => setLandForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Details (key–value)</label>
+                  <button
+                    type="button"
+                    onClick={() => setLandForm(p => ({ ...p, fields: [...p.fields, { key: '', value: '' }] }))}
+                    className="text-xs text-lime-600 dark:text-lime-400 hover:underline font-medium"
+                  >+ Add field</button>
+                </div>
+                <div className="space-y-2">
+                  {landForm.fields.map((f, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input
+                        placeholder="e.g. Document No."
+                        value={f.key}
+                        onChange={e => setLandForm(p => {
+                          const fields = [...p.fields];
+                          fields[idx] = { ...fields[idx], key: e.target.value };
+                          return { ...p, fields };
+                        })}
+                        className="flex-1 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                      />
+                      <input
+                        placeholder="Value"
+                        value={f.value}
+                        onChange={e => setLandForm(p => {
+                          const fields = [...p.fields];
+                          fields[idx] = { ...fields[idx], value: e.target.value };
+                          return { ...p, fields };
+                        })}
+                        className="flex-1 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                      />
+                      {landForm.fields.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLandForm(p => ({ ...p, fields: p.fields.filter((_, i) => i !== idx) }))}
+                          className="text-slate-300 hover:text-rose-400 transition-colors text-xl leading-none"
+                        >×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">e.g. Registered Date, Document No., Area (sqft), Location, Survey No…</p>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2 border-t border-slate-50 dark:border-slate-700">
+                <button type="button" onClick={() => setAssetModal(null)}
+                  className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+                <button type="submit" disabled={savingSpecial}
+                  className="bg-lime-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-lime-700 disabled:opacity-50 transition-colors">
+                  {savingSpecial ? 'Saving…' : 'Save Property'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
@@ -926,6 +1168,7 @@ export default function Investments() {
       )}
 
       {/* ── Investment Cards ─────────────────────────────────────────────────── */}
+      <div ref={portfolioRef} />
       {sortedItems.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm py-16 text-center">
           <p className="text-4xl mb-3">📈</p>
@@ -947,6 +1190,15 @@ export default function Investments() {
             const isMarket   = MARKET_TYPES.includes(inv.type);
             const isStock    = inv.type === 'stocks';
             const isMF       = inv.type === 'mutual_fund';
+            const isGold     = inv.type === 'gold';
+            const isLand     = inv.type === 'land';
+
+            // Parse land key-value fields
+            let landFields: { key: string; value: string }[] = [];
+            if (isLand && inv.symbol) {
+              try { landFields = JSON.parse(inv.symbol); } catch { /* ignore */ }
+            }
+
             return (
               <div key={inv.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow group">
                 <div className="flex items-start justify-between mb-3">
@@ -955,9 +1207,11 @@ export default function Investments() {
                     {isMarket && <span className="text-xs text-emerald-500 font-medium" title="Live price from Google Sheets">● Live</span>}
                   </div>
                   <div className="flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(inv)}
-                      title="Edit"
-                      className="text-slate-300 hover:text-violet-500 transition-colors text-base leading-none">✎</button>
+                    {!isLand && (
+                      <button onClick={() => openEdit(inv)}
+                        title="Edit"
+                        className="text-slate-300 hover:text-violet-500 transition-colors text-base leading-none">✎</button>
+                    )}
                     <button onClick={() => handleDelete(inv.id)}
                       title="Delete"
                       className="text-slate-300 hover:text-rose-400 transition-colors text-xl font-bold leading-none">×</button>
@@ -965,12 +1219,39 @@ export default function Investments() {
                 </div>
 
                 <p className="font-semibold text-slate-800 dark:text-slate-100 text-base mb-0.5">
-                  {inv.name && inv.name !== inv.symbol ? inv.name : (inv.symbol || '—')}
+                  {isLand ? inv.name : (inv.name && inv.name !== inv.symbol ? inv.name : (inv.symbol || '—'))}
                 </p>
-                {inv.symbol && inv.name && inv.name !== inv.symbol && (
+                {!isGold && !isLand && inv.symbol && inv.name && inv.name !== inv.symbol && (
                   <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mb-1">{inv.symbol}</p>
                 )}
-                {inv.units > 0 && (
+
+                {/* Gold-specific: grams */}
+                {isGold && (
+                  <div className="mb-3 space-y-1">
+                    {units > 0 && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-medium text-yellow-700 dark:text-yellow-400">{units.toLocaleString('en-IN', { maximumFractionDigits: 3 })} g</span>
+                      </p>
+                    )}
+                    {inv.notes && <p className="text-xs text-slate-400 dark:text-slate-500 italic">{inv.notes}</p>}
+                  </div>
+                )}
+
+                {/* Land-specific: key-value pairs */}
+                {isLand && (
+                  <div className="mb-3 mt-1 space-y-1">
+                    {landFields.filter(f => f.key).map((f, i) => (
+                      <div key={i} className="flex justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400">{f.key}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200 text-right max-w-[60%] truncate">{f.value}</span>
+                      </div>
+                    ))}
+                    {landFields.length === 0 && <p className="text-xs text-slate-400 dark:text-slate-500 italic">No details recorded</p>}
+                  </div>
+                )}
+
+                {/* Standard: units line */}
+                {!isGold && !isLand && units > 0 && (
                   <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
                     {Number(inv.units).toLocaleString('en-IN')} units
                     {inv.buyPrice > 0 && ` @ ₹${Number(inv.buyPrice).toLocaleString('en-IN')} avg`}
@@ -991,21 +1272,32 @@ export default function Investments() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">Invested</p>
-                    <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">{fmt(invested)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">Current</p>
-                    <p className="font-semibold text-blue-600 mt-0.5">{fmt(current)}</p>
-                  </div>
-                </div>
-
-                <div className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold ${g >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700' : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600'}`}>
-                  <span>{g >= 0 ? '▲' : '▼'} P&amp;L</span>
-                  <span>{g >= 0 ? '+' : ''}{fmt(g)} ({gPct}%)</span>
-                </div>
+                {/* Land: no P&L — just show amount if available */}
+                {isLand ? (
+                  invested > 0 && (
+                    <div className="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>Value recorded</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(invested)}</span>
+                    </div>
+                  )
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Invested</p>
+                        <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">{fmt(invested)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Current</p>
+                        <p className="font-semibold text-blue-600 mt-0.5">{fmt(current)}</p>
+                      </div>
+                    </div>
+                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold ${g >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700' : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600'}`}>
+                      <span>{g >= 0 ? '▲' : '▼'} P&amp;L</span>
+                      <span>{g >= 0 ? '+' : ''}{fmt(g)} ({gPct}%)</span>
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
