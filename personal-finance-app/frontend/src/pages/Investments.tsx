@@ -407,12 +407,19 @@ export default function Investments() {
   const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
 
-  // Gold / Land modals
+  // Gold / Land add modals
   const [assetModal, setAssetModal] = useState<'gold' | 'land' | null>(null);
   const [goldForm, setGoldForm] = useState(EMPTY_GOLD);
   const [landForm, setLandForm] = useState<{ title: string; fields: { key: string; value: string }[] }>(EMPTY_LAND);
   const [savingSpecial, setSavingSpecial] = useState(false);
   const portfolioRef = useRef<HTMLDivElement>(null);
+
+  // Gold / Land edit modals
+  const [editGoldItem, setEditGoldItem] = useState<any>(null);
+  const [editGoldForm, setEditGoldForm] = useState(EMPTY_GOLD);
+  const [editLandItem, setEditLandItem] = useState<any>(null);
+  const [editLandForm, setEditLandForm] = useState<{ title: string; fields: { key: string; value: string }[] }>(EMPTY_LAND);
+  const [updatingSpecial, setUpdatingSpecial] = useState(false);
 
   const load = () => getRows('investments').then(setItems).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -475,6 +482,63 @@ export default function Investments() {
       load();
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
+  };
+
+  const openEditGold = (inv: any) => {
+    setEditGoldItem(inv);
+    setEditGoldForm({
+      name: inv.name || '',
+      grams: String(inv.units || ''),
+      amountInvested: String(inv.amountInvested || ''),
+      purchaseDate: inv.date || '',
+      notes: inv.notes || '',
+    });
+  };
+
+  const handleUpdateGold = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editGoldItem) return;
+    setUpdatingSpecial(true);
+    try {
+      await updateRow('investments', editGoldItem.id, {
+        name: editGoldForm.name.trim() || 'Gold',
+        units: Number(editGoldForm.grams) || 0,
+        buyPrice: editGoldForm.grams && editGoldForm.amountInvested
+          ? Number(editGoldForm.amountInvested) / Number(editGoldForm.grams)
+          : 0,
+        amountInvested: Number(editGoldForm.amountInvested) || 0,
+        currentValue: Number(editGoldForm.amountInvested) || 0,
+        date: editGoldForm.purchaseDate || editGoldItem.date,
+        notes: editGoldForm.notes,
+      });
+      setEditGoldItem(null);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setUpdatingSpecial(false); }
+  };
+
+  const openEditLand = (inv: any) => {
+    let fields: { key: string; value: string }[] = [{ key: '', value: '' }];
+    if (inv.symbol) {
+      try { fields = JSON.parse(inv.symbol); if (!fields.length) fields = [{ key: '', value: '' }]; } catch { /* ignore */ }
+    }
+    setEditLandItem(inv);
+    setEditLandForm({ title: inv.name || '', fields });
+  };
+
+  const handleUpdateLand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editLandItem || !editLandForm.title.trim()) return;
+    setUpdatingSpecial(true);
+    try {
+      await updateRow('investments', editLandItem.id, {
+        name: editLandForm.title.trim(),
+        symbol: JSON.stringify(editLandForm.fields.filter(f => f.key.trim())),
+      });
+      setEditLandItem(null);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setUpdatingSpecial(false); }
   };
 
   const handleAddGold = async (e: React.FormEvent) => {
@@ -779,6 +843,138 @@ export default function Investments() {
                 <button type="submit" disabled={savingSpecial}
                   className="bg-lime-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-lime-700 disabled:opacity-50 transition-colors">
                   {savingSpecial ? 'Saving…' : 'Save Property'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Gold Modal ───────────────────────────────────────────────────── */}
+      {editGoldItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">🥇 Edit Gold</h3>
+              <button onClick={() => setEditGoldItem(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
+            </div>
+            <form onSubmit={handleUpdateGold} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Label / Description</label>
+                  <input
+                    placeholder="e.g. 22K Jewellery, Sovereign Gold Bond"
+                    value={editGoldForm.name}
+                    onChange={e => setEditGoldForm(p => ({ ...p, name: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weight (grams)</label>
+                  <input type="number" min="0" step="0.001" placeholder="0.000"
+                    value={editGoldForm.grams}
+                    onChange={e => setEditGoldForm(p => ({ ...p, grams: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount Invested (₹)</label>
+                  <input type="number" min="0" step="0.01" placeholder="0.00"
+                    value={editGoldForm.amountInvested}
+                    onChange={e => setEditGoldForm(p => ({ ...p, amountInvested: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Purchase Date</label>
+                  <input type="date"
+                    value={editGoldForm.purchaseDate}
+                    onChange={e => setEditGoldForm(p => ({ ...p, purchaseDate: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Notes</label>
+                  <input placeholder="e.g. Stored in locker"
+                    value={editGoldForm.notes}
+                    onChange={e => setEditGoldForm(p => ({ ...p, notes: e.target.value }))}
+                    className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-2 border-t border-slate-50 dark:border-slate-700">
+                <button type="button" onClick={() => setEditGoldItem(null)}
+                  className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+                <button type="submit" disabled={updatingSpecial}
+                  className="bg-yellow-500 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-yellow-600 disabled:opacity-50 transition-colors">
+                  {updatingSpecial ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Land Modal ───────────────────────────────────────────────────── */}
+      {editLandItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">🏞️ Edit Land / Property</h3>
+              <button onClick={() => setEditLandItem(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none">×</button>
+            </div>
+            <form onSubmit={handleUpdateLand} className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Property Title *</label>
+                <input required
+                  value={editLandForm.title}
+                  onChange={e => setEditLandForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Details (key–value)</label>
+                  <button type="button"
+                    onClick={() => setEditLandForm(p => ({ ...p, fields: [...p.fields, { key: '', value: '' }] }))}
+                    className="text-xs text-lime-600 dark:text-lime-400 hover:underline font-medium">+ Add field</button>
+                </div>
+                <div className="space-y-2">
+                  {editLandForm.fields.map((f, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input placeholder="e.g. Document No."
+                        value={f.key}
+                        onChange={e => setEditLandForm(p => {
+                          const fields = [...p.fields];
+                          fields[idx] = { ...fields[idx], key: e.target.value };
+                          return { ...p, fields };
+                        })}
+                        className="flex-1 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                      />
+                      <input placeholder="Value"
+                        value={f.value}
+                        onChange={e => setEditLandForm(p => {
+                          const fields = [...p.fields];
+                          fields[idx] = { ...fields[idx], value: e.target.value };
+                          return { ...p, fields };
+                        })}
+                        className="flex-1 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                      />
+                      {editLandForm.fields.length > 1 && (
+                        <button type="button"
+                          onClick={() => setEditLandForm(p => ({ ...p, fields: p.fields.filter((_, i) => i !== idx) }))}
+                          className="text-slate-300 hover:text-rose-400 transition-colors text-xl leading-none">×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-2 border-t border-slate-50 dark:border-slate-700">
+                <button type="button" onClick={() => setEditLandItem(null)}
+                  className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
+                <button type="submit" disabled={updatingSpecial}
+                  className="bg-lime-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-lime-700 disabled:opacity-50 transition-colors">
+                  {updatingSpecial ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -1207,11 +1403,10 @@ export default function Investments() {
                     {isMarket && <span className="text-xs text-emerald-500 font-medium" title="Live price from Google Sheets">● Live</span>}
                   </div>
                   <div className="flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!isLand && (
-                      <button onClick={() => openEdit(inv)}
-                        title="Edit"
-                        className="text-slate-300 hover:text-violet-500 transition-colors text-base leading-none">✎</button>
-                    )}
+                    <button
+                      onClick={() => isGold ? openEditGold(inv) : isLand ? openEditLand(inv) : openEdit(inv)}
+                      title="Edit"
+                      className="text-slate-300 hover:text-violet-500 transition-colors text-base leading-none">✎</button>
                     <button onClick={() => handleDelete(inv.id)}
                       title="Delete"
                       className="text-slate-300 hover:text-rose-400 transition-colors text-xl font-bold leading-none">×</button>
