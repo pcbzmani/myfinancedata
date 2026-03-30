@@ -125,9 +125,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
         {/* Brand */}
         <div className="px-5 pt-6 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-700 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-lg shadow-violet-200">
-              ₹
-            </div>
+            <img src="/icon.svg" alt="MyFinance" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200" />
             <div>
               <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">MyFinance</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>
@@ -183,9 +181,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex flex-col transform transition-transform duration-200 md:hidden ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-5 pt-6 pb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-700 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-lg shadow-violet-200">
-              ₹
-            </div>
+            <img src="/icon.svg" alt="MyFinance" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200" />
             <div>
               <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">MyFinance</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>
@@ -246,9 +242,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow">
-              ₹
-            </div>
+            <img src="/icon.svg" alt="MyFinance" className="w-7 h-7 rounded-lg shadow" />
             <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">MyFinance</p>
           </div>
           <button
