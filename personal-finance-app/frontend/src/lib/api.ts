@@ -47,3 +47,7 @@ export async function getMarketRates(): Promise<Record<string, { price: number; 
   return r.data || {};
 }
 
+export async function syncVaultPin(rawPin: string): Promise<void> {
+  await call({ action: 'setVaultPin', pin: rawPin });
+}
+

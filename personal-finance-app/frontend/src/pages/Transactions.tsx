@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
 
-const CATEGORIES = ['Salary', 'Freelance', 'Food', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
+const DEFAULT_CATEGORIES = ['Salary', 'Freelance', 'Food', 'Grocery', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
 const PRESET_CURRENCIES = ['QAR', 'INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'];
 const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', QAR: 'QAR', USD: '$', EUR: '€', GBP: '£', AED: 'AED', SAR: 'SAR' };
 
@@ -44,7 +44,28 @@ export default function Transactions() {
   const [customTo, setCustomTo]         = useState('');
   const [carryForward, setCarryForward] = useState<{ cur: string; net: number }[]>([]);
   const [search, setSearch] = useState('');
+  const [customCats, setCustomCats] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('custom_categories') || '[]'); } catch { return []; }
+  });
+  const [addingCatFor, setAddingCatFor] = useState<'add' | 'edit' | null>(null);
+  const [newCatInput, setNewCatInput] = useState('');
   const editFormRef = useRef<HTMLDivElement>(null);
+
+  const allCategories = [...DEFAULT_CATEGORIES, ...customCats.filter(c => !DEFAULT_CATEGORIES.includes(c))];
+
+  const confirmNewCat = (forForm: 'add' | 'edit') => {
+    const cat = newCatInput.trim();
+    if (!cat) { setAddingCatFor(null); return; }
+    if (!DEFAULT_CATEGORIES.includes(cat) && !customCats.includes(cat)) {
+      const updated = [...customCats, cat];
+      setCustomCats(updated);
+      localStorage.setItem('custom_categories', JSON.stringify(updated));
+    }
+    if (forForm === 'add') setForm(f => ({ ...f, category: cat }));
+    else setEditForm(f => ({ ...f, category: cat }));
+    setNewCatInput('');
+    setAddingCatFor(null);
+  };
 
   function computeCarryForward(allItems: any[]) {
     const now = new Date();
@@ -138,7 +159,7 @@ export default function Transactions() {
     setEditId(t.id);
     setEditForm({
       type: t.type || 'expense',
-      category: CATEGORIES.includes(t.category) ? t.category : 'Other',
+      category: allCategories.includes(t.category) ? t.category : (t.category || 'Other'),
       amount: String(t.amount || ''),
       description: t.description || '',
       date: toDateInput(t.date),
@@ -466,10 +487,30 @@ export default function Transactions() {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</label>
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+              <select
+                value={form.category}
+                onChange={e => {
+                  if (e.target.value === '__add_custom__') { setAddingCatFor('add'); setNewCatInput(''); }
+                  else setForm({ ...form, category: e.target.value });
+                }}
                 className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                {allCategories.map(c => <option key={c}>{c}</option>)}
+                <option value="__add_custom__">+ Add custom category…</option>
               </select>
+              {addingCatFor === 'add' && (
+                <div className="flex gap-2 mt-1.5">
+                  <input
+                    autoFocus
+                    value={newCatInput}
+                    onChange={e => setNewCatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmNewCat('add'); } if (e.key === 'Escape') setAddingCatFor(null); }}
+                    placeholder="Category name"
+                    className="flex-1 text-sm border border-violet-300 dark:border-violet-600 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:bg-slate-700 dark:text-slate-100"
+                  />
+                  <button type="button" onClick={() => confirmNewCat('add')} className="px-3 py-1.5 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700">Add</button>
+                  <button type="button" onClick={() => setAddingCatFor(null)} className="px-3 py-1.5 text-slate-500 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">✕</button>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>
@@ -543,10 +584,30 @@ export default function Transactions() {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</label>
-              <select value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+              <select
+                value={editForm.category}
+                onChange={e => {
+                  if (e.target.value === '__add_custom__') { setAddingCatFor('edit'); setNewCatInput(''); }
+                  else setEditForm({ ...editForm, category: e.target.value });
+                }}
                 className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                {allCategories.map(c => <option key={c}>{c}</option>)}
+                <option value="__add_custom__">+ Add custom category…</option>
               </select>
+              {addingCatFor === 'edit' && (
+                <div className="flex gap-2 mt-1.5">
+                  <input
+                    autoFocus
+                    value={newCatInput}
+                    onChange={e => setNewCatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmNewCat('edit'); } if (e.key === 'Escape') setAddingCatFor(null); }}
+                    placeholder="Category name"
+                    className="flex-1 text-sm border border-violet-300 dark:border-violet-600 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:bg-slate-700 dark:text-slate-100"
+                  />
+                  <button type="button" onClick={() => confirmNewCat('edit')} className="px-3 py-1.5 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700">Add</button>
+                  <button type="button" onClick={() => setAddingCatFor(null)} className="px-3 py-1.5 text-slate-500 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">✕</button>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currency</label>

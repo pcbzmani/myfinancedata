@@ -41,6 +41,10 @@ function doGet(e) {
       result = { ok: true, message: 'market_rates sheet ready' };
     } else if (action === 'readMarket') {
       result = readMarketRates(ss);
+    } else if (action === 'setVaultPin') {
+      result = setVaultPin(e.parameter.pin);
+    } else if (action === 'verifyVaultPin') {
+      result = verifyVaultPin(e.parameter.pin);
     } else {
       result = { error: 'Unknown action: ' + action };
     }
@@ -358,9 +362,10 @@ function setupMarketSheet(ss) {
      '=IFERROR(GOOGLEFINANCE("INDEXSP:.INX","change"),0)',
      '=IFERROR(GOOGLEFINANCE("INDEXSP:.INX","changepct"),0)'],
 
-    ['=GOOGLEFINANCE("SHA:000001","price")',
-     '=IFERROR(GOOGLEFINANCE("SHA:000001","change"),0)',
-     '=IFERROR(GOOGLEFINANCE("SHA:000001","changepct"),0)'],
+    // Shanghai SSE — GOOGLEFINANCE has no reliable ticker; use FT.com IMPORTXML instead
+    ['=IFERROR(VALUE(SUBSTITUTE(INDEX(IMPORTXML("https://markets.ft.com/data/indices/tearsheet/summary?s=SHI:SHH","//span[@class=\'mod-ui-data-list__value\']"),1),",","")),0)',
+     '=IFERROR(VALUE(TRIM(INDEX(SPLIT(INDEX(IMPORTXML("https://markets.ft.com/data/indices/tearsheet/summary?s=SHI:SHH","//span[@class=\'mod-ui-data-list__value\']"),2),"/"),1))),0)',
+     '=IFERROR(VALUE(SUBSTITUTE(TRIM(INDEX(SPLIT(INDEX(IMPORTXML("https://markets.ft.com/data/indices/tearsheet/summary?s=SHI:SHH","//span[@class=\'mod-ui-data-list__value\']"),2),"/"),2)),"%","")),0)'],
 
     ['=GOOGLEFINANCE("INDEXHANGSENG:HSI","price")',
      '=IFERROR(GOOGLEFINANCE("INDEXHANGSENG:HSI","change"),0)',
@@ -398,6 +403,68 @@ function setupMarketSheet(ss) {
   Logger.log('setupMarketSheet: done — ' + f.length + ' rows written.');
 }
 
+// ─── Vault PIN management ────────────────────────────────────────────────────
+
+/**
+ * Hashes a PIN with a fixed salt using SHA-256.
+ * Must match the SALT constant used in Vault.tsx on the frontend.
+ */
+function hashPin(pin) {
+  var SALT = 'myfinance_vault_v1_salt';
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pin + SALT);
+  return bytes.map(function(b) {
+    return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2);
+  }).join('');
+}
+
+/**
+ * Stores the hashed vault PIN in ScriptProperties and protects the vault sheet.
+ * Called from the frontend when the user sets their vault PIN.
+ */
+function setVaultPin(pin) {
+  if (!pin) return { error: 'PIN is required' };
+  var hash = hashPin(pin);
+  PropertiesService.getScriptProperties().setProperty('vault_pin_hash', hash);
+
+  // Protect the vault sheet with a warning so direct Sheets editing shows an alert
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('vault');
+  if (sheet) {
+    // Remove any existing protections first
+    var existing = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    existing.forEach(function(p) { p.remove(); });
+
+    var protection = sheet.protect();
+    protection.setDescription('Vault – PIN protected by MyFinance App. Do not edit directly.');
+    protection.setWarningOnly(true);
+  }
+  return { success: true };
+}
+
+/**
+ * Validates a PIN against the stored hash.
+ * Returns { valid: true } if correct, { valid: false } if wrong.
+ * Returns { valid: true } if no PIN has been set yet (first-run).
+ */
+function verifyVaultPin(pin) {
+  if (!pin) return { valid: false };
+  var stored = PropertiesService.getScriptProperties().getProperty('vault_pin_hash');
+  if (!stored) return { valid: true }; // no PIN set — open access
+  return { valid: hashPin(pin) === stored };
+}
+
+// ─── Numeric parse helper ────────────────────────────────────────────────────
+
+/** Parse a cell value to a number; handles strings like "3,456.78", "+0.18%", etc. */
+function parseNum(v) {
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
+  if (typeof v === 'string') {
+    var n = parseFloat(String(v).replace(/[,\s%]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
 /**
  * Reads the market_rates sheet and returns all rows as a key→{price,change,changePct} map.
  * Creates the sheet automatically if it doesn't exist yet.
@@ -414,15 +481,11 @@ function readMarketRates(ss) {
   var data = {};
   for (var i = 1; i < values.length; i++) {
     var key       = String(values[i][0]).trim();
-    var price     = values[i][1];
-    var change    = values[i][2];
-    var changePct = values[i][3];
-    if (key && typeof price === 'number' && !isNaN(price) && price > 0) {
-      data[key] = {
-        price:     price,
-        change:    typeof change    === 'number' ? change    : 0,
-        changePct: typeof changePct === 'number' ? changePct : 0
-      };
+    var price     = parseNum(values[i][1]);
+    var change    = parseNum(values[i][2]);
+    var changePct = parseNum(values[i][3]);
+    if (key && !isNaN(price) && price > 0) {
+      data[key] = { price: price, change: change, changePct: changePct };
     }
   }
   return { data: data };
