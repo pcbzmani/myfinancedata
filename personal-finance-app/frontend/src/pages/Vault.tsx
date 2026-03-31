@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
+import { getRows, addRow, deleteRow, updateRow, syncVaultPin } from '../lib/api';
 
 /* ─── Constants ─── */
 const CATEGORIES = ['banking', 'social', 'work', 'shopping', 'entertainment', 'email', 'other'] as const;
@@ -233,6 +233,8 @@ export default function Vault() {
     if (pinMode === 'setup') {
       localStorage.setItem(PIN_HASH_KEY, hash);
       sessionStorage.setItem(SESSION_KEY, 'true');
+      // Sync PIN hash to Apps Script + protect the vault sheet in Google Sheets
+      syncVaultPin(pin).catch(() => {}); // best-effort; silently ignores if not configured
       setUnlocked(true);
       loadItems();
     } else {

@@ -68,6 +68,7 @@ function TickerCell({ label, quote, prefix = '' }: { label: string; quote: Marke
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
+  BarChart, Bar, LineChart, Line,
 } from 'recharts';
 
 const PIE_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -84,10 +85,10 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function buildMonthly(txns: any[]) {
+function buildMonthly(txns: any[], period: number = 6) {
   const months: Record<string, { income: number; expense: number }> = {};
   const now = new Date();
-  for (let i = 5; i >= 0; i--) {
+  for (let i = period - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     months[key] = { income: 0, expense: 0 };
@@ -101,7 +102,7 @@ function buildMonthly(txns: any[]) {
     else months[key].expense += Number(t.amount) || 0;
   });
   return Object.entries(months).map(([key, v]) => ({
-    label: new Date(key + '-01').toLocaleDateString('en-IN', { month: 'short' }),
+    label: new Date(key + '-01').toLocaleDateString('en-IN', { month: 'short', ...(period > 6 ? { year: '2-digit' } : {}) }),
     ...v,
   }));
 }
@@ -152,6 +153,8 @@ export default function Dashboard() {
 
   const initMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [selectedMonth, setSelectedMonth] = useState(initMonth);
+  const [chartType, setChartType] = useState<'area' | 'line' | 'bar'>('area');
+  const [chartPeriod, setChartPeriod] = useState<3 | 6 | 12>(6);
 
   // Market data
   const [rates, setRates]               = useState<Rates>(EMPTY_RATES);
@@ -221,7 +224,12 @@ export default function Dashboard() {
   const totalPremium = insurance.reduce((s, i) => s + Number(i.premium || 0), 0);
   const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
   const gainPct = totalInvested > 0 ? `${portfolioGain >= 0 ? '+' : ''}${((portfolioGain / totalInvested) * 100).toFixed(1)}%` : '—';
-  const monthly = buildMonthly(txns);
+  const dominantCurrency = txns.length > 0
+    ? (Object.entries(txns.reduce((acc: Record<string, number>, t) => {
+        const cur = normCur(t); acc[cur] = (acc[cur] || 0) + 1; return acc;
+      }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'QAR')
+    : 'QAR';
+  const monthly = buildMonthly(txns, chartPeriod);
   const recent = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
   const pieData = Object.entries(
     monthTxns.filter(t => t.type === 'expense').reduce((acc: Record<string, number>, t) => {
@@ -350,26 +358,71 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-4 mb-5">
-            <div><h2 className="font-semibold text-slate-800 dark:text-slate-100">Cash Flow</h2><p className="text-xs text-slate-400 dark:text-slate-500">Last 6 months</p></div>
-            <div className="ml-auto flex gap-4 text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-violet-500" />Income</span>
-              <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-rose-400" />Expense</span>
+          {/* Header */}
+          <div className="flex flex-wrap items-start gap-2 mb-3">
+            <div>
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">Cash Flow</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Last {chartPeriod} months · {dominantCurrency}</p>
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {/* Period toggle */}
+              <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-xs">
+                {([3, 6, 12] as const).map(p => (
+                  <button key={p} onClick={() => setChartPeriod(p)}
+                    className={`px-2.5 py-1 font-medium transition-colors ${chartPeriod === p ? 'bg-violet-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                    {p}M
+                  </button>
+                ))}
+              </div>
+              {/* Chart type toggle */}
+              <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-xs">
+                {(['area', 'line', 'bar'] as const).map(ct => (
+                  <button key={ct} onClick={() => setChartType(ct)}
+                    className={`px-2.5 py-1 font-medium capitalize transition-colors ${chartType === ct ? 'bg-violet-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                    {ct}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+          {/* Legend */}
+          <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-violet-500" />Income</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-rose-400" />Expense</span>
+          </div>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={monthly}>
-              <defs>
-                <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} /><stop offset="95%" stopColor="#7c3aed" stopOpacity={0} /></linearGradient>
-                <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [fmt(v), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-              <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Income" dot={false} />
-              <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#ge)" name="Expense" dot={false} />
-            </AreaChart>
+            {chartType === 'bar' ? (
+              <BarChart data={monthly} barGap={3}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Bar dataKey="income" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Income" />
+                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" />
+              </BarChart>
+            ) : chartType === 'line' ? (
+              <LineChart data={monthly}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 5 }} />
+              </LineChart>
+            ) : (
+              <AreaChart data={monthly}>
+                <defs>
+                  <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} /><stop offset="95%" stopColor="#7c3aed" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Income" dot={false} />
+                <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#ge)" name="Expense" dot={false} />
+              </AreaChart>
+            )}
           </ResponsiveContainer>
         </div>
 
