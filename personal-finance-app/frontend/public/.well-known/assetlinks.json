@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.myfinance.app",
-      "sha256_cert_fingerprints": [
-        "REPLACE_WITH_SHA256_FROM_PWABUILDER"
-      ]
-    }
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.netlify.pcbzmani.twa",
+    "sha256_cert_fingerprints": ["25:F5:AE:44:E5:19:4F:60:BD:71:7C:66:FC:9F:7E:1E:7C:43:90:37:1B:E5:2D:F8:BD:6D:11:BC:4F:47:1F:9C"]
   }
-]
+}]
