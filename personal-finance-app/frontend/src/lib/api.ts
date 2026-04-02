@@ -1,8 +1,5 @@
 const STORAGE_KEY = 'myfinance_script_url';
 
-// Backend base URL — empty in dev (Vite proxy), set VITE_API_BASE in prod (Railway URL)
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
-
 export function getScriptUrl(): string {
   return localStorage.getItem(STORAGE_KEY) || '';
 }
@@ -52,29 +49,5 @@ export async function getMarketRates(): Promise<Record<string, { price: number; 
 
 export async function syncVaultPin(rawPin: string): Promise<void> {
   await call({ action: 'setVaultPin', pin: rawPin });
-}
-
-// ── Google OAuth (Option D — no Apps Script needed) ──────────────────────────
-
-export function getGoogleAuthUrl(): string {
-  return `${API_BASE}/api/v1/auth/google`;
-}
-
-export async function getGoogleAuthStatus(): Promise<{
-  connected: boolean;
-  email: string | null;
-  spreadsheetUrl: string | null;
-}> {
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/auth/status`);
-    if (!res.ok) return { connected: false, email: null, spreadsheetUrl: null };
-    return res.json();
-  } catch {
-    return { connected: false, email: null, spreadsheetUrl: null };
-  }
-}
-
-export async function disconnectGoogle(): Promise<void> {
-  await fetch(`${API_BASE}/api/v1/auth/google`, { method: 'DELETE' });
 }
 

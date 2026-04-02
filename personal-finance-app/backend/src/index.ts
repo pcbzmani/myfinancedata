@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
-import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import investmentRoutes from './routes/investments';
 import insuranceRoutes from './routes/insurance';
@@ -48,7 +47,6 @@ const aiLimiter = rateLimit({
 });
 app.use('/api/v1/ai', aiLimiter);
 
-app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/investments', investmentRoutes);
 app.use('/api/v1/insurance', insuranceRoutes);
