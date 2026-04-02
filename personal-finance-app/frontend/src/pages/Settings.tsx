@@ -372,6 +372,15 @@ export default function Settings() {
         <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Connect your Google Sheets database</p>
       </div>
 
+      {/* Mobile tip banner */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl px-4 py-3 flex gap-3">
+        <span className="text-amber-500 text-lg flex-shrink-0">📱</span>
+        <div className="text-sm text-amber-800 dark:text-amber-300">
+          <p className="font-semibold mb-1">On mobile? Use Chrome browser, not the Sheets app.</p>
+          <p className="text-xs">Open <strong>sheets.google.com</strong> in Chrome → tap the menu (⋮) → <strong>Desktop site</strong> → then follow the steps below. The Extensions menu only appears in desktop mode.</p>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="px-6 py-4 bg-violet-600">
           <h2 className="font-semibold text-white">📊 Google Sheets Setup</h2>
@@ -380,11 +389,12 @@ export default function Settings() {
         <div className="p-6 space-y-5">
           <div className="space-y-3">
             {[
-              { n: '1', text: 'Create a new Google Spreadsheet at sheets.google.com', sub: 'Give it any name e.g. "My Finance Data"' },
-              { n: '2', text: 'Open Apps Script editor', sub: 'Click Extensions → Apps Script in the top menu' },
-              { n: '3', text: 'Paste the script code below', sub: 'Delete any existing code, paste, click Save (Ctrl+S)' },
-              { n: '4', text: 'Deploy as a Web App', sub: 'Deploy → New Deployment → Type: Web app → Execute as: Me → Who can access: Anyone → Deploy' },
-              { n: '5', text: 'Copy the Web App URL and paste it below', sub: 'Looks like: https://script.google.com/macros/s/ABC.../exec' },
+              { n: '1', text: 'Open sheets.google.com in Chrome', sub: 'Tap ⋮ → "Desktop site" to enable Extensions menu on mobile' },
+              { n: '2', text: 'Create a new spreadsheet', sub: 'Tap + → give it any name e.g. "My Finance Data"' },
+              { n: '3', text: 'Open Apps Script editor', sub: 'Extensions → Apps Script in the top menu' },
+              { n: '4', text: 'Copy the script code below, paste it here', sub: 'Delete any existing code, paste, tap Save (💾 icon)' },
+              { n: '5', text: 'Deploy as a Web App', sub: 'Deploy → New Deployment → Type: Web app → Execute as: Me → Who can access: Anyone → Deploy' },
+              { n: '6', text: 'Copy the Web App URL and paste it below', sub: 'Looks like: https://script.google.com/macros/s/ABC.../exec' },
             ].map(({ n, text, sub }) => (
               <div key={n} className="flex gap-3">
                 <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex-shrink-0 flex items-center justify-center">{n}</span>
