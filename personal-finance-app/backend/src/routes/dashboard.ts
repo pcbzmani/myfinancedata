@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getRows } from '../sheets';
+import { getRows } from '../sheets-router';
 
 const router = Router();
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { getRows, getScriptUrl } from '../sheets';
+import { getRows } from '../sheets-router';
+import { getScriptUrl } from '../sheets';
 
 const router = Router();
 const MAX_MESSAGE_LENGTH = 500;
