@@ -3,7 +3,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getRows, getScriptUrl } from '../sheets';
 
 const router = Router();
-const MAX_MESSAGE_LENGTH = 500;
 
 /**
  * POST /api/v1/ai/chat
@@ -14,12 +13,14 @@ const MAX_MESSAGE_LENGTH = 500;
  * the ANTHROPIC_API_KEY or AI_API_KEY environment variable.
  */
 router.post('/chat', async (req: Request, res: Response) => {
-  const { message, apiKey, provider = 'anthropic', model } = req.body;
+  const { message, apiKey, provider = 'anthropic', model, maxTokens } = req.body;
 
   if (!message || typeof message !== 'string')
     return res.status(400).json({ error: 'Message required' });
-  if (message.length > MAX_MESSAGE_LENGTH)
-    return res.status(400).json({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` });
+  if (message.length > 4000)
+    return res.status(400).json({ error: 'Message too long (max 4000 characters)' });
+
+  const resolvedMaxTokens = Math.min(Math.max(Number(maxTokens) || 1024, 256), 4096);
 
   const key = apiKey || process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY || '';
   if (!key)
@@ -66,7 +67,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
       const client = new Anthropic({ apiKey: key });
       const response = await client.messages.create({
         model: model || 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: resolvedMaxTokens,
         system: systemPrompt,
         messages: [{ role: 'user', content: message }],
       });
@@ -81,7 +82,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         body: JSON.stringify({
           model: model || 'llama-3.1-8b-instant',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
-          max_tokens: 1024,
+          max_tokens: resolvedMaxTokens,
         }),
       });
       const data = await response.json() as any;

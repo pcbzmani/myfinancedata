@@ -9,6 +9,7 @@ import Subscriptions from './pages/Subscriptions';
 import Vault from './pages/Vault';
 import Split from './pages/Split';
 import Settings from './pages/Settings';
+import AIReport from './pages/AIReport';
 
 export default function App() {
   const { dark, toggle } = useDarkMode();
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="subscriptions" element={<Subscriptions />} />
           <Route path="vault" element={<Vault />} />
           <Route path="split" element={<Split />} />
+          <Route path="ai" element={<AIReport />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
