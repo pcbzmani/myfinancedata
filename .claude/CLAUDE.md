@@ -1,8 +1,9 @@
 # Personal Finance App
 
 ## Project Overview
-A full-stack personal finance application to track finances, investments, and insurance products.
+A full-stack personal finance application to track finances, investments, insurance products, subscriptions, a password vault, and group expense splitting.
 All data is stored in **Google Sheets** via a Google Apps Script web app — no SQL database.
+**SplitIt** (group expense tracker) is embedded as a standalone iframe page at `/split` — it uses its own separate Google Sheet and `localStorage` (`splitit_v3`).
 
 ## Role
 You are a full-stack developer building and deploying this app on GitHub.
@@ -53,7 +54,8 @@ personal-finance-app/
 │           ├── Transactions.tsx← Income/expense CRUD, multi-currency, inline edit
 │           ├── Investments.tsx ← Stocks/MF/Crypto/FD portfolio, live NSE prices
 │           ├── Insurance.tsx   ← Policies, annual premium, freq filter, .ics reminders
-│           └── Settings.tsx    ← Apps Script URL setup + embedded code guide
+│           ├── Split.tsx       ← iframe embed of public/split.html (SplitIt app)
+│           └── Settings.tsx    ← MyFinance + SplitIt Apps Script setup + code guide
 └── backend/
     └── src/
         ├── index.ts            ← Express setup, CORS, Helmet, rate-limit, route mounts
@@ -79,8 +81,17 @@ personal-finance-app/
 | `/transactions` | `Transactions.tsx` | Income/expense table, inline edit, currency filter |
 | `/investments` | `Investments.tsx` | Portfolio with live NSE/BSE prices |
 | `/insurance` | `Insurance.tsx` | Policy cards, annual view, calendar reminders |
-| `/settings` | `Settings.tsx` | Apps Script URL config + embedded guide |
+| `/subscriptions` | `Subscriptions.tsx` | Recurring services tracker |
+| `/vault` | `Vault.tsx` | PIN-protected password manager |
+| `/split` | `Split.tsx` | SplitIt group expense tracker (iframe → `public/split.html`) |
+| `/settings` | `Settings.tsx` | MyFinance + SplitIt Apps Script setup + code guide |
 | `*` | redirect → `/` | |
+
+### SplitIt Integration Notes
+- `public/split.html` is the full SplitIt standalone app (pure HTML/CSS/JS, no React)
+- It uses its own `localStorage` key `splitit_v3` — completely separate from MyFinance data
+- It requires a **separate** Google Sheet + Apps Script deployment (script shown in Settings)
+- Future: when a SplitIt expense is added and the user is "You", it should auto-create a Transaction entry — not yet implemented
 
 ---
 

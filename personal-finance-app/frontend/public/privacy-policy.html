@@ -14,14 +14,15 @@
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p><strong>App name:</strong> MyFinance<br />
-     <strong>Last updated:</strong> April 1, 2026</p>
+  <p><strong>App name:</strong> MyFinance (includes SplitIt group expense tracker)<br />
+     <strong>Last updated:</strong> April 3, 2026</p>
 
   <h2>1. Overview</h2>
-  <p>MyFinance is a personal finance tracking app. We take your privacy seriously. This policy explains what data is handled and how.</p>
+  <p>MyFinance is a standalone personal finance app that includes a group expense splitting tool (SplitIt). We take your privacy seriously. This policy explains what data is handled and how.</p>
 
   <h2>2. Data Storage</h2>
-  <p>All your financial data (transactions, investments, insurance policies) is stored exclusively in <strong>your own Google Sheets spreadsheet</strong> via Google Apps Script. The developer has no access to your data at any time.</p>
+  <p>All your financial data (transactions, investments, insurance policies, subscriptions, vault passwords) is stored exclusively in <strong>your own Google Sheets spreadsheet</strong> via Google Apps Script. The developer has no access to your data at any time.</p>
+  <p>SplitIt group expense data is stored in <strong>your own separate Google Sheet</strong> (configured by you) and in your browser's <code>localStorage</code>. Group data shared with friends is routed directly through your own Apps Script deployment — the developer never sees it.</p>
 
   <h2>3. Data We Do Not Collect</h2>
   <ul>
@@ -29,15 +30,16 @@
     <li>We do not use analytics or tracking tools</li>
     <li>We do not use cookies for tracking</li>
     <li>We do not share any data with third parties</li>
-    <li>We do not have access to your financial records</li>
+    <li>We do not have access to your financial records or group expense data</li>
   </ul>
 
   <h2>4. Local Storage</h2>
   <p>The app stores the following in your browser's local storage only:</p>
   <ul>
-    <li>Your Google Apps Script URL (to connect to your own spreadsheet)</li>
+    <li>Your Google Apps Script URL for MyFinance (to connect to your own spreadsheet)</li>
     <li>Your custom transaction categories</li>
-    <li>Your vault PIN (hashed, never transmitted)</li>
+    <li>Your vault PIN (hashed with SHA-256, never transmitted)</li>
+    <li>SplitIt group and expense data (<code>splitit_v3</code> key) — stays on your device unless you connect a shared sheet</li>
   </ul>
   <p>This data never leaves your device except to connect to your own Google account.</p>
 

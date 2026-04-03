@@ -1,6 +1,120 @@
 import { useEffect, useState } from 'react';
 import { getScriptUrl, setScriptUrl, ping } from '../lib/api';
 
+const SPLITIT_SCRIPT_CODE = `// SplitIt — Google Apps Script
+// Deploy: New Deployment → Web App → Execute as: Me → Who has access: Anyone
+// Use a SEPARATE Google Sheet from your MyFinance sheet.
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action || 'read';
+    if (action === 'read') return readGroups();
+    const raw = e.parameter.data;
+    if (!raw) return reply({status: "no data"});
+    writeToSheet(JSON.parse(decodeURIComponent(raw)));
+    return reply({status: "ok"});
+  } catch(err) {
+    return reply({status: "error", msg: err.toString()});
+  }
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    writeToSheet(data);
+    return reply({status: "ok"});
+  } catch(err) {
+    return reply({status: "error", msg: err.toString()});
+  }
+}
+
+function readGroups() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const meta = ss.getSheetByName('_meta');
+  if (!meta) return reply({groups: []});
+  let metaData;
+  try {
+    metaData = JSON.parse(meta.getRange(1,1).getValue()) || {groups: []};
+  } catch(e) {
+    return reply({groups: []});
+  }
+  const groups = metaData.groups.map(g => {
+    const dataSheet = ss.getSheetByName(g.id + ' — Data');
+    let expenses = g.expenses || [];
+    if (dataSheet && dataSheet.getLastRow() > 1) {
+      const rows = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 9).getValues();
+      expenses = rows.filter(r => r[0]).map(r => ({
+        id: r[0], date: r[1], desc: r[2], category: r[3],
+        amount: parseFloat(r[4]) || 0, currency: r[5], paidBy: r[6],
+        splits: tryParseJSON(r[7], {}), splitMode: r[8] || 'equal'
+      }));
+    }
+    const {expenses: _omit, ...gMeta} = g;
+    return {...gMeta, expenses};
+  });
+  return reply({groups});
+}
+
+function tryParseJSON(str, fallback) {
+  try { return JSON.parse(str); } catch(_) { return fallback; }
+}
+
+function writeToSheet(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const cur = data.currency || "QAR";
+  const grp = (data.groupName || "Default").replace(/[:\\\\/?*[\\]]/g, "").substring(0, 25);
+  function getOrCreate(name, hide) {
+    let sh = ss.getSheetByName(name);
+    if (!sh) { sh = ss.insertSheet(name); if (hide) sh.hideSheet(); }
+    return sh;
+  }
+  let meta = ss.getSheetByName('_meta');
+  if (!meta) { meta = ss.insertSheet('_meta'); meta.hideSheet(); }
+  let existing = {groups: []};
+  try { existing = JSON.parse(meta.getRange(1,1).getValue()) || {groups: []}; } catch(e) {}
+  const idIdx = data.groupId ? existing.groups.findIndex(g => g.id === data.groupId) : -1;
+  const nameIdx = idIdx < 0 ? existing.groups.findIndex(g => g.name === data.groupName) : -1;
+  const canonicalId = idIdx >= 0 ? existing.groups[idIdx].id : nameIdx >= 0 ? existing.groups[nameIdx].id : (data.groupId || data.groupName);
+  const gMeta = { id: canonicalId, name: data.groupName, emoji: data.groupEmoji || '👥', currency: cur, members: data.members || [] };
+  const finalIdx = idIdx >= 0 ? idIdx : nameIdx;
+  if (finalIdx >= 0) existing.groups[finalIdx] = gMeta;
+  else existing.groups.push(gMeta);
+  meta.getRange(1,1).setValue(JSON.stringify(existing));
+  const dataTab = getOrCreate(canonicalId + ' — Data', true);
+  dataTab.clearContents();
+  dataTab.appendRow(['id','date','desc','category','amount','currency','paidBy','splits','splitMode']);
+  (data.expenses || []).forEach(exp => {
+    dataTab.appendRow([exp.id, exp.date, exp.desc, exp.category, parseFloat(exp.amount).toFixed(2), exp.currency || cur, exp.paidBy, JSON.stringify(exp.splits || {}), exp.splitMode || 'equal']);
+  });
+  const sh = getOrCreate(grp + ' — Expenses');
+  sh.clearContents();
+  sh.appendRow(['ID','Date','Description','Category','Amount','Currency','Paid By','Split Details']);
+  (data.expenses || []).forEach(exp => {
+    const splits = Object.entries(exp.splits || {}).filter(([, v]) => parseFloat(v) > 0).map(([k, v]) => k + ': ' + parseFloat(v).toFixed(2)).join(' | ');
+    sh.appendRow([exp.id, exp.date, exp.desc, exp.category, parseFloat(exp.amount).toFixed(2), exp.currency || cur, exp.paidBy, splits]);
+  });
+  const msh = getOrCreate(grp + ' — Members');
+  msh.clearContents();
+  msh.appendRow(['Member']);
+  (data.members || []).forEach(m => msh.appendRow([m]));
+  const bsh = getOrCreate(grp + ' — Balances');
+  bsh.clearContents();
+  bsh.appendRow(['Member','Balance','Currency','Status']);
+  const bal = {};
+  (data.members || []).forEach(m => bal[m] = 0);
+  (data.expenses || []).forEach(exp => {
+    bal[exp.paidBy] = (bal[exp.paidBy] || 0) + parseFloat(exp.amount);
+    Object.entries(exp.splits || {}).forEach(([m, v]) => { bal[m] = (bal[m] || 0) - parseFloat(v); });
+  });
+  Object.entries(bal).forEach(([m, b]) => {
+    bsh.appendRow([m, parseFloat(b).toFixed(2), cur, b > 0.01 ? 'Is Owed' : b < -0.01 ? 'Owes' : 'Settled Up']);
+  });
+}
+
+function reply(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}`;
+
 const SCRIPT_CODE = `/*** Personal Finance App — Google Apps Script Backend
  * ===================================================
  * HOW TO DEPLOY:
@@ -340,6 +454,7 @@ export default function Settings() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedSplit, setCopiedSplit] = useState(false);
 
   useEffect(() => { setUrl(getScriptUrl()); }, []);
 
@@ -363,6 +478,12 @@ export default function Settings() {
     navigator.clipboard.writeText(SCRIPT_CODE);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copySplitCode = () => {
+    navigator.clipboard.writeText(SPLITIT_SCRIPT_CODE);
+    setCopiedSplit(true);
+    setTimeout(() => setCopiedSplit(false), 2000);
   };
 
   return (
@@ -464,6 +585,49 @@ export default function Settings() {
             </div>
           )}
         </form>
+      </div>
+
+      {/* SplitIt Script */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 bg-emerald-600">
+          <h2 className="font-semibold text-white">🔗 SplitIt — Group Expense Script</h2>
+          <p className="text-emerald-100 text-xs mt-0.5">Separate Google Sheet for splitting group expenses with friends</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            <p>SplitIt uses its <strong>own separate Google Sheet</strong> — do not use the same sheet as MyFinance above.</p>
+            <div className="space-y-2">
+              {[
+                { n: '1', text: 'Create a new (separate) Google Sheet', sub: 'e.g. "SplitIt Data" — keep this distinct from your finance sheet' },
+                { n: '2', text: 'Open Apps Script editor', sub: 'Extensions → Apps Script' },
+                { n: '3', text: 'Paste the script below, save and deploy', sub: 'New Deployment → Web App → Execute as: Me → Anyone → Deploy' },
+                { n: '4', text: 'Paste the Web App URL inside the SplitIt app', sub: 'Go to Split → open any sheet settings → paste URL there' },
+              ].map(({ n, text, sub }) => (
+                <div key={n} className="flex gap-3">
+                  <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex-shrink-0 flex items-center justify-center">{n}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{text}</p>
+                    {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">SplitIt Apps Script Code</p>
+              <button
+                onClick={copySplitCode}
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${copiedSplit ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+              >
+                {copiedSplit ? '✓ Copied!' : '📋 Copy Code'}
+              </button>
+            </div>
+            <pre className="bg-slate-900 text-slate-300 text-xs p-4 rounded-xl overflow-auto max-h-48 leading-relaxed font-mono">
+              {SPLITIT_SCRIPT_CODE}
+            </pre>
+          </div>
+        </div>
       </div>
 
       <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-600 p-5">
