@@ -383,6 +383,17 @@ select option{background:var(--surface2);}
 </div>
 
 <!-- ═══════════ MODAL: Create Group ═══════════ -->
+<div class="modal-overlay" id="onboardingModal">
+  <div class="modal">
+    <div class="modal-title">👋 Welcome to SplitIt!</div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">What should your friends call you in expense groups? You can use different names per group — this is just your default.</p>
+    <input type="text" id="onboardingName" placeholder="e.g. Mani, Alex, You…" maxlength="30" style="width:100%;box-sizing:border-box" onkeydown="if(event.key==='Enter')saveOnboardingName()">
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveOnboardingName()">Continue →</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="createGroupModal">
   <div class="modal">
     <div class="modal-title">✨ Create New Group</div>
@@ -642,6 +653,32 @@ function persist(){localStorage.setItem('splitit_v3',JSON.stringify(S));}
 function GS(){return S.sheets.find(s=>s.id===S.activeSheetId);}
 function G(){const sh=GS();return sh&&sh.groups.find(g=>g.id===S.activeGroupId);}
 
+// Returns which member is "you" in a given group.
+// Priority: group.myMember → member named same as stored user name → member named 'You' → first member
+function getMyMember(g){
+  if(!g)return localStorage.getItem('splitit_user_name')||'You';
+  if(g.myMember)return g.myMember;
+  const userName=localStorage.getItem('splitit_user_name')||'You';
+  const fallback=g.members.find(m=>m===userName)||g.members.find(m=>m==='You')||g.members[0]||'You';
+  g.myMember=fallback;persist();
+  return fallback;
+}
+function checkOnboarding(){
+  if(!localStorage.getItem('splitit_user_name')){
+    setTimeout(()=>{
+      document.getElementById('onboardingName').value='';
+      openModal('onboardingModal');
+    },300);
+  }
+}
+function saveOnboardingName(){
+  const name=document.getElementById('onboardingName').value.trim();
+  if(!name){toast('Enter your name');return;}
+  localStorage.setItem('splitit_user_name',name);
+  closeModal('onboardingModal');
+  toast(`Welcome, ${name}!`);
+}
+
 // ══════════════════════════════════════
 // SHEETS SCREEN
 // ══════════════════════════════════════
@@ -811,7 +848,7 @@ function openCreateGroup(){
   document.getElementById('emojiGrid').innerHTML=EMOJIS.map(e=>`<div class="emoji-opt${e===pickedGroupEmoji?' sel':''}" onclick="pickGroupEmoji(this,'${e}')">${e}</div>`).join('');
   fillSel('newGroupCurrency','QAR');
   document.getElementById('newGroupName').value='';
-  document.getElementById('newGroupMembers').value='You\n';
+  document.getElementById('newGroupMembers').value=(localStorage.getItem('splitit_user_name')||'You')+'\n';
   openModal('createGroupModal');
 }
 function pickGroupEmoji(el,e){document.querySelectorAll('#emojiGrid .emoji-opt').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');pickedGroupEmoji=e;}
@@ -823,7 +860,7 @@ function createGroup(){
   const currency=document.getElementById('newGroupCurrency').value;
   const members=document.getElementById('newGroupMembers').value.split('\n').map(m=>m.trim()).filter(Boolean);
   if(!members.length){toast('Add at least one member');return;}
-  const newG={id:'g'+Date.now(),name,emoji:pickedGroupEmoji,currency,members,expenses:[]};
+  const userName=localStorage.getItem('splitit_user_name')||'You';const myMember=members.find(m=>m===userName)||members[0];const newG={id:'g'+Date.now(),name,emoji:pickedGroupEmoji,currency,members,expenses:[],myMember};
   sh.groups.push(newG);
   persist();closeModal('createGroupModal');renderGroups();toast(`"${name}" created!`);
   syncGroupToSheet(sh,newG);
@@ -981,7 +1018,7 @@ function addMember(){
 function removeMember(name){
   const g=G();if(!g)return;
   if(g.members.length<=2){toast('Need at least 2 members');return;}
-  if(name==='You'){toast("Can't remove yourself");return;}
+  if(name===getMyMember(g)){toast("Can't remove yourself");return;}
   g.members=g.members.filter(m=>m!==name);persist();
   renderMembers();renderPaidBySelect();renderMembersSplit();
 }
@@ -991,8 +1028,8 @@ function renderMembers(){
   document.getElementById('membersList').innerHTML=g.members.map((m,i)=>`
     <div class="member-manage-row">
       <div class="member-avatar" style="background:${COLORS[i%COLORS.length]}22;color:${COLORS[i%COLORS.length]}">${m[0].toUpperCase()}</div>
-      <div style="flex:1"><div style="font-size:0.86rem;font-weight:500">${m}</div><div style="font-size:0.71rem;color:var(--muted)">${m==='You'?'You':'Member'}</div></div>
-      ${m!=='You'?`<button class="icon-btn" onclick="removeMember('${m}')">✕</button>`:''}
+      <div style="flex:1"><div style="font-size:0.86rem;font-weight:500">${m}</div><div style="font-size:0.71rem;color:var(--muted)">${m===getMyMember(g)?'You (me)':'Member'}</div></div>
+      ${m!==getMyMember(g)?`<button class="icon-btn" onclick="removeMember('${m}')">✕</button>`:''}
     </div>`).join('');
 }
 
@@ -1159,7 +1196,7 @@ function addExpense(){
     toast(`"${desc}" updated`);
   } else {
     const newExpId=Date.now();g.expenses.unshift({id:newExpId,desc,amount,currency,category,paidBy,date,splits,splitMode});
-    persist();if(window.parent!==window){window.parent.postMessage({type:'splitit_expense',expense:{id:String(newExpId),desc,amount,currency,category,paidBy,date}},'*');}renderExpenses();updateSummary();clearForm();syncToSheet();
+    persist();if(window.parent!==window&&paidBy===getMyMember(g)){window.parent.postMessage({type:'splitit_expense',expense:{id:String(newExpId),desc,amount,currency,category,paidBy,date}},'*');}renderExpenses();updateSummary();clearForm();syncToSheet();
     toast(`"${desc}" added — ${fmtCode(amount,currency)}`);
   }
 }
@@ -1620,6 +1657,7 @@ function toast(msg){
 // ══════════════════════════════════════
 loadCustomCurrencies();
 load();
+checkOnboarding();
 renderSheets();
 fillSel('newGroupCurrency','QAR');
 // service worker handled by parent app
