@@ -7,55 +7,96 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #1e293b; line-height: 1.7; }
     h1 { color: #7c3aed; }
-    h2 { color: #334155; margin-top: 2em; }
+    h2 { color: #334155; margin-top: 2em; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    h3 { color: #475569; margin-top: 1.5em; margin-bottom: 0.25em; }
     a { color: #7c3aed; }
-    footer { margin-top: 3em; font-size: 0.85em; color: #94a3b8; }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+    .badge { display: inline-block; background: #ede9fe; color: #6d28d9; font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+    .badge.green { background: #d1fae5; color: #065f46; }
+    .badge.blue { background: #dbeafe; color: #1e40af; }
+    footer { margin-top: 3em; font-size: 0.85em; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1em; }
   </style>
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p><strong>App name:</strong> MyFinance (includes SplitIt group expense tracker)<br />
-     <strong>Last updated:</strong> April 3, 2026</p>
+  <p>
+    <strong>App:</strong> MyFinance — Personal Finance Tracker<br />
+    <strong>Includes:</strong> SplitIt (group expense tracker) &amp; AI Finance Analyst<br />
+    <strong>Last updated:</strong> April 3, 2026
+  </p>
 
   <h2>1. Overview</h2>
-  <p>MyFinance is a standalone personal finance app that includes a group expense splitting tool (SplitIt). We take your privacy seriously. This policy explains what data is handled and how.</p>
+  <p>MyFinance is a personal finance app that helps you track transactions, investments, insurance, subscriptions, and group expenses. This policy explains exactly what data is processed, where it lives, and what we never do with it.</p>
+  <p><strong>Short version:</strong> Your data stays in your own accounts and your own device. We have zero access to it.</p>
 
   <h2>2. Data Storage</h2>
-  <p>All your financial data (transactions, investments, insurance policies, subscriptions, vault passwords) is stored exclusively in <strong>your own Google Sheets spreadsheet</strong> via Google Apps Script. The developer has no access to your data at any time.</p>
-  <p>SplitIt group expense data is stored in <strong>your own separate Google Sheet</strong> (configured by you) and in your browser's <code>localStorage</code>. Group data shared with friends is routed directly through your own Apps Script deployment — the developer never sees it.</p>
 
-  <h2>3. Data We Do Not Collect</h2>
+  <h3>MyFinance (transactions, investments, insurance, subscriptions)</h3>
+  <p>All financial records are stored exclusively in <strong>your own Google Sheets spreadsheet</strong> via a Google Apps Script deployment that runs under your Google account. The app connects to it using a URL you configure. The developer has no access to your spreadsheet at any time.</p>
+
+  <h3>SplitIt — Group Expenses <span class="badge green">Updated</span></h3>
+  <p>SplitIt group data is stored in two places, both owned by you:</p>
   <ul>
-    <li>We do not collect any personal information</li>
-    <li>We do not use analytics or tracking tools</li>
-    <li>We do not use cookies for tracking</li>
+    <li>Your browser's <code>localStorage</code> (key: <code>splitit_v3</code>) for offline access</li>
+    <li>A <strong>separate Google Sheet</strong> you create and own — not the same sheet as MyFinance</li>
+  </ul>
+  <p>Your identity within each group (your name) is stored per group inside <code>splitit_v3</code> in localStorage only — it never leaves your device.</p>
+  <p>When you add a group expense and you are the payer, a copy of that expense (amount, category, description, date) is automatically added to your MyFinance transactions. This transfer happens entirely within your own browser — no server is involved.</p>
+
+  <h3>AI Finance Analyst <span class="badge blue">New</span></h3>
+  <p>The AI feature generates a financial health report by sending a summary of your data to an AI provider (Anthropic Claude or Groq Llama) using an API key <strong>you supply at runtime</strong>.</p>
+  <ul>
+    <li><strong>Your API key is session-only.</strong> It is held in browser memory (React component state) only. It is never written to localStorage, cookies, a database, server logs, or anywhere else. It is cleared the moment you leave the AI Report page or close your browser tab.</li>
+    <li>When you generate a report, a financial summary (income/expense totals, category breakdowns, investment values, insurance count) is sent from your browser to this app's backend, which relays it to the AI provider's API. The backend does not log, store, or cache this data.</li>
+    <li>Downloaded reports are saved only to your device — they are not uploaded anywhere.</li>
+    <li>Your use of the AI feature is also subject to the privacy policy of the AI provider you choose: <a href="https://www.anthropic.com/legal/privacy" target="_blank">Anthropic Privacy Policy</a> or <a href="https://groq.com/privacy-policy/" target="_blank">Groq Privacy Policy</a>.</li>
+  </ul>
+
+  <h2>3. What We Do Not Collect</h2>
+  <ul>
+    <li>We do not collect any personal information (name, email, phone, location)</li>
+    <li>We do not use analytics or tracking tools (no Google Analytics, Mixpanel, etc.)</li>
+    <li>We do not use cookies for tracking or advertising</li>
     <li>We do not share any data with third parties</li>
-    <li>We do not have access to your financial records or group expense data</li>
+    <li>We do not have access to your financial records, vault passwords, or group expense data</li>
+    <li>We do not retain your AI API key</li>
   </ul>
 
-  <h2>4. Local Storage</h2>
-  <p>The app stores the following in your browser's local storage only:</p>
+  <h2>4. Browser localStorage</h2>
+  <p>The app stores the following locally in your browser. This data never leaves your device except to connect to your own Google account or the AI provider you choose:</p>
   <ul>
-    <li>Your Google Apps Script URL for MyFinance (to connect to your own spreadsheet)</li>
-    <li>Your custom transaction categories</li>
-    <li>Your vault PIN (hashed with SHA-256, never transmitted)</li>
-    <li>SplitIt group and expense data (<code>splitit_v3</code> key) — stays on your device unless you connect a shared sheet</li>
+    <li><code>apps_script_url</code> — your MyFinance Google Apps Script URL</li>
+    <li>Custom transaction categories you define</li>
+    <li>Your Vault PIN, hashed with SHA-256 — never transmitted in any form</li>
+    <li>Vault entries, encrypted in localStorage — never transmitted</li>
+    <li><code>splitit_v3</code> — SplitIt group data including your per-group identity name</li>
+    <li>Dark mode preference and UI settings</li>
   </ul>
-  <p>This data never leaves your device except to connect to your own Google account.</p>
+  <p>You can clear all of this at any time via your browser's "Clear site data" option.</p>
 
   <h2>5. Google Services</h2>
-  <p>The app connects to <strong>Google Sheets</strong> and <strong>Google Apps Script</strong> using a URL you provide. This connection is directly between your device and your own Google account. Please refer to <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a> for how Google handles your data.</p>
+  <p>The app connects to <strong>Google Sheets</strong> and <strong>Google Apps Script</strong> using the URL you configure in Settings. This connection is directly between your device and your Google account. Please refer to <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a> for how Google handles your data.</p>
+  <p><strong>Security tip:</strong> Your Apps Script URL acts like a password for your sheet. Do not share it publicly. You can revoke it anytime via <em>Apps Script → Deployments → Delete Deployment</em>.</p>
 
   <h2>6. Market Data</h2>
-  <p>Live market rates (stock prices, indices) are fetched from public financial data sources. No personal data is included in these requests.</p>
+  <p>Live market rates (stock prices, indices, currency rates) are fetched from public financial data sources (Yahoo Finance, Google Finance). No personal data is included in these requests.</p>
 
-  <h2>7. Children's Privacy</h2>
+  <h2>7. Security</h2>
+  <p>We implement the following measures to protect your data in transit:</p>
+  <ul>
+    <li>HTTPS enforced on all pages (HSTS)</li>
+    <li>Security headers: X-Frame-Options, X-Content-Type-Options, Referrer-Policy</li>
+    <li>Backend rate limiting to prevent abuse</li>
+    <li>CORS restricted to the app's own domain</li>
+  </ul>
+
+  <h2>8. Children's Privacy</h2>
   <p>This app is not directed at children under 13. We do not knowingly collect data from children.</p>
 
-  <h2>8. Changes to This Policy</h2>
+  <h2>9. Changes to This Policy</h2>
   <p>We may update this policy occasionally. Changes will be posted on this page with an updated date.</p>
 
-  <h2>9. Contact</h2>
+  <h2>10. Contact</h2>
   <p>For any privacy-related questions, please open an issue at our <a href="https://github.com/pcbzmani/myfinancedata" target="_blank">GitHub repository</a>.</p>
 
   <footer>© 2026 MyFinance. All rights reserved.</footer>

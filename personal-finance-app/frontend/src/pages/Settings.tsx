@@ -630,14 +630,52 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-600 p-5">
-        <h3 className="font-medium text-slate-700 dark:text-slate-200 mb-2">🔒 Privacy</h3>
-        <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
-          <li>• Your data is stored in <strong>your own</strong> Google Sheet — we never see it</li>
-          <li>• The Apps Script runs under your Google account</li>
-          <li>• No third-party tracking or analytics</li>
-          <li>• You can delete or revoke access anytime from Google Settings</li>
-        </ul>
+      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-600 p-5 space-y-4">
+        <h3 className="font-medium text-slate-700 dark:text-slate-200">🔒 Privacy &amp; Security</h3>
+
+        {/* MyFinance */}
+        <div>
+          <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-1.5">MyFinance Data</p>
+          <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
+            <li>• Your transactions, investments and insurance are stored in <strong>your own</strong> Google Sheet — this app never stores or reads your data on any server we own</li>
+            <li>• The Apps Script runs under your Google account and executes as you</li>
+            <li>• Guard your Apps Script URL — anyone who has it can read and write your sheet. Never share it publicly</li>
+            <li>• You can revoke the deployment anytime via <strong>Google Apps Script → Deployments → Delete</strong></li>
+          </ul>
+        </div>
+
+        {/* SplitIt */}
+        <div>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1.5">SplitIt — Group Expenses</p>
+          <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
+            <li>• SplitIt group data is saved in <strong>a separate Google Sheet</strong> you own — it is completely isolated from your MyFinance sheet</li>
+            <li>• Group data is also cached in your browser's localStorage (key: <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">splitit_v3</code>) for offline use — it never leaves your device except when syncing to your own sheet</li>
+            <li>• When you add an expense as the payer, a copy is automatically pushed to your MyFinance transactions — only the expense amount, category, and description are shared between the two apps</li>
+            <li>• Your identity (name) is stored per group inside <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">splitit_v3</code> in localStorage only</li>
+          </ul>
+        </div>
+
+        {/* AI Report */}
+        <div>
+          <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1.5">AI Finance Analyst</p>
+          <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
+            <li>• Your AI API key (Anthropic or Groq) is held <strong>in browser memory only</strong> for the current session — it is never written to localStorage, cookies, a database, or any server log</li>
+            <li>• When you generate a report, your financial summary (totals, category breakdowns, investment values) is sent directly from your browser to the AI provider's API using your key</li>
+            <li>• This app's backend acts only as a relay — it does not store, log, or cache your financial data or your API key</li>
+            <li>• Closing the AI Report page or refreshing the browser clears the key from memory immediately</li>
+            <li>• Downloaded reports are saved only to your device — they are not uploaded anywhere</li>
+          </ul>
+        </div>
+
+        {/* General */}
+        <div>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">General</p>
+          <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1.5">
+            <li>• No third-party analytics, tracking scripts, or advertising (no Google Analytics, Mixpanel, etc.)</li>
+            <li>• The Vault stores your passwords encrypted in localStorage — they never leave your device</li>
+            <li>• All data can be deleted by clearing your browser's localStorage and deleting your Google Sheets</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
