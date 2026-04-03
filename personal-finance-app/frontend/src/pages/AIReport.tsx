@@ -111,6 +111,8 @@ export default function AIReport() {
   const [customMsg, setCustomMsg] = useState('');
   const [keyVisible, setKeyVisible] = useState(false);
 
+  const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+
   async function callAI(message: string) {
     const key = apiKey.trim();
     if (!key) { setError('Enter your API key first'); return; }
@@ -118,7 +120,7 @@ export default function AIReport() {
     setError('');
     setReport('');
     try {
-      const res = await fetch('/api/v1/ai/chat', {
+      const res = await fetch(`${apiBase}/api/v1/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, apiKey: key, provider, maxTokens: 4096 }),
