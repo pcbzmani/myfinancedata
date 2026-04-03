@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { jsPDF } from 'jspdf';
 import { getRows } from '../lib/api';
 
 const REPORT_PROMPT =
@@ -213,16 +214,130 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
 
   function downloadReport() {
     const date = new Date().toISOString().split('T')[0];
-    const content = `MyFinance — Financial Health Report\nGenerated: ${date}\n\n${report}`;
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finance-report-${date}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginL = 15;
+    const marginR = 15;
+    const marginT = 18;
+    const marginB = 15;
+    const usableW = pageW - marginL - marginR;
+    let y = marginT;
+
+    // Header bar
+    doc.setFillColor(124, 58, 237); // violet-600
+    doc.rect(0, 0, pageW, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MyFinance — Financial Health Report', marginL, 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Generated: ${date}`, pageW - marginR, 8, { align: 'right' });
+
+    y = 20;
+
+    function addPage() {
+      doc.addPage();
+      doc.setFillColor(124, 58, 237);
+      doc.rect(0, 0, pageW, 8, 'F');
+      y = 14;
+    }
+
+    function checkY(needed: number) {
+      if (y + needed > pageH - marginB) addPage();
+    }
+
+    const lines = report.split('\n');
+    for (const raw of lines) {
+      const line = raw.trim();
+
+      if (line.startsWith('# ')) {
+        checkY(10);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59); // slate-800
+        const wrapped = doc.splitTextToSize(line.slice(2), usableW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 7 + 3;
+        // underline rule
+        doc.setDrawColor(124, 58, 237);
+        doc.setLineWidth(0.4);
+        doc.line(marginL, y - 2, pageW - marginR, y - 2);
+        y += 2;
+
+      } else if (line.startsWith('## ')) {
+        checkY(9);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(109, 40, 217); // violet-700
+        const wrapped = doc.splitTextToSize(line.slice(3), usableW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 6 + 2;
+
+      } else if (line.startsWith('### ')) {
+        checkY(7);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105); // slate-600
+        const wrapped = doc.splitTextToSize(line.slice(4), usableW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 5.5 + 1;
+
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        checkY(6);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 65, 85); // slate-700
+        const text = line.slice(2).replace(/\*\*([^*]+)\*\*/g, '$1');
+        const wrapped = doc.splitTextToSize(text, usableW - 6);
+        doc.text('•', marginL, y);
+        doc.text(wrapped, marginL + 5, y);
+        y += wrapped.length * 5.5;
+
+      } else if (/^\d+\. /.test(line)) {
+        checkY(6);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 65, 85);
+        const match = line.match(/^(\d+)\. (.*)/);
+        if (match) {
+          const text = match[2].replace(/\*\*([^*]+)\*\*/g, '$1');
+          const wrapped = doc.splitTextToSize(text, usableW - 8);
+          doc.setFont('helvetica', 'bold');
+          doc.text(match[1] + '.', marginL, y);
+          doc.setFont('helvetica', 'normal');
+          doc.text(wrapped, marginL + 7, y);
+          y += wrapped.length * 5.5;
+        }
+
+      } else if (line === '') {
+        y += 3;
+
+      } else {
+        checkY(6);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 65, 85);
+        const text = line.replace(/\*\*([^*]+)\*\*/g, '$1');
+        const wrapped = doc.splitTextToSize(text, usableW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 5.5;
+      }
+    }
+
+    // Footer on each page
+    const totalPages = (doc.internal as any).getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.setFont('helvetica', 'normal');
+      doc.text('MyFinance — for personal use only', marginL, pageH - 5);
+      doc.text(`Page ${p} of ${totalPages}`, pageW - marginR, pageH - 5, { align: 'right' });
+    }
+
+    doc.save(`finance-report-${date}.pdf`);
   }
 
   const modelLabel = provider === 'anthropic' ? 'Claude Haiku (Anthropic)' : 'Llama 3.1 (Groq)';
@@ -387,7 +502,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Download .txt
+                Download PDF
               </button>
             </div>
           </div>
