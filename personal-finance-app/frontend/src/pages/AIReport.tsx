@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { jsPDF } from 'jspdf';
 import { getRows } from '../lib/api';
 
 const REPORT_PROMPT =
@@ -212,145 +211,86 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     }
   }
 
-  function sanitize(text: string): string {
-    return text
-      .replace(/₹/g, 'Rs.')
-      .replace(/€/g, 'EUR ')
-      .replace(/£/g, 'GBP ')
-      .replace(/\u2019/g, "'")   // right single quote
-      .replace(/\u2018/g, "'")   // left single quote
-      .replace(/\u201C/g, '"')   // left double quote
-      .replace(/\u201D/g, '"')   // right double quote
-      .replace(/\u2013/g, '-')   // en dash
-      .replace(/\u2014/g, '--')  // em dash
-      .replace(/[^\x00-\x7F]/g, ''); // strip remaining non-ASCII (emojis etc)
-  }
-
   function downloadReport() {
     const date = new Date().toISOString().split('T')[0];
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const marginL = 15;
-    const marginR = 15;
-    const marginT = 18;
-    const marginB = 15;
-    const usableW = pageW - marginL - marginR;
-    let y = marginT;
 
-    // Header bar
-    doc.setFillColor(124, 58, 237); // violet-600
-    doc.rect(0, 0, pageW, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('MyFinance — Financial Health Report', marginL, 8);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Generated: ${date}`, pageW - marginR, 8, { align: 'right' });
-
-    y = 20;
-
-    function addPage() {
-      doc.addPage();
-      doc.setFillColor(124, 58, 237);
-      doc.rect(0, 0, pageW, 8, 'F');
-      y = 14;
+    // Convert markdown to HTML for print
+    function mdToHtml(md: string): string {
+      return md
+        .split('\n')
+        .map(line => {
+          const t = line.trim();
+          if (t.startsWith('# '))   return `<h1>${t.slice(2)}</h1>`;
+          if (t.startsWith('## '))  return `<h2>${t.slice(3)}</h2>`;
+          if (t.startsWith('### ')) return `<h3>${t.slice(4)}</h3>`;
+          if (t.startsWith('- ') || t.startsWith('* '))
+            return `<li>${t.slice(2).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li>`;
+          if (/^\d+\. /.test(t))
+            return `<li class="ol">${t.replace(/^\d+\. /, '').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li>`;
+          if (t === '' || t === '---') return '<br/>';
+          if (t.startsWith('|'))    return `<div class="table-row">${t}</div>`;
+          return `<p>${t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
+        })
+        .join('\n');
     }
 
-    function checkY(needed: number) {
-      if (y + needed > pageH - marginB) addPage();
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>MyFinance — Financial Health Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+           font-size: 11pt; color: #1e293b; line-height: 1.6; padding: 0; }
+    .header { background: #7c3aed; color: #fff; padding: 10px 24px;
+              display: flex; justify-content: space-between; align-items: center;
+              font-size: 10pt; }
+    .header strong { font-size: 11pt; }
+    .content { padding: 24px 32px; }
+    h1 { font-size: 18pt; font-weight: 700; color: #1e293b; margin: 18px 0 6px;
+         padding-bottom: 6px; border-bottom: 2px solid #7c3aed; }
+    h2 { font-size: 12pt; font-weight: 700; color: #6d28d9; margin: 16px 0 4px; }
+    h3 { font-size: 10.5pt; font-weight: 600; color: #475569; margin: 12px 0 3px; }
+    p  { margin: 4px 0; font-size: 10pt; color: #334155; }
+    li { margin: 3px 0 3px 20px; font-size: 10pt; color: #334155; list-style: disc; }
+    li.ol { list-style: decimal; }
+    br { display: block; margin: 6px 0; content: ''; }
+    strong { color: #1e293b; }
+    .table-row { font-family: monospace; font-size: 9pt; color: #475569;
+                 padding: 1px 0; white-space: pre-wrap; }
+    .footer { margin-top: 32px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+              font-size: 8pt; color: #94a3b8;
+              display: flex; justify-content: space-between; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { margin: 0; }
+      .content { padding: 20px 28px; }
     }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <strong>MyFinance — Financial Health Report</strong>
+    <span>Generated: ${date}</span>
+  </div>
+  <div class="content">
+    ${mdToHtml(report)}
+    <div class="footer">
+      <span>MyFinance — for personal use only</span>
+      <span>${date}</span>
+    </div>
+  </div>
+  <script>window.onload = function(){ window.print(); };<\/script>
+</body>
+</html>`;
 
-    const lines = report.split('\n');
-    for (const raw of lines) {
-      const line = raw.trim();
-
-      if (line.startsWith('# ')) {
-        checkY(10);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        const wrapped = doc.splitTextToSize(sanitize(line.slice(2)), usableW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 7 + 3;
-        doc.setDrawColor(124, 58, 237);
-        doc.setLineWidth(0.4);
-        doc.line(marginL, y - 2, pageW - marginR, y - 2);
-        y += 2;
-
-      } else if (line.startsWith('## ')) {
-        checkY(9);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(109, 40, 217);
-        const wrapped = doc.splitTextToSize(sanitize(line.slice(3)), usableW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 6 + 2;
-
-      } else if (line.startsWith('### ')) {
-        checkY(7);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(71, 85, 105);
-        const wrapped = doc.splitTextToSize(sanitize(line.slice(4)), usableW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 5.5 + 1;
-
-      } else if (line.startsWith('- ') || line.startsWith('* ')) {
-        checkY(6);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(51, 65, 85);
-        const text = sanitize(line.slice(2).replace(/\*\*([^*]+)\*\*/g, '$1'));
-        const wrapped = doc.splitTextToSize(text, usableW - 6);
-        doc.text('-', marginL, y);
-        doc.text(wrapped, marginL + 5, y);
-        y += wrapped.length * 5.5;
-
-      } else if (/^\d+\. /.test(line)) {
-        checkY(6);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(51, 65, 85);
-        const match = line.match(/^(\d+)\. (.*)/);
-        if (match) {
-          const text = sanitize(match[2].replace(/\*\*([^*]+)\*\*/g, '$1'));
-          const wrapped = doc.splitTextToSize(text, usableW - 8);
-          doc.setFont('helvetica', 'bold');
-          doc.text(match[1] + '.', marginL, y);
-          doc.setFont('helvetica', 'normal');
-          doc.text(wrapped, marginL + 7, y);
-          y += wrapped.length * 5.5;
-        }
-
-      } else if (line === '' || line === '---') {
-        y += 3;
-
-      } else {
-        checkY(6);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(51, 65, 85);
-        const text = sanitize(line.replace(/\*\*([^*]+)\*\*/g, '$1'));
-        const wrapped = doc.splitTextToSize(text, usableW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 5.5;
-      }
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
     }
-
-    // Footer on each page
-    const totalPages = (doc.internal as any).getNumberOfPages();
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p);
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.setFont('helvetica', 'normal');
-      doc.text('MyFinance — for personal use only', marginL, pageH - 5);
-      doc.text(`Page ${p} of ${totalPages}`, pageW - marginR, pageH - 5, { align: 'right' });
-    }
-
-    doc.save(`finance-report-${date}.pdf`);
   }
 
   const modelLabel = provider === 'anthropic' ? 'Claude Haiku (Anthropic)' : 'Llama 3.1 (Groq)';
