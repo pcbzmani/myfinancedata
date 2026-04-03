@@ -5,12 +5,10 @@ export default function Split() {
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data?.type !== 'splitit_expense') return;
+      // split.html only fires this when paidBy === the user's myMember in that group
       const { expense } = event.data as {
         expense: { id: string; desc: string; amount: number; currency: string; category: string; paidBy: string; date: string };
       };
-      const myName = localStorage.getItem('splitit_my_name')?.trim().toLowerCase();
-      if (!myName || expense.paidBy?.trim().toLowerCase() !== myName) return;
-      // Strip leading emoji from SplitIt category (e.g. "🍽️ Food & Drink" → "Food & Drink")
       const cat = expense.category?.replace(/^[\p{Emoji}\u200d\s]+/u, '').trim() || 'Shared Expense';
       addRow('transactions', {
         id: crypto.randomUUID(),
