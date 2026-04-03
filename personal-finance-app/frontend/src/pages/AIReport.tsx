@@ -212,6 +212,20 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     }
   }
 
+  function sanitize(text: string): string {
+    return text
+      .replace(/₹/g, 'Rs.')
+      .replace(/€/g, 'EUR ')
+      .replace(/£/g, 'GBP ')
+      .replace(/\u2019/g, "'")   // right single quote
+      .replace(/\u2018/g, "'")   // left single quote
+      .replace(/\u201C/g, '"')   // left double quote
+      .replace(/\u201D/g, '"')   // right double quote
+      .replace(/\u2013/g, '-')   // en dash
+      .replace(/\u2014/g, '--')  // em dash
+      .replace(/[^\x00-\x7F]/g, ''); // strip remaining non-ASCII (emojis etc)
+  }
+
   function downloadReport() {
     const date = new Date().toISOString().split('T')[0];
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -256,11 +270,10 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         checkY(10);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59); // slate-800
-        const wrapped = doc.splitTextToSize(line.slice(2), usableW);
+        doc.setTextColor(30, 41, 59);
+        const wrapped = doc.splitTextToSize(sanitize(line.slice(2)), usableW);
         doc.text(wrapped, marginL, y);
         y += wrapped.length * 7 + 3;
-        // underline rule
         doc.setDrawColor(124, 58, 237);
         doc.setLineWidth(0.4);
         doc.line(marginL, y - 2, pageW - marginR, y - 2);
@@ -270,8 +283,8 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         checkY(9);
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(109, 40, 217); // violet-700
-        const wrapped = doc.splitTextToSize(line.slice(3), usableW);
+        doc.setTextColor(109, 40, 217);
+        const wrapped = doc.splitTextToSize(sanitize(line.slice(3)), usableW);
         doc.text(wrapped, marginL, y);
         y += wrapped.length * 6 + 2;
 
@@ -279,8 +292,8 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         checkY(7);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(71, 85, 105); // slate-600
-        const wrapped = doc.splitTextToSize(line.slice(4), usableW);
+        doc.setTextColor(71, 85, 105);
+        const wrapped = doc.splitTextToSize(sanitize(line.slice(4)), usableW);
         doc.text(wrapped, marginL, y);
         y += wrapped.length * 5.5 + 1;
 
@@ -288,10 +301,10 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         checkY(6);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(51, 65, 85); // slate-700
-        const text = line.slice(2).replace(/\*\*([^*]+)\*\*/g, '$1');
+        doc.setTextColor(51, 65, 85);
+        const text = sanitize(line.slice(2).replace(/\*\*([^*]+)\*\*/g, '$1'));
         const wrapped = doc.splitTextToSize(text, usableW - 6);
-        doc.text('•', marginL, y);
+        doc.text('-', marginL, y);
         doc.text(wrapped, marginL + 5, y);
         y += wrapped.length * 5.5;
 
@@ -302,7 +315,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         doc.setTextColor(51, 65, 85);
         const match = line.match(/^(\d+)\. (.*)/);
         if (match) {
-          const text = match[2].replace(/\*\*([^*]+)\*\*/g, '$1');
+          const text = sanitize(match[2].replace(/\*\*([^*]+)\*\*/g, '$1'));
           const wrapped = doc.splitTextToSize(text, usableW - 8);
           doc.setFont('helvetica', 'bold');
           doc.text(match[1] + '.', marginL, y);
@@ -311,7 +324,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
           y += wrapped.length * 5.5;
         }
 
-      } else if (line === '') {
+      } else if (line === '' || line === '---') {
         y += 3;
 
       } else {
@@ -319,7 +332,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 65, 85);
-        const text = line.replace(/\*\*([^*]+)\*\*/g, '$1');
+        const text = sanitize(line.replace(/\*\*([^*]+)\*\*/g, '$1'));
         const wrapped = doc.splitTextToSize(text, usableW);
         doc.text(wrapped, marginL, y);
         y += wrapped.length * 5.5;
