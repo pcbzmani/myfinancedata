@@ -455,8 +455,12 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedSplit, setCopiedSplit] = useState(false);
+  const [splitMyName, setSplitMyName] = useState('');
 
-  useEffect(() => { setUrl(getScriptUrl()); }, []);
+  useEffect(() => {
+    setUrl(getScriptUrl());
+    setSplitMyName(localStorage.getItem('splitit_my_name') || '');
+  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -478,6 +482,11 @@ export default function Settings() {
     navigator.clipboard.writeText(SCRIPT_CODE);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const saveSplitMyName = (name: string) => {
+    setSplitMyName(name);
+    localStorage.setItem('splitit_my_name', name.trim());
   };
 
   const copySplitCode = () => {
@@ -594,6 +603,17 @@ export default function Settings() {
           <p className="text-emerald-100 text-xs mt-0.5">Separate Google Sheet for splitting group expenses with friends</p>
         </div>
         <div className="p-6 space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Your name in SplitIt</label>
+            <input
+              type="text"
+              value={splitMyName}
+              onChange={e => saveSplitMyName(e.target.value)}
+              placeholder="e.g. You, Alex, Me…"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500">When you pay for an expense in SplitIt, it auto-adds to your Transactions.</p>
+          </div>
           <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
             <p>SplitIt uses its <strong>own separate Google Sheet</strong> — do not use the same sheet as MyFinance above.</p>
             <div className="space-y-2">

@@ -1158,8 +1158,8 @@ function addExpense(){
     persist();renderExpenses();renderBalances();updateSummary();clearForm();syncToSheet();
     toast(`"${desc}" updated`);
   } else {
-    g.expenses.unshift({id:Date.now(),desc,amount,currency,category,paidBy,date,splits,splitMode});
-    persist();renderExpenses();updateSummary();clearForm();syncToSheet();
+    const newExpId=Date.now();g.expenses.unshift({id:newExpId,desc,amount,currency,category,paidBy,date,splits,splitMode});
+    persist();if(window.parent!==window){window.parent.postMessage({type:'splitit_expense',expense:{id:String(newExpId),desc,amount,currency,category,paidBy,date}},'*');}renderExpenses();updateSummary();clearForm();syncToSheet();
     toast(`"${desc}" added — ${fmtCode(amount,currency)}`);
   }
 }

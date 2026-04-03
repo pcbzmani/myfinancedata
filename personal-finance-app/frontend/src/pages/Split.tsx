@@ -1,4 +1,31 @@
+import { useEffect } from 'react';
+import { addRow } from '../lib/api';
+
 export default function Split() {
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type !== 'splitit_expense') return;
+      const { expense } = event.data as {
+        expense: { id: string; desc: string; amount: number; currency: string; category: string; paidBy: string; date: string };
+      };
+      const myName = localStorage.getItem('splitit_my_name')?.trim().toLowerCase();
+      if (!myName || expense.paidBy?.trim().toLowerCase() !== myName) return;
+      // Strip leading emoji from SplitIt category (e.g. "🍽️ Food & Drink" → "Food & Drink")
+      const cat = expense.category?.replace(/^[\p{Emoji}\u200d\s]+/u, '').trim() || 'Shared Expense';
+      addRow('transactions', {
+        id: crypto.randomUUID(),
+        type: 'expense',
+        category: cat,
+        currency: expense.currency || 'QAR',
+        amount: Number(expense.amount),
+        description: `${expense.desc} [SplitIt]`,
+        date: expense.date || new Date().toISOString().split('T')[0],
+      }).catch(console.error);
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   return (
     <div className="-mx-4 -my-4 md:-mx-8 md:-my-8">
       <iframe
