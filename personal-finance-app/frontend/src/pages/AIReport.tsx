@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getRows } from '../lib/api';
 
 const REPORT_PROMPT =
   `Analyze my complete financial health and generate a detailed structured report with the following sections:
@@ -111,7 +112,51 @@ export default function AIReport() {
   const [customMsg, setCustomMsg] = useState('');
   const [keyVisible, setKeyVisible] = useState(false);
 
-  const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+  async function buildSystemPrompt(): Promise<string> {
+    const [transactions, investments, insurance] = await Promise.all([
+      getRows('transactions'),
+      getRows('investments'),
+      getRows('insurance'),
+    ]);
+    const totalIncome   = transactions.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const totalExpense  = transactions.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const totalInvested = investments.reduce((s: number, i: any) => s + Number(i.amountInvested), 0);
+    const portfolioVal  = investments.reduce((s: number, i: any) => s + Number(i.currentValue), 0);
+
+    const catTotals: Record<string, number> = {};
+    transactions.filter((t: any) => t.type === 'expense').forEach((t: any) => {
+      const c = t.category || 'Other';
+      catTotals[c] = (catTotals[c] || 0) + Number(t.amount);
+    });
+    const topCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([c, v]) => `  - ${c}: ₹${v.toLocaleString('en-IN')}`).join('\n');
+
+    return `You are a personal finance assistant with access to the user's financial data:
+
+SUMMARY:
+- Total Income: ₹${totalIncome.toLocaleString('en-IN')}
+- Total Expense: ₹${totalExpense.toLocaleString('en-IN')}
+- Net Savings: ₹${(totalIncome - totalExpense).toLocaleString('en-IN')}
+- Savings Rate: ${totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome * 100).toFixed(1) : 0}%
+- Total Invested: ₹${totalInvested.toLocaleString('en-IN')}
+- Portfolio Value: ₹${portfolioVal.toLocaleString('en-IN')}
+- Portfolio Gain/Loss: ₹${(portfolioVal - totalInvested).toLocaleString('en-IN')}
+- Active Insurance Policies: ${insurance.length}
+
+TOP EXPENSE CATEGORIES:
+${topCats || '  (no data)'}
+
+RECENT TRANSACTIONS (last 10):
+${transactions.slice(0, 10).map((t: any) => `  - ${t.type} | ${t.category} | ${t.currency || '₹'}${t.amount} | ${t.description || ''}`).join('\n') || '  (no data)'}
+
+INVESTMENTS (${investments.length} total):
+${investments.map((i: any) => `  - ${i.name} (${i.type}) | Invested: ₹${i.amountInvested} | Current: ₹${i.currentValue}`).join('\n') || '  (no data)'}
+
+INSURANCE (${insurance.length} policies):
+${insurance.map((p: any) => `  - ${p.provider} (${p.type}) | ₹${p.premium}/${p.frequency} | Sum Assured: ₹${p.sumAssured}`).join('\n') || '  (no data)'}
+
+Give helpful, practical financial advice. Use ₹ for INR amounts.`;
+  }
 
   async function callAI(message: string) {
     const key = apiKey.trim();
@@ -120,14 +165,45 @@ export default function AIReport() {
     setError('');
     setReport('');
     try {
-      const res = await fetch(`${apiBase}/api/v1/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, apiKey: key, provider, maxTokens: 4096 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'AI service error');
-      setReport(data.reply || '');
+      const systemPrompt = await buildSystemPrompt();
+
+      if (provider === 'anthropic') {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: message }],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Anthropic API error');
+        setReport(data.content?.[0]?.text || '');
+        return;
+      }
+
+      if (provider === 'groq') {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            max_tokens: 4096,
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Groq API error');
+        setReport(data.choices?.[0]?.message?.content || '');
+        return;
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
