@@ -7,21 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: personal-finance-app/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: personal-finance-app/backend/package-lock.json
-      - run: npm ci
-      - run: npm run build
-
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -36,8 +21,6 @@ jobs:
           cache-dependency-path: personal-finance-app/frontend/package-lock.json
       - run: npm ci
       - run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
   # ── Deploy on push to main only ──────────────────────────────────────────
   deploy-frontend:
@@ -55,19 +38,9 @@ jobs:
         working-directory: personal-finance-app/frontend
       - run: npm run build
         working-directory: personal-finance-app/frontend
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
       - uses: netlify/actions/cli@master
         with:
           args: deploy --dir=personal-finance-app/frontend/dist --prod
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-
-  deploy-backend:
-    needs: backend
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Trigger Railway deploy
-        run: curl -X POST "${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}"
