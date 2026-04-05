@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
+import { markEntryMadeToday } from '../lib/notifications';
 
 const DEFAULT_CATEGORIES = ['Salary', 'Freelance', 'Food', 'Grocery', 'Transport', 'Shopping', 'Rent', 'Medical', 'Entertainment', 'Utilities', 'Other'];
 const PRESET_CURRENCIES = ['QAR', 'INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'];
@@ -138,6 +139,7 @@ export default function Transactions() {
         amount: Number(form.amount),
         date: form.date || new Date().toISOString().split('T')[0],
       });
+      markEntryMadeToday();
       setShowForm(false);
       setForm(EMPTY_FORM);
       setCustomCurrency('');
