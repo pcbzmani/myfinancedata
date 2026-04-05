@@ -215,23 +215,48 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     const date = new Date().toISOString().split('T')[0];
 
     // Convert markdown to HTML for print
+    function bold(s: string) { return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
+
     function mdToHtml(md: string): string {
-      return md
-        .split('\n')
-        .map(line => {
-          const t = line.trim();
-          if (t.startsWith('# '))   return `<h1>${t.slice(2)}</h1>`;
-          if (t.startsWith('## '))  return `<h2>${t.slice(3)}</h2>`;
-          if (t.startsWith('### ')) return `<h3>${t.slice(4)}</h3>`;
-          if (t.startsWith('- ') || t.startsWith('* '))
-            return `<li>${t.slice(2).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li>`;
-          if (/^\d+\. /.test(t))
-            return `<li class="ol">${t.replace(/^\d+\. /, '').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li>`;
-          if (t === '' || t === '---') return '<br/>';
-          if (t.startsWith('|'))    return `<div class="table-row">${t}</div>`;
-          return `<p>${t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
-        })
-        .join('\n');
+      const lines = md.split('\n');
+      const out: string[] = [];
+      let i = 0;
+      while (i < lines.length) {
+        const t = lines[i].trim();
+
+        // Markdown table: collect contiguous | lines
+        if (t.startsWith('|')) {
+          const tableLines: string[] = [];
+          while (i < lines.length && lines[i].trim().startsWith('|')) {
+            tableLines.push(lines[i].trim());
+            i++;
+          }
+          // Filter out separator rows (---|---|---)
+          const rows = tableLines.filter(l => !/^\|[\s\-|:]+\|$/.test(l));
+          if (rows.length > 0) {
+            out.push('<table>');
+            rows.forEach((row, ri) => {
+              const cells = row.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+              const tag = ri === 0 ? 'th' : 'td';
+              out.push('<tr>' + cells.map(c => `<${tag}>${bold(c)}</${tag}>`).join('') + '</tr>');
+            });
+            out.push('</table>');
+          }
+          continue;
+        }
+
+        if (t.startsWith('# '))   { out.push(`<h1>${bold(t.slice(2))}</h1>`); }
+        else if (t.startsWith('## '))  { out.push(`<h2>${bold(t.slice(3))}</h2>`); }
+        else if (t.startsWith('### ')) { out.push(`<h3>${bold(t.slice(4))}</h3>`); }
+        else if (t.startsWith('- ') || t.startsWith('* '))
+          { out.push(`<li>${bold(t.slice(2))}</li>`); }
+        else if (/^\d+\. /.test(t))
+          { out.push(`<li class="ol">${bold(t.replace(/^\d+\. /, ''))}</li>`); }
+        else if (t === '' || t === '---') { out.push('<br/>'); }
+        else { out.push(`<p>${bold(t)}</p>`); }
+        i++;
+      }
+      return out.join('\n');
     }
 
     const html = `<!DOCTYPE html>
@@ -257,8 +282,11 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     li.ol { list-style: decimal; }
     br { display: block; margin: 6px 0; content: ''; }
     strong { color: #1e293b; }
-    .table-row { font-family: monospace; font-size: 9pt; color: #475569;
-                 padding: 1px 0; white-space: pre-wrap; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.5pt; }
+    th { background: #ede9fe; color: #4c1d95; font-weight: 600; text-align: left;
+         padding: 5px 8px; border: 1px solid #c4b5fd; }
+    td { padding: 4px 8px; border: 1px solid #e2e8f0; color: #334155; }
+    tr:nth-child(even) td { background: #f8fafc; }
     .footer { margin-top: 32px; padding-top: 8px; border-top: 1px solid #e2e8f0;
               font-size: 8pt; color: #94a3b8;
               display: flex; justify-content: space-between; }

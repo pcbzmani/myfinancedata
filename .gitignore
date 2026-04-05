@@ -14,6 +14,9 @@ uv.lock
 node_modules/
 *.tsbuildinfo
 
+# Compiled JS output — never commit tsc-emitted .js alongside .ts sources
+personal-finance-app/frontend/src/**/*.js
+
 # Build output
 dist/
 .next/

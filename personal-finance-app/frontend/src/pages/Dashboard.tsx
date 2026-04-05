@@ -43,8 +43,8 @@ const INDICES = [
 const FX_GOLD = [
   { key: 'usdInr'  as const, label: 'USD/INR',     prefix: '₹'   },
   { key: 'qarInr'  as const, label: 'QAR/INR',     prefix: '₹'   },
-  { key: 'goldInr' as const, label: 'Gold ₹/10g',  prefix: '₹'   },
-  { key: 'goldQar' as const, label: 'Gold QAR/10g', prefix: 'QAR ' },
+  { key: 'goldInr' as const, label: 'Gold ₹/1g',  prefix: '₹'   },
+  { key: 'goldQar' as const, label: 'Gold QAR/1g', prefix: 'QAR ' },
 ];
 
 function TickerCell({ label, quote, prefix = '' }: { label: string; quote: MarketQuote | null; prefix?: string }) {
