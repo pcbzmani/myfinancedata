@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getScriptUrl, setScriptUrl, ping } from '../lib/api';
+import {
+  notificationsGranted,
+  isNotifDisabled,
+  requestPermission,
+  setNotifEnabled,
+} from '../lib/notifications';
 
 const SPLITIT_SCRIPT_CODE = `// SplitIt — Google Apps Script
 // Deploy: New Deployment → Web App → Execute as: Me → Who has access: Anyone
@@ -456,7 +462,26 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [copiedSplit, setCopiedSplit] = useState(false);
 
+  const getPermStatus = () => {
+    if (!('Notification' in window)) return 'unsupported' as const;
+    return Notification.permission as 'default' | 'granted' | 'denied';
+  };
+  const [notifPerm, setNotifPerm] = useState<'default' | 'granted' | 'denied' | 'unsupported'>(getPermStatus);
+  const [notifOn, setNotifOn] = useState(() => notificationsGranted() && !isNotifDisabled());
+
   useEffect(() => { setUrl(getScriptUrl()); }, []);
+
+  const handleEnableNotif = async () => {
+    const granted = await requestPermission();
+    setNotifPerm(getPermStatus());
+    setNotifOn(granted);
+    if (granted) await setNotifEnabled(true);
+  };
+
+  const handleToggleNotif = async (on: boolean) => {
+    setNotifOn(on);
+    await setNotifEnabled(on);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,6 +653,50 @@ export default function Settings() {
             </pre>
           </div>
         </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">🔔 Daily Entry Reminder</h2>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Get a reminder at 8 PM if you haven't logged any entries that day</p>
+
+        {notifPerm === 'unsupported' && (
+          <p className="text-sm text-slate-400">Notifications are not supported in this browser.</p>
+        )}
+
+        {notifPerm === 'denied' && (
+          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 rounded-xl px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
+            Notifications are blocked in your browser settings. To enable, click the lock/info icon in the address bar and allow notifications for this site, then reload.
+          </div>
+        )}
+
+        {notifPerm === 'default' && (
+          <button
+            onClick={handleEnableNotif}
+            className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors"
+          >
+            Enable Notifications
+          </button>
+        )}
+
+        {notifPerm === 'granted' && (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {notifOn ? 'Reminders are on' : 'Reminders are off'}
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                {notifOn ? 'You\'ll be reminded at 8 PM on days you haven\'t added entries' : 'No reminders will be sent'}
+              </p>
+            </div>
+            <button
+              onClick={() => handleToggleNotif(!notifOn)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${notifOn ? 'bg-violet-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${notifOn ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-600 p-5 space-y-4">
