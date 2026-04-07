@@ -4,7 +4,7 @@
 # VITE_VAPID_PUBLIC_KEY is intentionally bundled into the client (public key by design).
 # VAPID_EMAIL appears in split.html as a contact address — not a secret.
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "VITE_VAPID_PUBLIC_KEY,VAPID_EMAIL"
+  SECRETS_SCAN_OMIT_KEYS = "VAPID_PUBLIC_KEY,VITE_VAPID_PUBLIC_KEY,VAPID_EMAIL"
 
 # SPA routing — send all requests to index.html (functions take priority)
 [[redirects]]
