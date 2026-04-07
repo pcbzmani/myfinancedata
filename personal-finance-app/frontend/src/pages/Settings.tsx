@@ -5,6 +5,7 @@ import {
   isNotifDisabled,
   requestPermission,
   setNotifEnabled,
+  fireTestNotification,
 } from '../lib/notifications';
 
 const SPLITIT_SCRIPT_CODE = `// SplitIt — Google Apps Script
@@ -680,7 +681,7 @@ export default function Settings() {
         )}
 
         {notifPerm === 'granted' && (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 {notifOn ? 'Reminders are on' : 'Reminders are off'}
@@ -689,12 +690,22 @@ export default function Settings() {
                 {notifOn ? 'You\'ll be reminded at 8 PM on days you haven\'t added entries' : 'No reminders will be sent'}
               </p>
             </div>
-            <button
-              onClick={() => handleToggleNotif(!notifOn)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${notifOn ? 'bg-violet-600' : 'bg-slate-300 dark:bg-slate-600'}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${notifOn ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {notifOn && (
+                <button
+                  onClick={() => fireTestNotification()}
+                  className="text-xs text-violet-600 dark:text-violet-400 border border-violet-300 dark:border-violet-600 px-2.5 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+                >
+                  Test
+                </button>
+              )}
+              <button
+                onClick={() => handleToggleNotif(!notifOn)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${notifOn ? 'bg-violet-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${notifOn ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
           </div>
         )}
       </div>
