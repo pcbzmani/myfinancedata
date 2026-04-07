@@ -1,6 +1,7 @@
-const ENTRY_KEY   = 'myfinance_last_entry';
-const ASKED_KEY   = 'myfinance_notif_asked';
-const REMINDER_H  = 20; // 8 PM
+const ENTRY_KEY    = 'myfinance_last_entry';
+const ASKED_KEY    = 'myfinance_notif_asked';
+const DISABLED_KEY = 'myfinance_notif_disabled';
+const REMINDER_H   = 20; // 8 PM
 
 export function todayStr() {
   return new Date().toISOString().split('T')[0];
@@ -26,6 +27,29 @@ export function notificationsGranted() {
   return 'Notification' in window && Notification.permission === 'granted';
 }
 
+export function isNotifDisabled() {
+  return localStorage.getItem(DISABLED_KEY) === '1';
+}
+
+export async function setNotifEnabled(enabled: boolean) {
+  if (enabled) {
+    localStorage.removeItem(DISABLED_KEY);
+    await registerPeriodicSync();
+    scheduleInAppReminder();
+  } else {
+    localStorage.setItem(DISABLED_KEY, '1');
+    // Unregister periodic background sync
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if ('periodicSync' in reg) {
+          await (reg as any).periodicSync.unregister('daily-entry-reminder');
+        }
+      } catch { /* ignore */ }
+    }
+  }
+}
+
 export async function requestPermission(): Promise<boolean> {
   markAskedPermission();
   if (!('Notification' in window)) return false;
@@ -35,7 +59,7 @@ export async function requestPermission(): Promise<boolean> {
 
 /** Register periodic background sync (Chrome Android / TWA) */
 export async function registerPeriodicSync() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!('serviceWorker' in navigator) || isNotifDisabled()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     if ('periodicSync' in reg) {
@@ -48,7 +72,7 @@ export async function registerPeriodicSync() {
 
 /** Schedule an in-app notification at REMINDER_H (8 PM) if tab stays open */
 export function scheduleInAppReminder() {
-  if (!notificationsGranted()) return;
+  if (!notificationsGranted() || isNotifDisabled()) return;
   const now    = new Date();
   const target = new Date(now);
   target.setHours(REMINDER_H, 0, 0, 0);
