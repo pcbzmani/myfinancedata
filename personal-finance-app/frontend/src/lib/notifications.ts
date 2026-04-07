@@ -1,6 +1,9 @@
 const ENTRY_KEY    = 'myfinance_last_entry';
 const DISABLED_KEY = 'myfinance_notif_disabled';
-const REMINDER_H   = 20; // 8 PM
+const INTERVAL_MS  = 4 * 60 * 60 * 1000; // every 4 hours
+
+// VAPID public key — set VITE_VAPID_PUBLIC_KEY in Netlify env vars
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
 export function todayStr() {
   return new Date().toISOString().split('T')[0];
@@ -25,11 +28,11 @@ export function isNotifDisabled() {
 export async function setNotifEnabled(enabled: boolean) {
   if (enabled) {
     localStorage.removeItem(DISABLED_KEY);
+    await subscribeToWebPush();
     await registerPeriodicSync();
     scheduleInAppReminder();
   } else {
     localStorage.setItem(DISABLED_KEY, '1');
-    // Unregister periodic background sync
     if ('serviceWorker' in navigator) {
       try {
         const reg = await navigator.serviceWorker.ready;
@@ -47,33 +50,49 @@ export async function requestPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
-/** Register periodic background sync (Chrome Android / TWA) */
+/** Subscribe to Web Push and save the subscription to Netlify Blob via API */
+export async function subscribeToWebPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!VAPID_PUBLIC_KEY) return; // not configured (local dev)
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let subscription = await reg.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription),
+    });
+  } catch (err) {
+    console.warn('Web Push subscription failed:', err);
+  }
+}
+
+/** Register periodic background sync (Chrome Android PWA) */
 export async function registerPeriodicSync() {
   if (!('serviceWorker' in navigator) || isNotifDisabled()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     if ('periodicSync' in reg) {
       await (reg as any).periodicSync.register('daily-entry-reminder', {
-        minInterval: 20 * 60 * 60 * 1000, // 20 hours
+        minInterval: INTERVAL_MS,
       });
     }
   } catch { /* not supported in this browser */ }
 }
 
-/** Schedule an in-app notification at REMINDER_H (8 PM) if tab stays open.
- *  If already past 8 PM today, schedules for tomorrow's 8 PM instead. */
+/** Fire a reminder every 4 hours while the tab is open, if no entry today */
 export function scheduleInAppReminder() {
   if (!notificationsGranted() || isNotifDisabled()) return;
-  const now    = new Date();
-  const target = new Date(now);
-  target.setHours(REMINDER_H, 0, 0, 0);
 
-  // Already past 8 PM today → schedule for tomorrow
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  const ms = target.getTime() - now.getTime();
   setTimeout(() => {
     if (!isNotifDisabled() && localStorage.getItem(ENTRY_KEY) !== todayStr()) {
       new Notification('MyFinance Reminder', {
@@ -82,9 +101,8 @@ export function scheduleInAppReminder() {
         tag: 'daily-reminder',
       });
     }
-    // Re-schedule for the next day so it keeps firing daily
     scheduleInAppReminder();
-  }, ms);
+  }, INTERVAL_MS);
 }
 
 /** Fire a test notification immediately (for verification in Settings) */
@@ -95,4 +113,11 @@ export function fireTestNotification() {
     icon: '/pwa-192x192.png',
     tag: 'daily-reminder-test',
   });
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }

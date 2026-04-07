@@ -1,4 +1,7 @@
-# SPA routing — send all requests to index.html
+[functions]
+  node_bundler = "esbuild"
+
+# SPA routing — send all requests to index.html (functions take priority)
 [[redirects]]
   from = "/*"
   to = "/index.html"
