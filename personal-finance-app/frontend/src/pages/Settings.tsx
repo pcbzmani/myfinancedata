@@ -663,7 +663,7 @@ export default function Settings() {
       {/* Notifications */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
         <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">🔔 Daily Entry Reminder</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Get a reminder at 8 PM if you haven't logged any entries that day</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Get a reminder every 4 hours if you haven't logged any entries that day</p>
 
         {notifPerm === 'unsupported' && (
           <p className="text-sm text-slate-400">Notifications are not supported in this browser.</p>
@@ -691,7 +691,7 @@ export default function Settings() {
                 {notifOn ? 'Reminders are on' : 'Reminders are off'}
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                {notifOn ? 'You\'ll be reminded at 8 PM on days you haven\'t added entries' : 'No reminders will be sent'}
+                {notifOn ? 'You\'ll be reminded every 4 hours on days you haven\'t added entries' : 'No reminders will be sent'}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
