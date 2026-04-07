@@ -6,13 +6,6 @@ declare const self: ServiceWorkerGlobalScope;
 // Precache all static assets
 precacheAndRoute(self.__WB_MANIFEST);
 
-// ── Periodic background sync ──────────────────────────────────────────────────
-self.addEventListener('periodicsync', (event: any) => {
-  if (event.tag === 'daily-entry-reminder') {
-    event.waitUntil(checkAndNotify());
-  }
-});
-
 const NOTIF_CACHE = 'myfinance-notif-v1';
 
 function getToday() {
@@ -43,6 +36,18 @@ async function checkAndNotify() {
   await cache.put('notified-date', new Response(today));
 }
 
+// ── Web Push (Netlify scheduled function → browser) ──────────────────────────
+self.addEventListener('push', (event: PushEvent) => {
+  event.waitUntil(checkAndNotify());
+});
+
+// ── Periodic background sync (Chrome Android PWA) ────────────────────────────
+self.addEventListener('periodicsync', (event: any) => {
+  if (event.tag === 'daily-entry-reminder') {
+    event.waitUntil(checkAndNotify());
+  }
+});
+
 // ── Notification click → open app ────────────────────────────────────────────
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();
@@ -63,7 +68,7 @@ self.addEventListener('message', async (event: ExtendableMessageEvent) => {
   if ((event.data as { type?: string })?.type === 'ENTRY_MADE') {
     const cache = await caches.open(NOTIF_CACHE);
     await cache.put('entry-date', new Response((event.data as { date: string }).date));
-    // Close any pending daily-reminder notification
+    // Dismiss any pending reminder notification
     const notifications = await self.registration.getNotifications({ tag: 'daily-reminder' });
     notifications.forEach(n => n.close());
   }

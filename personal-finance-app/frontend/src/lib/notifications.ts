@@ -2,6 +2,9 @@ const ENTRY_KEY    = 'myfinance_last_entry';
 const DISABLED_KEY = 'myfinance_notif_disabled';
 const INTERVAL_MS  = 4 * 60 * 60 * 1000; // every 4 hours
 
+// VAPID public key — set VITE_VAPID_PUBLIC_KEY in Netlify env vars
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+
 export function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
@@ -25,6 +28,7 @@ export function isNotifDisabled() {
 export async function setNotifEnabled(enabled: boolean) {
   if (enabled) {
     localStorage.removeItem(DISABLED_KEY);
+    await subscribeToWebPush();
     await registerPeriodicSync();
     scheduleInAppReminder();
   } else {
@@ -46,7 +50,33 @@ export async function requestPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
-/** Register periodic background sync (Chrome Android / TWA) */
+/** Subscribe to Web Push and save the subscription to Netlify Blob via API */
+export async function subscribeToWebPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!VAPID_PUBLIC_KEY) return; // not configured (local dev)
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let subscription = await reg.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription),
+    });
+  } catch (err) {
+    console.warn('Web Push subscription failed:', err);
+  }
+}
+
+/** Register periodic background sync (Chrome Android PWA) */
 export async function registerPeriodicSync() {
   if (!('serviceWorker' in navigator) || isNotifDisabled()) return;
   try {
@@ -71,7 +101,6 @@ export function scheduleInAppReminder() {
         tag: 'daily-reminder',
       });
     }
-    // Re-schedule next 4-hour check regardless (resets after entry made)
     scheduleInAppReminder();
   }, INTERVAL_MS);
 }
@@ -84,4 +113,11 @@ export function fireTestNotification() {
     icon: '/pwa-192x192.png',
     tag: 'daily-reminder-test',
   });
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
