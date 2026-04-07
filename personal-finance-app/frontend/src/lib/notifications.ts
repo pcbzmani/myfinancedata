@@ -1,5 +1,4 @@
 const ENTRY_KEY    = 'myfinance_last_entry';
-const ASKED_KEY    = 'myfinance_notif_asked';
 const DISABLED_KEY = 'myfinance_notif_disabled';
 const REMINDER_H   = 20; // 8 PM
 
@@ -13,14 +12,6 @@ export function markEntryMadeToday() {
   if (navigator.serviceWorker?.controller) {
     navigator.serviceWorker.controller.postMessage({ type: 'ENTRY_MADE', date: todayStr() });
   }
-}
-
-export function hasAskedPermission() {
-  return !!localStorage.getItem(ASKED_KEY);
-}
-
-export function markAskedPermission() {
-  localStorage.setItem(ASKED_KEY, '1');
 }
 
 export function notificationsGranted() {
@@ -51,7 +42,6 @@ export async function setNotifEnabled(enabled: boolean) {
 }
 
 export async function requestPermission(): Promise<boolean> {
-  markAskedPermission();
   if (!('Notification' in window)) return false;
   const result = await Notification.requestPermission();
   return result === 'granted';
