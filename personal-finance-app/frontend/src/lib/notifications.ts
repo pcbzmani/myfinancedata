@@ -60,22 +60,39 @@ export async function registerPeriodicSync() {
   } catch { /* not supported in this browser */ }
 }
 
-/** Schedule an in-app notification at REMINDER_H (8 PM) if tab stays open */
+/** Schedule an in-app notification at REMINDER_H (8 PM) if tab stays open.
+ *  If already past 8 PM today, schedules for tomorrow's 8 PM instead. */
 export function scheduleInAppReminder() {
   if (!notificationsGranted() || isNotifDisabled()) return;
   const now    = new Date();
   const target = new Date(now);
   target.setHours(REMINDER_H, 0, 0, 0);
-  if (target <= now) return; // already past 8 PM
+
+  // Already past 8 PM today → schedule for tomorrow
+  if (target <= now) {
+    target.setDate(target.getDate() + 1);
+  }
 
   const ms = target.getTime() - now.getTime();
   setTimeout(() => {
-    if (localStorage.getItem(ENTRY_KEY) !== todayStr()) {
+    if (!isNotifDisabled() && localStorage.getItem(ENTRY_KEY) !== todayStr()) {
       new Notification('MyFinance Reminder', {
         body: "Don't forget to log today's financial entries!",
         icon: '/pwa-192x192.png',
         tag: 'daily-reminder',
       });
     }
+    // Re-schedule for the next day so it keeps firing daily
+    scheduleInAppReminder();
   }, ms);
+}
+
+/** Fire a test notification immediately (for verification in Settings) */
+export function fireTestNotification() {
+  if (!notificationsGranted()) return;
+  new Notification('MyFinance Reminder', {
+    body: "Don't forget to log today's financial entries!",
+    icon: '/pwa-192x192.png',
+    tag: 'daily-reminder-test',
+  });
 }
