@@ -476,12 +476,16 @@ export default function Settings() {
     const granted = await requestPermission();
     setNotifPerm(getPermStatus());
     setNotifOn(granted);
-    if (granted) await setNotifEnabled(true);
+    if (granted) {
+      await setNotifEnabled(true);
+      fireTestNotification();
+    }
   };
 
   const handleToggleNotif = async (on: boolean) => {
     setNotifOn(on);
     await setNotifEnabled(on);
+    if (on) fireTestNotification();
   };
 
   const handleSave = (e: React.FormEvent) => {
