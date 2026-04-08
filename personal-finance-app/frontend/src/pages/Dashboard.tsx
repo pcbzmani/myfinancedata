@@ -20,16 +20,23 @@ const EMPTY_RATES: Rates = {
 };
 
 async function fetchRates(): Promise<Rates> {
-  const scriptUrl = getScriptUrl();
+  // Always try Netlify function first (works in both local + Sheets mode)
   try {
-    // Local mode — use Netlify function proxy (works without Apps Script)
-    if (!scriptUrl) {
-      const r = await fetch('/api/market-rates', { signal: AbortSignal.timeout(15000) });
-      if (!r.ok) return EMPTY_RATES;
+    const r = await fetch('/api/market-rates', { signal: AbortSignal.timeout(15000) });
+    if (r.ok) {
       const json = await r.json();
-      return { ...EMPTY_RATES, ...(json.data || {}) };
+      const data = json.data || {};
+      // Check we got real data (not all-null)
+      if (Object.values(data).some(v => v !== null)) {
+        return { ...EMPTY_RATES, ...data };
+      }
     }
-    // Google Sheets mode — use Apps Script
+  } catch { /* fall through to Apps Script */ }
+
+  // Fallback — Apps Script (Google Sheets mode)
+  const scriptUrl = getScriptUrl();
+  if (!scriptUrl) return EMPTY_RATES;
+  try {
     const r = await fetch(`${scriptUrl}?action=readMarket`, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return EMPTY_RATES;
     const json = await r.json();
