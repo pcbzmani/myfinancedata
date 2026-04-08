@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getScriptUrl, setScriptUrl, ping } from '../lib/api';
+import { getScriptUrl, setScriptUrl, ping, isLocalMode } from '../lib/api';
+import { idbTotalCount, idbImportAll, downloadBackup } from '../lib/idb';
 import {
   notificationsGranted,
   isNotifDisabled,
@@ -463,6 +464,13 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [copiedSplit, setCopiedSplit] = useState(false);
 
+  // Backup / restore
+  const [localMode, setLocalMode] = useState(isLocalMode);
+  const [localCount, setLocalCount] = useState(0);
+  const [migrating, setMigrating] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const restoreInputRef = { current: null as HTMLInputElement | null };
+
   const getPermStatus = () => {
     if (!('Notification' in window)) return 'unsupported' as const;
     return Notification.permission as 'default' | 'granted' | 'denied';
@@ -471,6 +479,48 @@ export default function Settings() {
   const [notifOn, setNotifOn] = useState(() => notificationsGranted() && !isNotifDisabled());
 
   useEffect(() => { setUrl(getScriptUrl()); }, []);
+
+  useEffect(() => {
+    if (localMode) idbTotalCount().then(setLocalCount);
+  }, [localMode]);
+
+  const handleDownloadBackup = async () => {
+    try {
+      await downloadBackup();
+      setBackupMsg('Backup downloaded!');
+    } catch {
+      setBackupMsg('Download failed.');
+    }
+    setTimeout(() => setBackupMsg(null), 3000);
+  };
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const dump = JSON.parse(ev.target?.result as string);
+        await idbImportAll(dump);
+        const count = await idbTotalCount();
+        setLocalCount(count);
+        setBackupMsg('Restore complete!');
+      } catch {
+        setBackupMsg('Invalid backup file.');
+      }
+      setTimeout(() => setBackupMsg(null), 3000);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleSaveUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    setScriptUrl(url);
+    setLocalMode(isLocalMode());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   const handleEnableNotif = async () => {
     const granted = await requestPermission();
@@ -488,12 +538,6 @@ export default function Settings() {
     if (on) fireTestNotification();
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setScriptUrl(url);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
 
   const handleTest = async () => {
     setTesting(true);
@@ -520,8 +564,21 @@ export default function Settings() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Connect your Google Sheets database</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+          {localMode ? 'Running in local mode — data saved on this device' : 'Connected to Google Sheets'}
+        </p>
       </div>
+
+      {/* Local mode banner */}
+      {localMode && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl px-4 py-3 flex gap-3">
+          <span className="text-blue-500 text-lg flex-shrink-0">📱</span>
+          <div className="text-sm text-blue-800 dark:text-blue-300">
+            <p className="font-semibold mb-0.5">Local mode — no setup needed!</p>
+            <p className="text-xs">Your data is saved on this device. To back it up or sync across devices, download a backup below or set up Google Sheets.</p>
+          </div>
+        </div>
+      )}
 
       {/* Mobile tip banner */}
       <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl px-4 py-3 flex gap-3">
@@ -576,7 +633,7 @@ export default function Settings() {
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
         <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">Web App URL</h2>
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSaveUrl} className="space-y-4">
           <div>
             <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Google Apps Script URL</label>
             <input
@@ -658,6 +715,49 @@ export default function Settings() {
             </pre>
           </div>
         </div>
+      </div>
+
+      {/* Data Storage & Backup */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">💾 Data Storage</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {localMode
+              ? `Storing data locally on this device (${localCount} record${localCount !== 1 ? 's' : ''}). Add a Google Sheets URL above to switch to cloud storage.`
+              : 'Data is stored in your Google Sheet. Download a local backup anytime.'}
+          </p>
+        </div>
+
+        {/* Migration prompt: local data exists and URL just got configured */}
+        {!localMode && localCount > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            <p className="font-medium mb-1">⚠️ You have {localCount} locally stored records</p>
+            <p className="text-xs">Download a backup before switching — local data won't automatically move to Google Sheets.</p>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleDownloadBackup}
+            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            ⬇️ Download Backup
+          </button>
+          <label className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer">
+            ⬆️ Restore from Backup
+            <input
+              ref={el => { restoreInputRef.current = el; }}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleRestoreFile}
+            />
+          </label>
+        </div>
+
+        {backupMsg && (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">{backupMsg}</p>
+        )}
       </div>
 
       {/* Notifications */}
