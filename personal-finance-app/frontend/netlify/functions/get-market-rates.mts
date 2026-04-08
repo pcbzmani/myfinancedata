@@ -1,9 +1,8 @@
 import type { Config } from '@netlify/functions';
 
 /**
- * Yahoo Finance v7 quote endpoint.
- * Uses batch quote API — fetches all symbols in one request.
- * Works server-side without cookies on Netlify's infrastructure.
+ * Yahoo Finance requires a session cookie + crumb for server-side requests.
+ * Flow: 1) GET fc.yahoo.com → get cookie  2) GET crumb endpoint  3) fetch quotes with crumb+cookie
  */
 
 const SYMBOLS: Record<string, string> = {
@@ -22,31 +21,62 @@ const SYMBOLS: Record<string, string> = {
 
 interface Quote { price: number; change: number; changePct: number; }
 
-async function fetchAllQuotes(): Promise<Record<string, Quote | null>> {
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+async function getCookieAndCrumb(): Promise<{ cookie: string; crumb: string } | null> {
+  try {
+    // Step 1: get session cookie
+    const cookieRes = await fetch('https://fc.yahoo.com/', {
+      headers: { 'User-Agent': UA },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
+    });
+    const setCookieHeader = cookieRes.headers.get('set-cookie') ?? '';
+    // Extract the A3 or similar cookie
+    const cookie = setCookieHeader
+      .split(',')
+      .map(c => c.split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
+
+    if (!cookie) return null;
+
+    // Step 2: get crumb
+    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { 'User-Agent': UA, Cookie: cookie },
+      signal: AbortSignal.timeout(8000),
+    });
+    const crumb = (await crumbRes.text()).trim();
+    if (!crumb || crumb.includes('<')) return null; // got HTML error page
+
+    return { cookie, crumb };
+  } catch (err) {
+    console.error('getCookieAndCrumb failed:', err);
+    return null;
+  }
+}
+
+async function fetchQuotesWithCrumb(cookie: string, crumb: string): Promise<Record<string, Quote | null>> {
   const allSymbols = Object.values(SYMBOLS).join(',');
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(allSymbols)}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent`;
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(allSymbols)}&crumb=${encodeURIComponent(crumb)}`;
 
-  const headers: Record<string, string> = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
-
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA, Cookie: cookie },
+    signal: AbortSignal.timeout(12000),
+  });
 
   if (!res.ok) {
-    console.error('Yahoo Finance v7 failed:', res.status, await res.text().catch(() => ''));
+    console.error('Yahoo Finance quote failed:', res.status);
     return {};
   }
 
   const json = await res.json();
   const results: any[] = json?.quoteResponse?.result ?? [];
 
-  const out: Record<string, Quote | null> = {};
-  // index by symbol
   const bySymbol: Record<string, any> = {};
   for (const r of results) bySymbol[r.symbol] = r;
 
+  const out: Record<string, Quote | null> = {};
   for (const [key, sym] of Object.entries(SYMBOLS)) {
     const q = bySymbol[sym];
     if (!q) { out[key] = null; continue; }
@@ -60,8 +90,14 @@ async function fetchAllQuotes(): Promise<Record<string, Quote | null>> {
 
 export default async () => {
   let raw: Record<string, Quote | null> = {};
+
   try {
-    raw = await fetchAllQuotes();
+    const auth = await getCookieAndCrumb();
+    if (auth) {
+      raw = await fetchQuotesWithCrumb(auth.cookie, auth.crumb);
+    } else {
+      console.error('Could not get Yahoo Finance session — all values will be null');
+    }
   } catch (err) {
     console.error('get-market-rates error:', err);
   }
