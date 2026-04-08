@@ -6,6 +6,13 @@ declare const self: ServiceWorkerGlobalScope;
 // Precache all static assets
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Never cache API calls — always go to network
+self.addEventListener('fetch', (event: FetchEvent) => {
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+  }
+});
+
 const NOTIF_CACHE = 'myfinance-notif-v1';
 
 function getToday() {
