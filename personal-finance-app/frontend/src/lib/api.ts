@@ -55,7 +55,14 @@ export async function ping(): Promise<boolean> {
 }
 
 export async function getMarketRates(): Promise<Record<string, { price: number; change: number; changePct: number }>> {
-  if (isLocalMode()) return {};
+  if (isLocalMode()) {
+    try {
+      const r = await fetch('/api/market-rates', { signal: AbortSignal.timeout(15000) });
+      if (!r.ok) return {};
+      const json = await r.json();
+      return json.data || {};
+    } catch { return {}; }
+  }
   const r = await call({ action: 'readMarket' });
   return r.data || {};
 }
