@@ -11,7 +11,7 @@ const fmt = (n: number, currency = 'QAR') =>
   `${currSym(currency)} ${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const normCur = (t: any): string => (t.currency && String(t.currency).trim()) || 'QAR';
 
-const EMPTY_FORM = { type: 'expense', category: 'Food', amount: '', description: '', date: '', currency: 'QAR' };
+const emptyForm = () => ({ type: 'expense', category: 'Food', amount: '', description: '', date: new Date().toISOString().split('T')[0], currency: 'QAR' });
 
 /** Normalize any date value (Date object, locale string, ISO string) to YYYY-MM-DD for <input type="date"> */
 const toDateInput = (d: any): string => {
@@ -25,7 +25,7 @@ const toDateInput = (d: any): string => {
 
 export default function Transactions() {
   const [items, setItems]               = useState<any[]>([]);
-  const [form, setForm]                 = useState(EMPTY_FORM);
+  const [form, setForm]                 = useState(emptyForm);
   const [customCurrency, setCustomCurrency] = useState('');
   const [showForm, setShowForm]         = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -36,7 +36,7 @@ export default function Transactions() {
   const [editCurVal, setEditCurVal]     = useState('');
   const [editCurCustom, setEditCurCustom] = useState('');
   const [editId, setEditId]             = useState<string | null>(null);
-  const [editForm, setEditForm]         = useState(EMPTY_FORM);
+  const [editForm, setEditForm]         = useState(emptyForm);
   const [editCustomCurrency, setEditCustomCurrency] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState<'original' | 'QAR' | 'INR' | 'USD'>('original');
   const [fxRates, setFxRates]           = useState<{ qarInr: number; usdInr: number } | null>(null);
@@ -141,7 +141,7 @@ export default function Transactions() {
       });
       markEntryMadeToday();
       setShowForm(false);
-      setForm(EMPTY_FORM);
+      setForm(emptyForm());
       setCustomCurrency('');
       load();
     } catch (e: any) { setError(e.message); }
@@ -550,7 +550,7 @@ export default function Transactions() {
                 className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
             <div className="sm:col-span-2 flex gap-3 justify-end pt-2 border-t border-slate-50">
-              <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setCustomCurrency(''); }}
+              <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm()); setCustomCurrency(''); }}
                 className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium">Cancel</button>
               <button type="submit" disabled={saving}
                 className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors">

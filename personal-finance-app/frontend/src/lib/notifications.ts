@@ -1,6 +1,10 @@
-const ENTRY_KEY    = 'myfinance_last_entry';
-const DISABLED_KEY = 'myfinance_notif_disabled';
-const INTERVAL_MS  = 4 * 60 * 60 * 1000; // every 4 hours
+const ENTRY_KEY      = 'myfinance_last_entry';
+const DISABLED_KEY   = 'myfinance_notif_disabled';
+const LAST_FIRED_KEY = 'myfinance_last_notif_fired';
+const INTERVAL_MS    = 4 * 60 * 60 * 1000; // every 4 hours
+
+// Module-level guard so scheduleInAppReminder() is never running twice in the same page
+let _reminderScheduled = false;
 
 // VAPID public key — set VITE_VAPID_PUBLIC_KEY in Netlify env vars
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
@@ -89,20 +93,35 @@ export async function registerPeriodicSync() {
   } catch { /* not supported in this browser */ }
 }
 
-/** Fire a reminder every 4 hours while the tab is open, if no entry today */
+/** Fire a reminder every 4 hours while the tab is open, if no entry today.
+ *  Persists last-fired timestamp so a page reload doesn't restart the 4-hour clock.
+ *  Module-level guard prevents duplicate timers when called more than once. */
 export function scheduleInAppReminder() {
   if (!notificationsGranted() || isNotifDisabled()) return;
+  if (_reminderScheduled) return; // already running in this page session
+  _reminderScheduled = true;
 
-  setTimeout(() => {
-    if (!isNotifDisabled() && localStorage.getItem(ENTRY_KEY) !== todayStr()) {
-      new Notification('MyFinance Reminder', {
-        body: "Don't forget to log today's financial entries!",
-        icon: '/pwa-192x192.png',
-        tag: 'daily-reminder',
-      });
-    }
-    scheduleInAppReminder();
-  }, INTERVAL_MS);
+  function fireIfDue() {
+    if (isNotifDisabled()) { _reminderScheduled = false; return; }
+
+    const lastFired = Number(localStorage.getItem(LAST_FIRED_KEY) || 0);
+    const elapsed   = Date.now() - lastFired;
+    const waitMs    = elapsed >= INTERVAL_MS ? 0 : INTERVAL_MS - elapsed;
+
+    setTimeout(() => {
+      if (!isNotifDisabled() && localStorage.getItem(ENTRY_KEY) !== todayStr()) {
+        localStorage.setItem(LAST_FIRED_KEY, String(Date.now()));
+        new Notification('MyFinance Reminder', {
+          body: "Don't forget to log today's financial entries!",
+          icon: '/pwa-192x192.png',
+          tag: 'daily-reminder',
+        });
+      }
+      fireIfDue(); // schedule next check
+    }, waitMs);
+  }
+
+  fireIfDue();
 }
 
 /** Fire a test notification immediately (for verification in Settings) */

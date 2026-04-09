@@ -463,6 +463,8 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedSplit, setCopiedSplit] = useState(false);
+  const [splitName, setSplitName] = useState('');
+  const [splitNameSaved, setSplitNameSaved] = useState(false);
 
   // Backup / restore
   const [localMode, setLocalMode] = useState(isLocalMode);
@@ -478,7 +480,10 @@ export default function Settings() {
   const [notifPerm, setNotifPerm] = useState<'default' | 'granted' | 'denied' | 'unsupported'>(getPermStatus);
   const [notifOn, setNotifOn] = useState(() => notificationsGranted() && !isNotifDisabled());
 
-  useEffect(() => { setUrl(getScriptUrl()); }, []);
+  useEffect(() => {
+    setUrl(getScriptUrl());
+    setSplitName(localStorage.getItem('splitit_user_name') || '');
+  }, []);
 
   useEffect(() => {
     if (localMode) idbTotalCount().then(setLocalCount);
@@ -558,6 +563,15 @@ export default function Settings() {
     navigator.clipboard.writeText(SPLITIT_SCRIPT_CODE);
     setCopiedSplit(true);
     setTimeout(() => setCopiedSplit(false), 2000);
+  };
+
+  const handleSaveSplitName = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = splitName.trim();
+    if (name) localStorage.setItem('splitit_user_name', name);
+    else localStorage.removeItem('splitit_user_name');
+    setSplitNameSaved(true);
+    setTimeout(() => setSplitNameSaved(false), 2500);
   };
 
   return (
@@ -715,6 +729,30 @@ export default function Settings() {
             </pre>
           </div>
         </div>
+      </div>
+
+      {/* SplitIt — Your Name */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">👤 Your Name in SplitIt</h2>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+          When you pay for an expense in SplitIt, it's automatically added to your MyFinance transactions.
+          This only works if your name here matches <strong>exactly</strong> how you appear as a member in your SplitIt groups.
+        </p>
+        <form onSubmit={handleSaveSplitName} className="flex gap-3">
+          <input
+            type="text"
+            placeholder="e.g. Mani"
+            value={splitName}
+            onChange={e => setSplitName(e.target.value)}
+            className="flex-1 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:focus:ring-emerald-700"
+          />
+          <button
+            type="submit"
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            {splitNameSaved ? '✓ Saved!' : 'Save'}
+          </button>
+        </form>
       </div>
 
       {/* Data Storage & Backup */}
