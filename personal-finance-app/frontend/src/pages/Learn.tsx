@@ -597,25 +597,45 @@ function renderContent(text: string) {
   let inTable = false;
   let key = 0;
 
+  const isDark = () => document.documentElement.classList.contains('dark');
+
   const flushTable = () => {
     if (tableRows.length < 2) return;
     const headers = tableRows[0];
     const body = tableRows.slice(2); // skip separator row
+    const dark = isDark();
     elements.push(
       <div key={key++} className="overflow-x-auto my-4 rounded-xl border border-slate-200 dark:border-slate-600">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-100 dark:bg-slate-700">
+            <tr style={{ background: dark ? '#334155' : '#f1f5f9' }}>
               {headers.map((h, i) => (
-                <th key={i} className="px-4 py-2.5 text-left font-semibold text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-600 first:rounded-tl-xl last:rounded-tr-xl">{h.trim()}</th>
+                <th
+                  key={i}
+                  style={{ color: dark ? '#ffffff' : '#1e293b', borderBottom: `1px solid ${dark ? '#475569' : '#e2e8f0'}` }}
+                  className="px-4 py-2.5 text-left font-semibold"
+                >{h.trim()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {body.map((row, ri) => (
-              <tr key={ri} className={ri % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-800/60'}>
+              <tr
+                key={ri}
+                style={{ background: ri % 2 === 0
+                  ? (dark ? '#1e293b' : '#ffffff')
+                  : (dark ? '#0f172a' : '#f8fafc')
+                }}
+              >
                 {row.map((cell, ci) => (
-                  <td key={ci} className="px-4 py-2.5 text-slate-800 dark:text-slate-100 border-t border-slate-100 dark:border-slate-700">{cell.trim()}</td>
+                  <td
+                    key={ci}
+                    style={{
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      borderTop: `1px solid ${dark ? '#334155' : '#e2e8f0'}`,
+                    }}
+                    className="px-4 py-2.5"
+                  >{cell.trim()}</td>
                 ))}
               </tr>
             ))}
