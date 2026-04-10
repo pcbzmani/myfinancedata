@@ -602,20 +602,20 @@ function renderContent(text: string) {
     const headers = tableRows[0];
     const body = tableRows.slice(2); // skip separator row
     elements.push(
-      <div key={key++} className="overflow-x-auto my-4">
+      <div key={key++} className="overflow-x-auto my-4 rounded-xl border border-slate-200 dark:border-slate-600">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-slate-100 dark:bg-slate-700">
               {headers.map((h, i) => (
-                <th key={i} className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600">{h.trim()}</th>
+                <th key={i} className="px-4 py-2.5 text-left font-semibold text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-600 first:rounded-tl-xl last:rounded-tr-xl">{h.trim()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {body.map((row, ri) => (
-              <tr key={ri} className={ri % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-750'}>
+              <tr key={ri} className={ri % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-800/60'}>
                 {row.map((cell, ci) => (
-                  <td key={ci} className="px-3 py-2 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600">{cell.trim()}</td>
+                  <td key={ci} className="px-4 py-2.5 text-slate-800 dark:text-slate-100 border-t border-slate-100 dark:border-slate-700">{cell.trim()}</td>
                 ))}
               </tr>
             ))}
@@ -643,23 +643,21 @@ function renderContent(text: string) {
     if (!line.trim()) {
       elements.push(<div key={key++} className="h-2" />);
     } else if (line.startsWith('## ')) {
-      elements.push(<h2 key={key++} className="text-base font-bold text-slate-800 dark:text-slate-100 mt-5 mb-2 first:mt-0">{line.slice(3)}</h2>);
+      elements.push(<h2 key={key++} className="text-base font-bold text-slate-900 dark:text-white mt-5 mb-2 first:mt-0">{line.slice(3)}</h2>);
     } else if (line.startsWith('### ')) {
-      elements.push(<h3 key={key++} className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-3 mb-1">{line.slice(4)}</h3>);
+      elements.push(<h3 key={key++} className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-3 mb-1">{line.slice(4)}</h3>);
     } else if (line.startsWith('---')) {
       elements.push(<hr key={key++} className="border-slate-200 dark:border-slate-600 my-3" />);
     } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      // Bold within bullet
-      const text = line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const txt = line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong class="text-slate-900 dark:text-white font-semibold">$1</strong>');
       elements.push(
-        <li key={key++} className="text-sm text-slate-700 dark:text-slate-300 ml-4 mb-1 list-disc"
-          dangerouslySetInnerHTML={{ __html: text }} />
+        <li key={key++} className="text-sm text-slate-700 dark:text-slate-200 ml-4 mb-1 list-disc leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: txt }} />
       );
     } else {
-      // Bold inline
-      const html = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const html = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-slate-900 dark:text-white font-semibold">$1</strong>');
       elements.push(
-        <p key={key++} className="text-sm text-slate-700 dark:text-slate-300 mb-1"
+        <p key={key++} className="text-sm text-slate-700 dark:text-slate-200 mb-1 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: html }} />
       );
     }
@@ -760,10 +758,10 @@ export default function Learn() {
                   <span className="text-2xl flex-shrink-0">{topic.emoji}</span>
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{topic.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{topic.summary}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 truncate">{topic.summary}</p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {topic.tags.map(tag => (
-                        <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${cat?.bg ?? 'bg-slate-100 dark:bg-slate-700'} ${cat?.color ?? 'text-slate-600 dark:text-slate-400'}`}>
+                        <span key={tag} className={`text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300`}>
                           {tag}
                         </span>
                       ))}
@@ -780,8 +778,8 @@ export default function Learn() {
 
               {/* Content */}
               {isOpen && (
-                <div className={`border-t ${cat?.border ?? 'border-slate-100 dark:border-slate-700'} px-5 py-5 ${cat?.bg ?? ''}`}>
-                  <div className="prose-sm max-w-none">
+                <div className={`border-t ${cat?.border ?? 'border-slate-100 dark:border-slate-700'} px-5 py-5 bg-white dark:bg-slate-800`}>
+                  <div className="max-w-none">
                     {renderContent(topic.content)}
                   </div>
                 </div>
