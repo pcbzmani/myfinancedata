@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRows, addRow, deleteRow, updateRow, getMarketRates } from '../lib/api';
 
-const FREQUENCIES = ['monthly', 'quarterly', 'half-yearly', 'yearly', 'custom'] as const;
+const FREQUENCIES = ['monthly', 'quarterly', 'half-yearly', 'yearly', 'custom', 'one-time'] as const;
 const CATEGORIES = ['productivity', 'entertainment', 'tools', 'cloud', 'ai', 'other'] as const;
 const CURRENCIES = ['QAR', 'INR', 'USD', 'EUR', 'GBP'];
 const STATUSES = ['active', 'paused', 'cancelled'] as const;
@@ -9,41 +9,54 @@ const STATUSES = ['active', 'paused', 'cancelled'] as const;
 type Frequency = typeof FREQUENCIES[number];
 type Category = typeof CATEGORIES[number];
 type Status = typeof STATUSES[number];
+type CustomUnit = 'months' | 'days';
 
 const FREQ_LABEL: Record<Frequency, string> = {
-  monthly: 'Monthly', quarterly: 'Quarterly', 'half-yearly': 'Half-Yearly', yearly: 'Yearly', custom: 'Custom',
+  monthly: 'Monthly', quarterly: 'Quarterly', 'half-yearly': 'Half-Yearly', yearly: 'Yearly', custom: 'Custom', 'one-time': 'One-Time',
 };
-// Payments per year (custom handled separately via customMonths)
-const FREQ_PER_YEAR: Record<Frequency, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1, custom: 0 };
+// Payments per year (custom & one-time handled separately)
+const FREQ_PER_YEAR: Record<Frequency, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1, custom: 0, 'one-time': 0 };
 
 const toMonthly = (cost: number, freq: Frequency, customMonths = 1): number => {
   if (freq === 'monthly') return cost;
   if (freq === 'quarterly') return cost / 3;
   if (freq === 'half-yearly') return cost / 6;
   if (freq === 'custom') return customMonths > 0 ? cost / customMonths : 0;
+  if (freq === 'one-time') return 0;
   return cost / 12;
 };
 const toAnnual = (cost: number, freq: Frequency, customMonths = 1): number => {
   if (freq === 'custom') return customMonths > 0 ? cost * (12 / customMonths) : 0;
+  if (freq === 'one-time') return cost;
   return cost * FREQ_PER_YEAR[freq];
 };
 
 /** Auto-calculate end date from start date + frequency */
-function calcEndDate(startDate: string, frequency: Frequency, customMonths = 1): string {
+function calcEndDate(startDate: string, frequency: Frequency, customMonths = 1, customUnit: CustomUnit = 'months'): string {
   if (!startDate) return '';
+  if (frequency === 'one-time') return startDate; // one-time ends on same day
   const d = new Date(startDate + 'T00:00:00');
   if (isNaN(d.getTime())) return '';
   if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
   else if (frequency === 'quarterly') d.setMonth(d.getMonth() + 3);
   else if (frequency === 'half-yearly') d.setMonth(d.getMonth() + 6);
-  else if (frequency === 'custom') d.setMonth(d.getMonth() + Math.max(1, customMonths));
+  else if (frequency === 'custom') {
+    if (customUnit === 'days') d.setDate(d.getDate() + Math.max(1, customMonths));
+    else d.setMonth(d.getMonth() + Math.max(1, customMonths));
+  }
   else d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().split('T')[0];
 }
 
+/** Local timezone YYYY-MM-DD */
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const getEmpty = () => {
-  const sd = new Date().toISOString().split('T')[0];
-  return { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, customMonths: '1', startDate: sd, endDate: calcEndDate(sd, 'monthly'), website: '', notes: '' };
+  const sd = localToday();
+  return { name: '', category: 'productivity' as Category, cost: '', currency: 'QAR', frequency: 'monthly' as Frequency, customMonths: '1', customUnit: 'months' as CustomUnit, startDate: sd, endDate: calcEndDate(sd, 'monthly'), website: '', notes: '' };
 };
 
 const CAT_META: Record<Category, { emoji: string; color: string; bg: string; border: string }> = {
@@ -61,16 +74,20 @@ const STATUS_META: Record<Status, { label: string; color: string; bg: string }> 
   cancelled: { label: 'Cancelled', color: 'text-rose-700 dark:text-rose-400',       bg: 'bg-rose-50 dark:bg-rose-900/30' },
 };
 
-function advanceByFreq(d: Date, freq: Frequency, customMonths: number) {
+function advanceByFreq(d: Date, freq: Frequency, customMonths: number, customUnit: CustomUnit = 'months') {
   if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
   else if (freq === 'quarterly') d.setMonth(d.getMonth() + 3);
   else if (freq === 'half-yearly') d.setMonth(d.getMonth() + 6);
-  else if (freq === 'custom') d.setMonth(d.getMonth() + Math.max(1, customMonths));
-  else d.setFullYear(d.getFullYear() + 1);
+  else if (freq === 'custom') {
+    if (customUnit === 'days') d.setDate(d.getDate() + Math.max(1, customMonths));
+    else d.setMonth(d.getMonth() + Math.max(1, customMonths));
+  }
+  else if (freq !== 'one-time') d.setFullYear(d.getFullYear() + 1);
 }
 
 function nextRenewal(sub: any): Date | null {
   if (!sub.startDate) return null;
+  if (sub.frequency === 'one-time') return null; // no future renewal
   const start = new Date(sub.startDate + 'T00:00:00');
   const end = sub.endDate ? new Date(sub.endDate + 'T00:00:00') : null;
   const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -78,8 +95,9 @@ function nextRenewal(sub: any): Date | null {
 
   const freq: Frequency = sub.frequency || 'monthly';
   const cm = Number(sub.customMonths) || 1;
+  const cu: CustomUnit = sub.customUnit || 'months';
   let next = new Date(start);
-  while (next <= now) advanceByFreq(next, freq, cm);
+  while (next <= now) advanceByFreq(next, freq, cm, cu);
   return (!end || next <= end) ? next : null;
 }
 
@@ -141,6 +159,7 @@ export default function Subscriptions() {
         currency,
         frequency: form.frequency,
         customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
+        customUnit: form.frequency === 'custom' ? ((form as any).customUnit || 'months') : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
         website: form.website,
@@ -182,6 +201,7 @@ export default function Subscriptions() {
       currency: isCustom ? '__custom__' : cur,
       frequency: (FREQUENCIES.includes(item.frequency) ? item.frequency : 'monthly') as Frequency,
       customMonths: String(item.customMonths || '1'),
+      customUnit: (item.customUnit || 'months') as CustomUnit,
       startDate: item.startDate || '',
       endDate: item.endDate || '',
       website: item.website || '',
@@ -207,6 +227,7 @@ export default function Subscriptions() {
         cost: parseFloat(form.cost), currency,
         frequency: form.frequency,
         customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
+        customUnit: form.frequency === 'custom' ? ((form as any).customUnit || 'months') : undefined,
         startDate: form.startDate,
         endDate: form.endDate, website: form.website, notes: form.notes,
       };
@@ -477,13 +498,21 @@ export default function Subscriptions() {
                 {FREQUENCIES.map(f => <option key={f} value={f}>{FREQ_LABEL[f]}</option>)}
               </select>
               {form.frequency === 'custom' && (
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Every</label>
-                  <input type="number" min="1" max="24" value={form.customMonths}
-                    onChange={e => setForm(p => ({ ...p, customMonths: e.target.value, endDate: calcEndDate(p.startDate, 'custom', Number(e.target.value) || 1) }))}
+                  <input type="number" min="1" max="365" value={form.customMonths}
+                    onChange={e => setForm(p => ({ ...p, customMonths: e.target.value, endDate: calcEndDate(p.startDate, 'custom', Number(e.target.value) || 1, (p as any).customUnit || 'months') }))}
                     className="w-16 px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                  <label className="text-xs text-slate-500 dark:text-slate-400">month(s)</label>
+                  <select value={(form as any).customUnit || 'months'}
+                    onChange={e => setForm(p => ({ ...p, customUnit: e.target.value as CustomUnit, endDate: calcEndDate(p.startDate, 'custom', Number(p.customMonths) || 1, e.target.value as CustomUnit) }))}
+                    className="px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+                    <option value="months">Month(s)</option>
+                    <option value="days">Day(s)</option>
+                  </select>
                 </div>
+              )}
+              {form.frequency === 'one-time' && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Single payment — no recurring renewal</p>
               )}
             </div>
             <div>

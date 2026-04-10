@@ -32,7 +32,7 @@ Numbered list of the most impactful steps to improve my financial health.
 
 Be specific with numbers from my data. Keep each section concise but insightful.`;
 
-type Provider = 'anthropic' | 'groq';
+type Provider = 'anthropic' | 'groq' | 'google';
 
 function renderInline(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/);
@@ -204,6 +204,25 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         setReport(data.choices?.[0]?.message?.content || '');
         return;
       }
+
+      if (provider === 'google') {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: message }] }],
+              generationConfig: { maxOutputTokens: 4096 },
+            }),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Google AI error');
+        setReport(data.candidates?.[0]?.content?.parts?.[0]?.text || '');
+        return;
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -321,11 +340,13 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     }
   }
 
-  const modelLabel = provider === 'anthropic' ? 'Claude Haiku (Anthropic)' : 'Llama 3.1 (Groq)';
-  const keyPlaceholder = provider === 'anthropic' ? 'sk-ant-api03-…' : 'gsk_…';
+  const modelLabel = provider === 'anthropic' ? 'Claude Haiku (Anthropic)' : provider === 'groq' ? 'Llama 3.1 (Groq)' : 'Gemini 2.0 Flash (Google AI)';
+  const keyPlaceholder = provider === 'anthropic' ? 'sk-ant-api03-…' : provider === 'groq' ? 'gsk_…' : 'AIza…';
   const keyHint = provider === 'anthropic'
     ? 'Get a free key at console.anthropic.com'
-    : 'Get a free key at console.groq.com';
+    : provider === 'groq'
+    ? 'Get a free key at console.groq.com'
+    : 'Get a free key at aistudio.google.com/apikey';
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -354,18 +375,22 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Configuration</h2>
 
         {/* Provider */}
-        <div className="flex gap-3">
-          {(['anthropic', 'groq'] as Provider[]).map(p => (
+        <div className="flex gap-2 flex-wrap">
+          {([
+            { id: 'anthropic', label: 'Anthropic (Claude)' },
+            { id: 'groq',      label: 'Groq (Llama)' },
+            { id: 'google',    label: 'Google (Gemini)' },
+          ] as { id: Provider; label: string }[]).map(p => (
             <button
-              key={p}
-              onClick={() => { setProvider(p); setApiKey(''); setError(''); }}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                provider === p
+              key={p.id}
+              onClick={() => { setProvider(p.id); setApiKey(''); setError(''); }}
+              className={`flex-1 min-w-[120px] py-2 rounded-xl text-sm font-medium border transition-colors ${
+                provider === p.id
                   ? 'bg-violet-600 border-violet-600 text-white'
                   : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-400'
               }`}
             >
-              {p === 'anthropic' ? 'Anthropic (Claude)' : 'Groq (Llama)'}
+              {p.label}
             </button>
           ))}
         </div>

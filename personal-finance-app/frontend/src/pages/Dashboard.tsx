@@ -85,7 +85,10 @@ import {
   BarChart, Bar, LineChart, Line,
 } from 'recharts';
 
-const PIE_COLORS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const PIE_COLORS = [
+  '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444',
+  '#f97316', '#8b5cf6', '#ec4899', '#14b8a6', '#84cc16', '#6366f1',
+];
 const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', QAR: 'QAR', USD: '$', EUR: '€', GBP: '£', AED: 'AED', SAR: 'SAR' };
 const currSym = (code: string) => CURRENCY_SYMBOLS[code] ?? code;
 const normCur = (t: any): string => (t.currency && String(t.currency).trim()) || 'QAR';
@@ -99,7 +102,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function buildMonthly(txns: any[], period: number = 6) {
+function buildMonthly(txns: any[], period: number = 1) {
   const months: Record<string, { income: number; expense: number }> = {};
   const now = new Date();
   for (let i = period - 1; i >= 0; i--) {
@@ -168,7 +171,7 @@ export default function Dashboard() {
   const initMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [selectedMonth, setSelectedMonth] = useState(initMonth);
   const [chartType, setChartType] = useState<'area' | 'line' | 'bar'>('area');
-  const [chartPeriod, setChartPeriod] = useState<3 | 6 | 12>(6);
+  const [chartPeriod, setChartPeriod] = useState<1 | 3 | 6 | 12>(1);
 
   // Market data
   const [rates, setRates]               = useState<Rates>(EMPTY_RATES);
@@ -195,8 +198,32 @@ export default function Dashboard() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+    <div className="space-y-6 animate-pulse">
+      {/* Ticker skeleton */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 h-16" />
+      {/* Heading skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-slate-100 dark:bg-slate-700 rounded-lg" />
+          <div className="h-7 w-52 bg-slate-200 dark:bg-slate-600 rounded-lg" />
+        </div>
+        <div className="h-9 w-40 bg-slate-100 dark:bg-slate-700 rounded-xl" />
+      </div>
+      {/* Stat cards skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm space-y-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700" />
+            <div className="h-3 w-20 bg-slate-100 dark:bg-slate-700 rounded" />
+            <div className="h-7 w-28 bg-slate-200 dark:bg-slate-600 rounded" />
+          </div>
+        ))}
+      </div>
+      {/* Chart skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 h-72" />
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 h-72" />
+      </div>
     </div>
   );
 
@@ -376,15 +403,15 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-start gap-2 mb-3">
             <div>
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">Cash Flow</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Last {chartPeriod} months · {dominantCurrency}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{chartPeriod === 1 ? 'Current month' : `Last ${chartPeriod} months`} · {dominantCurrency}</p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               {/* Period toggle */}
               <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-xs">
-                {([3, 6, 12] as const).map(p => (
+                {([1, 3, 6, 12] as const).map(p => (
                   <button key={p} onClick={() => setChartPeriod(p)}
                     className={`px-2.5 py-1 font-medium transition-colors ${chartPeriod === p ? 'bg-violet-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                    {p}M
+                    {p === 1 ? '1M' : `${p}M`}
                   </button>
                 ))}
               </div>

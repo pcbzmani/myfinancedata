@@ -11,7 +11,13 @@ const fmt = (n: number, currency = 'QAR') =>
   `${currSym(currency)} ${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const normCur = (t: any): string => (t.currency && String(t.currency).trim()) || 'QAR';
 
-const emptyForm = () => ({ type: 'expense', category: 'Food', amount: '', description: '', date: new Date().toISOString().split('T')[0], currency: 'QAR' });
+/** Returns today's date in YYYY-MM-DD using LOCAL timezone (not UTC) */
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const emptyForm = () => ({ type: 'expense', category: 'Food', amount: '', description: '', date: localToday(), currency: 'QAR' });
 
 /** Normalize any date value (Date object, locale string, ISO string) to YYYY-MM-DD for <input type="date"> */
 const toDateInput = (d: any): string => {
@@ -45,6 +51,7 @@ export default function Transactions() {
   const [customTo, setCustomTo]         = useState('');
   const [carryForward, setCarryForward] = useState<{ cur: string; net: number }[]>([]);
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [customCats, setCustomCats] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('custom_categories') || '[]'); } catch { return []; }
   });
@@ -317,21 +324,32 @@ export default function Transactions() {
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Track your income and expenses</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Collapsible search */}
+          <div className={`flex items-center overflow-hidden transition-all duration-200 ${searchOpen ? 'w-52' : 'w-9'}`}>
+            {searchOpen ? (
+              <div className="relative w-full">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input
+                  autoFocus
+                  value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search…"
+                  className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+                <button onClick={() => { setSearch(''); setSearchOpen(false); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setSearchOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" title="Search transactions">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            )}
+          </div>
           <button onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm">
             + Add Transaction
           </button>
         </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search transactions…"
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
-        />
       </div>
 
       {error && (

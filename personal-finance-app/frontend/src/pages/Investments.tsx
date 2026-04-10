@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRows, addRow, deleteRow, updateRow } from '../lib/api';
 
-const TYPES = ['stocks', 'mutual_fund', 'crypto', 'fd', 'ppf', 'gold', 'land', 'other'];
+const TYPES = ['stocks', 'mutual_fund', 'crypto', 'fd', 'rd', 'bonds', 'ppf', 'gold', 'land', 'other'];
 const MARKET_TYPES = ['stocks', 'mutual_fund'];
+const MATURITY_TYPES = ['fd', 'rd', 'bonds'];
 const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   stocks:      { label: 'Stocks',      color: 'text-blue-700',    bg: 'bg-blue-100' },
   mutual_fund: { label: 'Mutual Fund', color: 'text-violet-700',  bg: 'bg-violet-100' },
   crypto:      { label: 'Crypto',      color: 'text-amber-700',   bg: 'bg-amber-100' },
   fd:          { label: 'FD',          color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  rd:          { label: 'RD',          color: 'text-cyan-700',    bg: 'bg-cyan-100' },
+  bonds:       { label: 'Bonds',       color: 'text-indigo-700',  bg: 'bg-indigo-100' },
   ppf:         { label: 'PPF',         color: 'text-teal-700',    bg: 'bg-teal-100' },
   gold:        { label: 'Gold',        color: 'text-yellow-700',  bg: 'bg-yellow-100' },
   land:        { label: 'Land',        color: 'text-lime-700',    bg: 'bg-lime-100' },
@@ -380,7 +383,7 @@ const POPULAR_STOCKS = [
 ];
 
 const fmt = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
-const EMPTY = { type: 'stocks', name: '', symbol: '', units: '', buyPrice: '', currentValue: '' };
+const EMPTY = { type: 'stocks', name: '', symbol: '', units: '', buyPrice: '', currentValue: '', maturityDate: '', interestRate: '' };
 
 export default function Investments() {
   const [items, setItems]       = useState<any[]>([]);
@@ -435,8 +438,10 @@ export default function Investments() {
   }, []);
 
   const isMarketType       = MARKET_TYPES.includes(form.type);
+  const isMaturityType     = MATURITY_TYPES.includes(form.type);
   const computedInvested   = (Number(form.units) || 0) * (Number(form.buyPrice) || 0);
   const editIsMarket       = editItem ? MARKET_TYPES.includes(editItem.type) : false;
+  const editIsMaturity     = editItem ? MATURITY_TYPES.includes(editItem.type) : false;
   const editComputedInvested = editForm
     ? (Number(editForm.units) || 0) * (Number(editForm.buyPrice) || 0)
     : 0;
@@ -475,6 +480,8 @@ export default function Investments() {
         buyPrice: Number(form.buyPrice),
         amountInvested: computedInvested,
         currentValue: isMarketType ? 0 : Number(form.currentValue),
+        ...(isMaturityType && form.maturityDate ? { maturityDate: form.maturityDate } : {}),
+        ...(isMaturityType && form.interestRate ? { interestRate: Number(form.interestRate) } : {}),
       });
       setShowForm(false);
       setForm(EMPTY);
@@ -603,6 +610,8 @@ export default function Investments() {
       units: String(inv.units || ''),
       buyPrice: String(inv.buyPrice || ''),
       currentValue: String(inv.currentValue || ''),
+      maturityDate: inv.maturityDate || '',
+      interestRate: String(inv.interestRate || ''),
     });
   };
 
@@ -618,6 +627,10 @@ export default function Investments() {
         amountInvested: editComputedInvested,
       };
       if (!editIsMarket) updates.currentValue = Number(editForm.currentValue);
+      if (editIsMaturity) {
+        if (editForm.maturityDate) updates.maturityDate = editForm.maturityDate;
+        if (editForm.interestRate) updates.interestRate = Number(editForm.interestRate);
+      }
       await updateRow('investments', editItem.id, updates);
       setEditItem(null);
       setEditForm(null);
@@ -1134,28 +1147,43 @@ export default function Investments() {
 
                   {form.symbol && (
                     <p className="text-xs mt-1.5 font-medium text-violet-600">
-                      ✓ Ticker: <span className="font-mono">{form.symbol}</span>
-                      <span className="text-emerald-600 ml-2">· Live price auto-updated by Google Sheets</span>
+                      ✓ <span className="font-mono">{form.symbol}</span>
+                      <span className="text-emerald-600 ml-2">· Live price auto-updated</span>
+                      <a
+                        href={`https://www.google.com/finance/quote/${form.symbol.replace('.NS', ':NSE').replace('.BO', ':BOM')}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="ml-2 text-blue-500 hover:underline"
+                      >View on Google Finance ↗</a>
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Mutual fund ticker (manual entry) */}
+              {/* Mutual fund ticker (with Google Finance lookup) */}
               {form.type === 'mutual_fund' && (
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Google Finance Ticker *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Google Finance Ticker *
+                    </label>
+                    <a
+                      href={`https://www.google.com/finance/search?q=${encodeURIComponent(form.symbol || form.name || 'mutual fund india')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    >
+                      🔍 Search Google Finance ↗
+                    </a>
+                  </div>
                   <input
-                    placeholder="e.g. 0P0001ISIZ.BO  (search on google.com/finance)"
+                    placeholder="e.g. 0P0001ISIZ.BO  — find it on Google Finance"
                     value={form.symbol}
                     onChange={e => setForm({ ...form, symbol: e.target.value })}
                     required
                     className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                   />
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                    Find it at <span className="font-mono">google.com/finance</span>
+                    Go to <span className="font-mono">google.com/finance</span> → search your fund → copy the ticker from the URL
                     <span className="ml-2 text-emerald-600 font-medium">· Live NAV auto-updated</span>
                   </p>
                 </div>
@@ -1226,6 +1254,48 @@ export default function Investments() {
                     className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
                   />
                 </div>
+              )}
+
+              {/* Maturity Date + Interest Rate — FD / RD / Bonds only */}
+              {isMaturityType && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Maturity Date {form.type === 'rd' ? '(End of RD tenure)' : ''}
+                    </label>
+                    <input
+                      type="date"
+                      value={form.maturityDate}
+                      onChange={e => setForm({ ...form, maturityDate: e.target.value })}
+                      className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                    {form.maturityDate && (() => {
+                      const d = Math.ceil((new Date(form.maturityDate).getTime() - Date.now()) / 86400000);
+                      return d > 0 ? (
+                        <p className="text-xs text-violet-600 mt-1">Matures in {d} day{d !== 1 ? 's' : ''}</p>
+                      ) : null;
+                    })()}
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      {form.type === 'bonds' ? 'Coupon Rate (% p.a.)' : 'Interest Rate (% p.a.)'}
+                    </label>
+                    <input
+                      type="number" min="0" max="30" step="0.01"
+                      placeholder={form.type === 'bonds' ? '7.50' : '6.50'}
+                      value={form.interestRate}
+                      onChange={e => setForm({ ...form, interestRate: e.target.value })}
+                      className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  </div>
+                  {form.type === 'rd' && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 rounded-lg px-3 py-2 border border-cyan-200 dark:border-cyan-700">
+                        💡 <strong>RD tip:</strong> Enter monthly installment as "Avg Buy Price" and number of installments paid as "Qty" — Amount Invested updates automatically.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1325,6 +1395,32 @@ export default function Investments() {
                     </div>
                   </div>
                 )}
+
+                {/* Maturity Date + Interest Rate for FD / RD / Bonds */}
+                {editIsMaturity && (
+                  <>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Maturity Date</label>
+                      <input
+                        type="date"
+                        value={editForm.maturityDate}
+                        onChange={e => setEditForm({ ...editForm, maturityDate: e.target.value })}
+                        className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        {editItem?.type === 'bonds' ? 'Coupon Rate (% p.a.)' : 'Interest Rate (% p.a.)'}
+                      </label>
+                      <input
+                        type="number" min="0" max="30" step="0.01"
+                        value={editForm.interestRate}
+                        onChange={e => setEditForm({ ...editForm, interestRate: e.target.value })}
+                        className="w-full mt-1.5 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex gap-3 justify-end pt-2 border-t border-slate-50">
@@ -1388,6 +1484,10 @@ export default function Investments() {
             const isMF       = inv.type === 'mutual_fund';
             const isGold     = inv.type === 'gold';
             const isLand     = inv.type === 'land';
+            const isMaturity = MATURITY_TYPES.includes(inv.type);
+            const maturityDaysLeft = inv.maturityDate
+              ? Math.ceil((new Date(inv.maturityDate).getTime() - Date.now()) / 86400000)
+              : null;
 
             // Parse land key-value fields
             let landFields: { key: string; value: string }[] = [];
@@ -1447,10 +1547,43 @@ export default function Investments() {
 
                 {/* Standard: units line */}
                 {!isGold && !isLand && units > 0 && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-                    {Number(inv.units).toLocaleString('en-IN')} units
-                    {inv.buyPrice > 0 && ` @ ₹${Number(inv.buyPrice).toLocaleString('en-IN')} avg`}
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
+                    {Number(inv.units).toLocaleString('en-IN')} {inv.type === 'rd' ? 'installments' : 'units'}
+                    {inv.buyPrice > 0 && ` @ ₹${Number(inv.buyPrice).toLocaleString('en-IN')} ${inv.type === 'rd' ? '/mo' : 'avg'}`}
                   </p>
+                )}
+
+                {/* Maturity info for FD / RD / Bonds */}
+                {isMaturity && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    {inv.maturityDate && (
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        maturityDaysLeft !== null && maturityDaysLeft < 0
+                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                          : maturityDaysLeft !== null && maturityDaysLeft <= 30
+                          ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                          : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                      }`}>
+                        🏁 {maturityDaysLeft !== null && maturityDaysLeft < 0
+                          ? 'Matured'
+                          : maturityDaysLeft !== null && maturityDaysLeft === 0
+                          ? 'Matures Today!'
+                          : maturityDaysLeft !== null
+                          ? `${maturityDaysLeft}d to maturity`
+                          : ''}
+                      </span>
+                    )}
+                    {inv.interestRate && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400">
+                        {inv.type === 'bonds' ? '🎯' : '📊'} {Number(inv.interestRate).toFixed(2)}% p.a.
+                      </span>
+                    )}
+                    {inv.maturityDate && (
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                        {new Date(inv.maturityDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* LTP / NAV pill */}

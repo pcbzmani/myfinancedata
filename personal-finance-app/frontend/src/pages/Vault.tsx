@@ -7,6 +7,7 @@ type Category = typeof CATEGORIES[number];
 
 const PIN_HASH_KEY  = 'vault_pin_hash';
 const SESSION_KEY   = 'vault_unlocked';
+const SESSION_TTL   = 12 * 60 * 60 * 1000; // 12 hours
 const SALT          = 'myfinance_vault_v1_salt';
 
 const CAT_META: Record<Category, { emoji: string; color: string; bg: string; border: string }> = {
@@ -195,6 +196,7 @@ function PasswordGenerator({ onUse }: { onUse?: (pw: string) => void }) {
 
 /* ─── Main Vault component ─── */
 const EMPTY_FORM = { siteName: '', siteUrl: '', category: 'other' as Category, username: '', email: '', password: '', notes: '' };
+const EMPTY_NOTE = { title: '', content: '' };
 
 export default function Vault() {
   const [unlocked, setUnlocked]     = useState(false);
@@ -212,19 +214,31 @@ export default function Vault() {
   const [showGen, setShowGen]       = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
-  /* Check session on mount */
+  /* Notes state */
+  const [vaultTab, setVaultTab]     = useState<'passwords' | 'notes'>('passwords');
+  const [noteForm, setNoteForm]     = useState(EMPTY_NOTE);
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [editNoteId, setEditNoteId] = useState<string | null>(null);
+  const noteFormRef = useRef<HTMLDivElement>(null);
+
+  /* Check session on mount — 12h localStorage-based session */
   useEffect(() => {
     const pinHash = localStorage.getItem(PIN_HASH_KEY);
     if (!pinHash) {
       setPinMode('setup');
     } else {
-      const sessionOk = sessionStorage.getItem(SESSION_KEY) === 'true';
-      if (sessionOk) {
-        setUnlocked(true);
-        loadItems();
-      } else {
-        setPinMode('enter');
-      }
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const { ts } = JSON.parse(raw);
+          if (Date.now() - ts < SESSION_TTL) {
+            setUnlocked(true);
+            loadItems();
+            return;
+          }
+        }
+      } catch { /* ignore parse errors */ }
+      setPinMode('enter');
     }
   }, []);
 
@@ -232,7 +246,7 @@ export default function Vault() {
     const hash = await hashPin(pin);
     if (pinMode === 'setup') {
       localStorage.setItem(PIN_HASH_KEY, hash);
-      sessionStorage.setItem(SESSION_KEY, 'true');
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
       // Sync PIN hash to Apps Script + protect the vault sheet in Google Sheets
       syncVaultPin(pin).catch(() => {}); // best-effort; silently ignores if not configured
       setUnlocked(true);
@@ -240,7 +254,7 @@ export default function Vault() {
     } else {
       const stored = localStorage.getItem(PIN_HASH_KEY);
       if (hash === stored) {
-        sessionStorage.setItem(SESSION_KEY, 'true');
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
         setUnlocked(true);
         loadItems();
       } else {
@@ -250,7 +264,7 @@ export default function Vault() {
   }
 
   function handleLock() {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
     setUnlocked(false);
     setItems([]);
     setRevealed(new Set());
@@ -267,6 +281,43 @@ export default function Vault() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleAddNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteForm.title.trim()) { setError('Note title is required.'); return; }
+    setSaving(true);
+    try {
+      const row = { id: Date.now().toString(), type: 'note', title: noteForm.title.trim(), content: noteForm.content, createdAt: new Date().toISOString() };
+      await addRow('vault', row);
+      setItems(prev => [row, ...prev]);
+      setNoteForm(EMPTY_NOTE);
+      setShowNoteForm(false);
+      setError('');
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleUpdateNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteForm.title.trim() || !editNoteId) return;
+    setSaving(true);
+    try {
+      const updates = { title: noteForm.title.trim(), content: noteForm.content };
+      await updateRow('vault', editNoteId, updates);
+      setItems(prev => prev.map(i => i.id === editNoteId ? { ...i, ...updates } : i));
+      setEditNoteId(null);
+      setNoteForm(EMPTY_NOTE);
+      setShowNoteForm(false);
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
+  function startEditNote(item: any) {
+    setEditNoteId(item.id);
+    setNoteForm({ title: item.title, content: item.content || '' });
+    setShowNoteForm(true);
+    setTimeout(() => noteFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -352,30 +403,44 @@ export default function Vault() {
   /* ─── Not unlocked: show PIN screen ─── */
   if (!unlocked) return <PinScreen mode={pinMode} onSubmit={handlePinSubmit} />;
 
-  const filtered = catFilter === 'all' ? items : items.filter(i => i.category === catFilter);
+  const pwItems = items.filter(i => !i.type || i.type === 'password');
+  const noteItems = items.filter(i => i.type === 'note');
+  const filtered = catFilter === 'all' ? pwItems : pwItems.filter(i => i.category === catFilter);
 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Password Vault</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Securely stored in your private Google Sheet</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vault</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Passwords & secure notes — unlocked for 12 hours</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowGen(p => !p)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-            </svg>
-            Generator
-          </button>
-          <button
-            onClick={() => { setEditId(null); setForm(EMPTY_FORM); setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Add Entry
-          </button>
+          {vaultTab === 'passwords' && (
+            <>
+              <button onClick={() => setShowGen(p => !p)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                </svg>
+                Generator
+              </button>
+              <button
+                onClick={() => { setEditId(null); setForm(EMPTY_FORM); setShowForm(true); setError(''); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Add Password
+              </button>
+            </>
+          )}
+          {vaultTab === 'notes' && (
+            <button
+              onClick={() => { setEditNoteId(null); setNoteForm(EMPTY_NOTE); setShowNoteForm(true); setError(''); setTimeout(() => noteFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Add Note
+            </button>
+          )}
           <button onClick={handleLock}
             className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
             title="Lock vault">
@@ -385,6 +450,22 @@ export default function Vault() {
             </svg>
           </button>
         </div>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1 mb-6 w-fit">
+        {(['passwords', 'notes'] as const).map(tab => (
+          <button key={tab} onClick={() => { setVaultTab(tab); setShowForm(false); setShowNoteForm(false); setError(''); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              vaultTab === tab ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}>
+            {tab === 'passwords' ? (
+              <><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Passwords <span className="ml-0.5 text-xs bg-slate-200 dark:bg-slate-600 px-1.5 py-0.5 rounded-full">{pwItems.length}</span></>
+            ) : (
+              <><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Notes <span className="ml-0.5 text-xs bg-slate-200 dark:bg-slate-600 px-1.5 py-0.5 rounded-full">{noteItems.length}</span></>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Error */}
@@ -401,6 +482,98 @@ export default function Vault() {
           <PasswordGenerator onUse={pw => { setForm(p => ({ ...p, password: pw })); setShowGen(false); if (!showForm) { setShowForm(true); setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 50); } }} />
         </div>
       )}
+
+      {/* ──── NOTES TAB ──────────────────────────────────────────────────────── */}
+      {vaultTab === 'notes' && (
+        <div>
+          {/* Note form */}
+          {showNoteForm && (
+            <div ref={noteFormRef} className="mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100">{editNoteId ? 'Edit Note' : 'New Secure Note'}</h2>
+                <button onClick={() => { setShowNoteForm(false); setEditNoteId(null); setError(''); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+              </div>
+              <form onSubmit={editNoteId ? handleUpdateNote : handleAddNote} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Title *</label>
+                  <input value={noteForm.title} onChange={e => setNoteForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Bank account details, Important credentials"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    required autoFocus />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Content</label>
+                  <textarea value={noteForm.content} onChange={e => setNoteForm(p => ({ ...p, content: e.target.value }))}
+                    placeholder="Write your secure note here…"
+                    rows={8}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" disabled={saving}
+                    className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white py-2 rounded-xl text-sm font-medium transition-colors">
+                    {saving ? 'Saving…' : editNoteId ? 'Update Note' : 'Save Note'}
+                  </button>
+                  <button type="button" onClick={() => { setShowNoteForm(false); setEditNoteId(null); setError(''); }}
+                    className="px-6 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Notes list */}
+          {loading ? (
+            <div className="text-center py-16 text-slate-400"><div className="inline-block w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full animate-spin mb-2" /><p className="text-sm">Loading…</p></div>
+          ) : noteItems.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-4xl mb-3">📝</p>
+              <p className="font-semibold text-slate-700 dark:text-slate-300">No secure notes yet</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Store bank details, PINs, or any sensitive text here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {noteItems.map(note => (
+                <div key={note.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-4 h-4 text-violet-600 dark:text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{note.title}</p>
+                        {note.content && (
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 whitespace-pre-wrap break-words line-clamp-3">{note.content}</p>
+                        )}
+                        <p className="text-xs text-slate-300 dark:text-slate-600 mt-2">
+                          {note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => copyToClipboard(note.content || '', `n-${note.id}`)} className="p-1.5 rounded-lg text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400 transition-colors" title="Copy content">
+                        {copied === `n-${note.id}` ? <svg className="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
+                      </button>
+                      <button onClick={() => startEditNote(note)} className="p-1.5 rounded-lg text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400 transition-colors" title="Edit">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button onClick={() => handleDelete(note.id)} className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 transition-colors" title="Delete">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ──── PASSWORDS TAB ──────────────────────────────────────────────────── */}
+      {vaultTab === 'passwords' && <>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -636,8 +809,10 @@ export default function Vault() {
         <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <span>Passwords are stored in your own private Google Sheet (not visible to anyone else). The vault locks automatically when you close or refresh the browser tab. PIN is never transmitted — only stored locally as a SHA-256 hash.</span>
+        <span>Passwords are stored in your own private Google Sheet (not visible to anyone else). Session stays unlocked for 12 hours. PIN is never transmitted — only stored locally as a SHA-256 hash.</span>
       </div>
+
+      </> }
     </div>
   );
 }

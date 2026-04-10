@@ -99,6 +99,28 @@ function downloadICS(p: any) {
   URL.revokeObjectURL(url);
 }
 
+/** Open a Google Calendar "create event" page pre-filled with the payment details */
+function openGoogleCalendar(p: any) {
+  const next = nextDueDate(p);
+  if (!next) return;
+  const cur = normCur(p);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const dateStr = `${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`;
+  const title = encodeURIComponent(`Insurance Payment: ${p.provider} (${p.type})`);
+  const details = encodeURIComponent(
+    `Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency), cur)}\nPolicy#: ${p.policyNumber || 'N/A'}`
+  );
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}&details=${details}&crm=AVAILABLE`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/** Returns days until next due date, or null */
+function daysUntilDue(p: any): number | null {
+  const next = nextDueDate(p);
+  if (!next) return null;
+  return Math.ceil((next.getTime() - Date.now()) / 86400000);
+}
+
 type FreqFilter = 'all' | 'monthly' | 'quarterly' | 'half-yearly' | 'yearly' | 'custom';
 
 export default function Insurance() {
@@ -210,6 +232,10 @@ export default function Insurance() {
     .filter(({ next }) => next !== null && (next!.getTime() - Date.now()) / 86400000 <= 7)
     .sort((a, b) => a.next!.getTime() - b.next!.getTime());
 
+  const urgentPayments = upcomingPayments.filter(({ next }) =>
+    next !== null && Math.ceil((next!.getTime() - Date.now()) / 86400000) <= 2
+  );
+
   const q = search.toLowerCase();
   const filtered = items
     .filter(p => freqFilter === 'all' || p.frequency === freqFilter)
@@ -237,6 +263,47 @@ export default function Insurance() {
         <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 text-rose-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           {error}
           <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-600 ml-4">✕</button>
+        </div>
+      )}
+
+      {/* 2-day urgent reminder banner */}
+      {urgentPayments.length > 0 && (
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-300 dark:border-rose-600 rounded-2xl px-5 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">🔔</span>
+            <p className="text-sm font-bold text-rose-800 dark:text-rose-200">
+              Urgent: {urgentPayments.length} insurance payment{urgentPayments.length > 1 ? 's' : ''} due within 2 days!
+            </p>
+          </div>
+          <div className="space-y-2">
+            {urgentPayments.map(({ p, next }) => {
+              const daysUntil = Math.ceil((next!.getTime() - Date.now()) / 86400000);
+              const cur = normCur(p);
+              return (
+                <div key={p.id} className="flex items-center justify-between bg-white/60 dark:bg-rose-900/30 rounded-xl px-3 py-2">
+                  <div>
+                    <span className="text-sm font-semibold text-rose-800 dark:text-rose-100">
+                      {TYPE_META[p.type]?.emoji} {p.provider}
+                    </span>
+                    <span className="text-xs text-rose-600 dark:text-rose-300 ml-2">
+                      {fmt(Number(p.premium), cur)} / {p.frequency}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-800/50 px-2 py-0.5 rounded-full">
+                      {daysUntil === 0 ? 'Due Today!' : daysUntil === 1 ? 'Due Tomorrow!' : `${daysUntil}d left`}
+                    </span>
+                    <button
+                      onClick={() => openGoogleCalendar(p)}
+                      className="text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-slate-700 border border-rose-300 dark:border-rose-500 text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/40 transition-colors font-medium"
+                    >
+                      📅 Remind me
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -574,13 +641,22 @@ export default function Insurance() {
                 </div>
 
                 {next && (
-                  <button
-                    onClick={() => downloadICS(p)}
-                    className="mt-3 w-full text-xs py-1.5 rounded-lg border border-slate-400 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:border-violet-500 dark:hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors font-medium flex items-center justify-center gap-1.5"
-                    title="Download .ics reminder for Google Calendar / Apple Calendar / Outlook"
-                  >
-                    📅 Add reminder to calendar
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => openGoogleCalendar(p)}
+                      className="flex-1 text-xs py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-500 transition-colors font-medium flex items-center justify-center gap-1"
+                      title="Add to Google Calendar"
+                    >
+                      🗓 Google Cal
+                    </button>
+                    <button
+                      onClick={() => downloadICS(p)}
+                      className="flex-1 text-xs py-1.5 rounded-lg border border-slate-300 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:border-violet-400 dark:hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors font-medium flex items-center justify-center gap-1"
+                      title="Download .ics for Apple / Outlook calendar"
+                    >
+                      📥 .ics File
+                    </button>
+                  </div>
                 )}
               </div>
             );
