@@ -17,12 +17,16 @@ const normCur = (p: any): string => (p.currency && String(p.currency).trim()) ||
 const fmt = (n: number, currency = 'INR') =>
   `${currSym(currency)}${Math.abs(n).toLocaleString('en-IN')}`;
 
-const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', currency: 'INR', frequency: 'yearly', customMonths: '1', sumAssured: '', startDate: '', endDate: '' };
+type CustomUnit = 'months' | 'days';
+const EMPTY = { type: 'health', provider: '', policyNumber: '', premium: '', currency: 'INR', frequency: 'yearly', customMonths: '1', customUnit: 'months' as CustomUnit, sumAssured: '', startDate: '', endDate: '' };
 
 const FREQ_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1 };
 const FREQ_LABEL: Record<string, string> = { monthly: 'Monthly', quarterly: 'Quarterly', 'half-yearly': 'Half-Yearly', yearly: 'Yearly', custom: 'Custom' };
-const toAnnual = (premium: number, frequency: string, customMonths = 1): number => {
-  if (frequency === 'custom') return customMonths > 0 ? premium * (12 / customMonths) : 0;
+const toAnnual = (premium: number, frequency: string, customVal = 1, customUnit: CustomUnit = 'months'): number => {
+  if (frequency === 'custom') {
+    if (customUnit === 'days') return customVal > 0 ? premium * (365 / customVal) : 0;
+    return customVal > 0 ? premium * (12 / customVal) : 0;
+  }
   return premium * (FREQ_MULTIPLIER[frequency] ?? 1);
 };
 
@@ -45,12 +49,16 @@ function nextDueDate(p: any): Date | null {
 
   const freq = p.frequency || 'yearly';
   const cm = Math.max(1, Number(p.customMonths) || 1);
+  const cu: CustomUnit = p.customUnit || 'months';
   let next = new Date(start);
   while (next <= now) {
     if (freq === 'monthly')           next.setMonth(next.getMonth() + 1);
     else if (freq === 'quarterly')    next.setMonth(next.getMonth() + 3);
     else if (freq === 'half-yearly')  next.setMonth(next.getMonth() + 6);
-    else if (freq === 'custom')       next.setMonth(next.getMonth() + cm);
+    else if (freq === 'custom') {
+      if (cu === 'days') next.setDate(next.getDate() + cm);
+      else               next.setMonth(next.getMonth() + cm);
+    }
     else                              next.setFullYear(next.getFullYear() + 1);
   }
   return next <= end ? next : null;
@@ -75,7 +83,7 @@ function downloadICS(p: any) {
     `DTSTART;VALUE=DATE:${dtDate}`,
     `DTEND;VALUE=DATE:${dtDate}`,
     `SUMMARY:Insurance Payment: ${p.provider} (${p.type})`,
-    `DESCRIPTION:Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency), cur)}\\nPolicy#: ${p.policyNumber || 'N/A'}`,
+    `DESCRIPTION:Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency, Number(p.customMonths) || 1, p.customUnit || 'months'), cur)}\\nPolicy#: ${p.policyNumber || 'N/A'}`,
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
     'TRIGGER:-P7D',
@@ -108,7 +116,7 @@ function openGoogleCalendar(p: any) {
   const dateStr = `${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`;
   const title = encodeURIComponent(`Insurance Payment: ${p.provider} (${p.type})`);
   const details = encodeURIComponent(
-    `Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency), cur)}\nPolicy#: ${p.policyNumber || 'N/A'}`
+    `Premium: ${fmt(Number(p.premium), cur)}/${p.frequency}\nAnnual: ${fmt(toAnnual(Number(p.premium), p.frequency, Number(p.customMonths) || 1, p.customUnit || 'months'), cur)}\nPolicy#: ${p.policyNumber || 'N/A'}`
   );
   const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}&details=${details}&crm=AVAILABLE`;
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -133,6 +141,7 @@ export default function Insurance() {
   const [freqFilter, setFreqFilter]   = useState<FreqFilter>('all');
   const [curFilter, setCurFilter]     = useState('all');
   const [search, setSearch]           = useState('');
+  const [searchOpen, setSearchOpen]   = useState(false);
   const [editId, setEditId]           = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -154,6 +163,7 @@ export default function Insurance() {
         currency,
         premium: Number(form.premium),
         customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
+        customUnit: form.frequency === 'custom' ? form.customUnit : undefined,
         sumAssured: Number(form.sumAssured),
         status: 'active',
       });
@@ -177,6 +187,7 @@ export default function Insurance() {
         type: form.type, provider: form.provider, policyNumber: form.policyNumber,
         premium: Number(form.premium), currency, frequency: form.frequency,
         customMonths: form.frequency === 'custom' ? Number(form.customMonths) || 1 : undefined,
+        customUnit: form.frequency === 'custom' ? form.customUnit : undefined,
         sumAssured: Number(form.sumAssured), startDate: form.startDate, endDate: form.endDate,
       };
       await updateRow('insurance', editId, updates);
@@ -198,6 +209,7 @@ export default function Insurance() {
       currency: isCustom ? '__custom__' : cur,
       frequency: p.frequency || 'yearly',
       customMonths: String(p.customMonths || '1'),
+      customUnit: (p.customUnit || 'months') as CustomUnit,
       sumAssured: String(p.sumAssured || ''),
       startDate: toDateInput(p.startDate),
       endDate: toDateInput(p.endDate),
@@ -251,12 +263,40 @@ export default function Insurance() {
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Insurance</h1>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">All your policies in one place</p>
         </div>
-        <button
-          onClick={() => { setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(true); scrollToForm(); }}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm"
-        >
-          + Add Policy
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Collapsible search */}
+          <div className={`flex items-center overflow-hidden transition-all duration-200 ${searchOpen ? 'w-48' : 'w-9'}`}>
+            {searchOpen ? (
+              <div className="relative w-full">
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search policies…"
+                  className="w-full pl-3 pr-7 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+                <button
+                  onClick={() => { setSearch(''); setSearchOpen(false); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none"
+                >✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSearchOpen(true)}
+                title="Search policies"
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => { setEditId(null); setForm(EMPTY); setCustomCurrency(''); setShowForm(true); scrollToForm(); }}
+            className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm"
+          >
+            + Add Policy
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -363,16 +403,6 @@ export default function Insurance() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search policies…"
-          className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
-        />
-      </div>
-
       {/* Filters */}
       {items.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -450,12 +480,19 @@ export default function Insurance() {
                 ))}
               </select>
               {form.frequency === 'custom' && (
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Every</label>
-                  <input type="number" min="1" max="24" value={form.customMonths}
+                  <input type="number" min="1" max="365" value={form.customMonths}
                     onChange={e => setForm({ ...form, customMonths: e.target.value })}
                     className="w-16 px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 dark:bg-slate-700 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                  <label className="text-xs text-slate-500 dark:text-slate-400">month(s)</label>
+                  <select
+                    value={form.customUnit}
+                    onChange={e => setForm({ ...form, customUnit: e.target.value as CustomUnit })}
+                    className="px-2 py-1.5 rounded-lg border border-violet-300 dark:border-violet-600 dark:bg-slate-700 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  >
+                    <option value="months">month(s)</option>
+                    <option value="days">day(s)</option>
+                  </select>
                 </div>
               )}
             </div>
@@ -485,7 +522,7 @@ export default function Insurance() {
                   form.frequency === 'monthly' ? 'month' :
                   form.frequency === 'quarterly' ? 'quarter' :
                   form.frequency === 'half-yearly' ? '6 months' :
-                  form.frequency === 'custom' ? `${form.customMonths || 1} month(s)` : 'year'
+                  form.frequency === 'custom' ? `${form.customMonths || 1} ${form.customUnit === 'days' ? 'day(s)' : 'month(s)'}` : 'year'
                 })
               </label>
               <input
@@ -497,7 +534,7 @@ export default function Insurance() {
               />
               {form.premium && form.frequency !== 'yearly' && (
                 <p className="text-xs text-violet-600 mt-1">
-                  = {fmt(toAnnual(Number(form.premium), form.frequency), formCur === '?' ? 'INR' : formCur)} / year
+                  = {fmt(toAnnual(Number(form.premium), form.frequency, Number(form.customMonths) || 1, form.customUnit), formCur === '?' ? 'INR' : formCur)} / year
                 </p>
               )}
             </div>

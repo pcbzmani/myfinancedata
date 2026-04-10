@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 
 function DashboardIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -14,7 +14,7 @@ function DashboardIcon() {
 
 function CreditCardIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="4" width="22" height="16" rx="2" />
       <line x1="1" y1="10" x2="23" y2="10" />
     </svg>
@@ -23,7 +23,7 @@ function CreditCardIcon() {
 
 function TrendingUpIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
       <polyline points="17 6 23 6 23 12" />
     </svg>
@@ -32,7 +32,7 @@ function TrendingUpIcon() {
 
 function ShieldIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
@@ -40,7 +40,7 @@ function ShieldIcon() {
 
 function SplitIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="18" cy="5" r="3" />
       <circle cx="6" cy="12" r="3" />
       <circle cx="18" cy="19" r="3" />
@@ -52,7 +52,7 @@ function SplitIcon() {
 
 function SparkleIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/>
       <path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75z"/>
       <path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5z"/>
@@ -62,7 +62,7 @@ function SparkleIcon() {
 
 function CogIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -71,7 +71,7 @@ function CogIcon() {
 
 function RefreshIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 4 23 10 17 10" />
       <polyline points="1 20 1 14 7 14" />
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -81,9 +81,20 @@ function RefreshIcon() {
 
 function LockIcon() {
   return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <line x1="9" y1="7" x2="15" y2="7" />
+      <line x1="9" y1="11" x2="15" y2="11" />
     </svg>
   );
 }
@@ -108,6 +119,22 @@ function MoonIcon() {
   );
 }
 
+function ChevronLeftIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 const nav = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon },
   { to: '/transactions', label: 'Transactions', Icon: CreditCardIcon },
@@ -117,6 +144,7 @@ const nav = [
   { to: '/vault', label: 'Vault', Icon: LockIcon },
   { to: '/split', label: 'Split', Icon: SplitIcon },
   { to: '/ai', label: 'AI Report', Icon: SparkleIcon },
+  { to: '/learn', label: 'Learn', Icon: BookIcon },
   { to: '/settings', label: 'Settings', Icon: CogIcon },
 ];
 
@@ -127,69 +155,100 @@ interface LayoutProps {
 
 export default function Layout({ dark, onToggleDark }: LayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('sidebar_collapsed', String(collapsed)); } catch { /* ignore */ }
+  }, [collapsed]);
 
   const activeClass = 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-200/50';
   const inactiveClass = 'text-slate-500 dark:text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-400';
 
-  const ThemeToggle = () => (
+  const ThemeToggle = ({ showLabel }: { showLabel?: boolean }) => (
     <button
       onClick={onToggleDark}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${!showLabel ? 'justify-center' : ''}`}
       aria-label="Toggle dark mode"
+      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {dark ? <SunIcon /> : <MoonIcon />}
-      <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+      {showLabel && <span>{dark ? 'Light mode' : 'Dark mode'}</span>}
     </button>
   );
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex w-60 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex-col">
-        {/* Brand */}
-        <div className="px-5 pt-6 pb-5">
-          <div className="flex items-center gap-3">
-            <img src="/icon.svg" alt="MyFinance" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200" />
-            <div>
-              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">MyFinance</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>
+      <aside className={`hidden md:flex flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex-col transition-all duration-200 ${collapsed ? 'w-16' : 'w-60'}`}>
+        {/* Brand + collapse toggle */}
+        <div className={`pt-5 pb-4 flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
+          {!collapsed && (
+            <div className="flex items-center gap-3 min-w-0">
+              <img src="/icon.svg" alt="MyFinance" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none truncate">MyFinance</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">Personal Finance</p>
+              </div>
             </div>
-          </div>
+          )}
+          {collapsed && (
+            <img src="/icon.svg" alt="MyFinance" className="w-8 h-8 rounded-xl shadow-lg shadow-violet-200" />
+          )}
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            className={`flex-shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 dark:hover:text-violet-400 transition-colors ${collapsed ? 'mt-3' : ''}`}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </button>
         </div>
 
-        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
+        <div className="mx-3 h-px bg-slate-100 dark:bg-slate-700" />
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
           {nav.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${collapsed ? 'justify-center' : ''} ${
                   isActive ? activeClass : inactiveClass
                 }`
               }
             >
               <Icon />
-              {label}
+              {!collapsed && <span className="truncate">{label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
+        <div className="mx-3 h-px bg-slate-100 dark:bg-slate-700" />
 
-        {/* Footer: sync status + theme toggle */}
-        <div className="px-4 py-4 space-y-2">
-          <ThemeToggle />
-          <div className="flex items-center gap-2 px-3">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
-          </div>
+        {/* Footer */}
+        <div className={`py-4 space-y-2 ${collapsed ? 'px-2' : 'px-4'}`}>
+          <ThemeToggle showLabel={!collapsed} />
+          {!collapsed && (
+            <div className="flex items-center gap-2 px-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex justify-center" title="Synced to Google Sheets">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -220,7 +279,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
 
         <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {nav.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -241,7 +300,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
 
         <div className="mx-4 h-px bg-slate-100 dark:bg-slate-700" />
         <div className="px-4 py-4 space-y-2">
-          <ThemeToggle />
+          <ThemeToggle showLabel />
           <div className="flex items-center gap-2 px-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
