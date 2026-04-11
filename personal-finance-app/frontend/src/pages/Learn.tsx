@@ -597,45 +597,35 @@ function renderContent(text: string) {
   let inTable = false;
   let key = 0;
 
-  const isDark = () => document.documentElement.classList.contains('dark');
-
   const flushTable = () => {
     if (tableRows.length < 2) return;
     const headers = tableRows[0];
     const body = tableRows.slice(2); // skip separator row
-    const dark = isDark();
     elements.push(
-      <div key={key++} className="overflow-x-auto my-4 rounded-xl border border-slate-200 dark:border-slate-600">
-        <table className="w-full text-sm border-collapse">
+      <div key={key++} style={{ overflowX: 'auto', margin: '16px 0', borderRadius: '10px', border: '1px solid #e2e8f0' }} className="dark-table-wrap">
+        <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: dark ? '#334155' : '#f1f5f9' }}>
+            <tr>
               {headers.map((h, i) => (
-                <th
-                  key={i}
-                  style={{ color: dark ? '#ffffff' : '#1e293b', borderBottom: `1px solid ${dark ? '#475569' : '#e2e8f0'}` }}
-                  className="px-4 py-2.5 text-left font-semibold"
-                >{h.trim()}</th>
+                <th key={i} style={{
+                  padding: '10px 14px',
+                  textAlign: 'left',
+                  fontWeight: 600,
+                  borderBottom: '2px solid #e2e8f0',
+                  background: 'transparent',
+                  whiteSpace: 'nowrap',
+                }} className="learn-th">{h.trim()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {body.map((row, ri) => (
-              <tr
-                key={ri}
-                style={{ background: ri % 2 === 0
-                  ? (dark ? '#1e293b' : '#ffffff')
-                  : (dark ? '#0f172a' : '#f8fafc')
-                }}
-              >
+              <tr key={ri}>
                 {row.map((cell, ci) => (
-                  <td
-                    key={ci}
-                    style={{
-                      color: dark ? '#f1f5f9' : '#1e293b',
-                      borderTop: `1px solid ${dark ? '#334155' : '#e2e8f0'}`,
-                    }}
-                    className="px-4 py-2.5"
-                  >{cell.trim()}</td>
+                  <td key={ci} style={{
+                    padding: '10px 14px',
+                    borderBottom: ri < body.length - 1 ? '1px solid #e2e8f0' : 'none',
+                  }} className="learn-td">{cell.trim()}</td>
                 ))}
               </tr>
             ))}
@@ -686,6 +676,15 @@ function renderContent(text: string) {
   return elements;
 }
 
+const LEARN_TABLE_STYLES = `
+  .dark .dark-table-wrap { border-color: #334155 !important; }
+  .dark .learn-th { color: #f8fafc !important; border-bottom-color: #475569 !important; }
+  .dark .learn-td { color: #e2e8f0 !important; border-bottom-color: #334155 !important; }
+  .dark .dark-table-wrap tr:hover td { background: #1e293b; }
+  .learn-th { color: #0f172a; }
+  .learn-td { color: #1e293b; }
+`;
+
 export default function Learn() {
   const [activeCat, setActiveCat] = useState<string>('trading');
   const [openTopic, setOpenTopic] = useState<string | null>(null);
@@ -707,6 +706,7 @@ export default function Learn() {
 
   return (
     <div className="space-y-6">
+      <style dangerouslySetInnerHTML={{ __html: LEARN_TABLE_STYLES }} />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
