@@ -152,7 +152,7 @@ export default function Subscriptions() {
       : form.currency;
     try {
       const row = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: form.name.trim(),
         category: form.category,
         cost: parseFloat(form.cost),
@@ -170,7 +170,7 @@ export default function Subscriptions() {
       await addRow('subscriptions', row);
       // Mirror subscription start as an expense transaction
       await addRow('transactions', {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         type: 'expense',
         category: 'Other',
         amount: row.cost,

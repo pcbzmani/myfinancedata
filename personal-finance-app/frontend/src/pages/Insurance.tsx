@@ -220,6 +220,7 @@ export default function Insurance() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Delete this policy? This cannot be undone.')) return;
     try { await deleteRow('insurance', id); load(); }
     catch (e: any) { setError(e.message); }
   };

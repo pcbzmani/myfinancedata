@@ -15,15 +15,17 @@ function clearToken() {
 }
 function decodeTokenPayload(token: string): { email?: string; plan?: string; expiry?: number } | null {
   try {
-    const [payload64] = token.split('.');
-    return JSON.parse(atob(payload64));
+    const parts = token.split('.');
+    if (parts.length !== 2 || !parts[0]) return null;
+    return JSON.parse(atob(parts[0]));
   } catch {
     return null;
   }
 }
 function isTokenExpired(token: string): boolean {
+  if (!token) return true;
   const p = decodeTokenPayload(token);
-  if (!p?.expiry) return true;
+  if (!p || typeof p.expiry !== 'number') return true;
   return p.expiry < Date.now();
 }
 

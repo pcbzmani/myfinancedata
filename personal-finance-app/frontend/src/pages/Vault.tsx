@@ -288,7 +288,7 @@ export default function Vault() {
     if (!noteForm.title.trim()) { setError('Note title is required.'); return; }
     setSaving(true);
     try {
-      const row = { id: Date.now().toString(), type: 'note', title: noteForm.title.trim(), content: noteForm.content, createdAt: new Date().toISOString() };
+      const row = { id: crypto.randomUUID(), type: 'note', title: noteForm.title.trim(), content: noteForm.content, createdAt: new Date().toISOString() };
       await addRow('vault', row);
       setItems(prev => [row, ...prev]);
       setNoteForm(EMPTY_NOTE);
@@ -326,7 +326,7 @@ export default function Vault() {
     setSaving(true);
     try {
       const row = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         siteName: form.siteName.trim(),
         siteUrl: form.siteUrl,
         category: form.category,

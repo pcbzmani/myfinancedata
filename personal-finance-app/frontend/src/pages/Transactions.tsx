@@ -157,6 +157,7 @@ export default function Transactions() {
 
   // ── delete ─────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
+    if (!confirm('Delete this transaction? This cannot be undone.')) return;
     try { await deleteRow('transactions', id); load(); }
     catch (e: any) { setError(e.message); }
   };

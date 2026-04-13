@@ -4,8 +4,11 @@ import { createHmac } from 'crypto';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
 const TOKEN_SECRET      = process.env.TOKEN_SECRET ?? '';
 
+const ALLOWED_ORIGIN = process.env.URL ?? 'https://pcbzmani.netlify.app';
+const MAX_MESSAGE_LEN = 4000;
+
 const CORS = {
-  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Origin':  ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
@@ -61,6 +64,9 @@ export default async (req: Request) => {
   }
   if (!message || typeof message !== 'string') {
     return json({ error: 'message is required' }, 400);
+  }
+  if (message.length > MAX_MESSAGE_LEN) {
+    return json({ error: `Message too long (max ${MAX_MESSAGE_LEN} chars)` }, 400);
   }
 
   // --- Call Anthropic ---

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getScriptUrl, setScriptUrl, ping, isLocalMode } from '../lib/api';
 import { idbTotalCount, idbImportAll, downloadBackup } from '../lib/idb';
+import ExportButtons from '../components/ExportButtons';
 import {
   notificationsGranted,
   isNotifDisabled,
@@ -796,6 +797,15 @@ export default function Settings() {
         {backupMsg && (
           <p className="text-sm text-emerald-600 dark:text-emerald-400">{backupMsg}</p>
         )}
+      </div>
+
+      {/* CSV Export */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">📊 Export to CSV</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500">Download your data as CSV files for tax filing, spreadsheet analysis, or record-keeping.</p>
+        </div>
+        <ExportButtons />
       </div>
 
       {/* Notifications */}
