@@ -129,6 +129,7 @@ export default function AIReport() {
   /* Google auth state */
   const [gUser, setGUser]         = useState<{ email: string; name: string; picture: string } | null>(null);
   const [gsiReady, setGsiReady]   = useState(false);
+  const [gsiLoading, setGsiLoading] = useState(!!GOOGLE_CLIENT_ID);
   const gButtonRef                = useRef<HTMLDivElement>(null);
 
   /* Subscription state */
@@ -138,6 +139,7 @@ export default function AIReport() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [newToken, setNewToken]   = useState('');
   const [showSavedToken, setShowSavedToken] = useState(false);
+  const [restoreChecked, setRestoreChecked] = useState(false);
 
   /* AI state */
   const [report, setReport]       = useState('');
@@ -148,40 +150,18 @@ export default function AIReport() {
   const isSubscribed = !!subToken && !isTokenExpired(subToken);
   const tokenInfo    = isSubscribed ? decodeTokenPayload(subToken) : null;
 
-  /* ── Load Google Identity Services ── */
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
-    loadGSI().then(() => {
-      if (!window.google?.accounts) return;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback:  handleGoogleCredential,
-        auto_select: false,
-      });
-      setGsiReady(true);
-    });
-  }, []);
-
-  /* ── Render Google button once GSI ready ── */
-  useEffect(() => {
-    if (!gsiReady || !gButtonRef.current || gUser || isSubscribed) return;
-    window.google?.accounts.id.renderButton(gButtonRef.current, {
-      theme: 'outline',
-      size:  'large',
-      width: '100%',
-      text:  'signin_with',
-      shape: 'rectangular',
-    });
-  }, [gsiReady, gUser, isSubscribed]);
-
-  /* ── Handle Google sign-in callback ── */
-  async function handleGoogleCredential(response: any) {
+  /* ── Handle Google sign-in callback (stable ref to avoid stale closure) ── */
+  const handleGoogleCredential = useRef(async (response: any) => {});
+  handleGoogleCredential.current = async (response: any) => {
     const user = parseGoogleJWT(response.credential);
     if (!user?.email) return;
     setGUser(user);
+    setRestoreChecked(false);
 
-    // Auto-restore subscription if this email has one
-    if (!isSubscribed) {
+    // Auto-restore subscription for this Google account
+    const currentToken = getStoredToken();
+    const currentSubscribed = !!currentToken && !isTokenExpired(currentToken);
+    if (!currentSubscribed) {
       try {
         const res  = await fetch('/api/restore-subscription', {
           method:  'POST',
@@ -193,9 +173,43 @@ export default function AIReport() {
           saveToken(data.subscriptionToken);
           setSubToken(data.subscriptionToken);
         }
-      } catch { /* no subscription found — that's fine */ }
+      } catch { /* no subscription — show upgrade CTA */ }
     }
-  }
+    setRestoreChecked(true);
+  };
+
+  /* ── Load Google Identity Services ── */
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) { setGsiLoading(false); return; }
+    loadGSI().then(() => {
+      if (!window.google?.accounts) { setGsiLoading(false); return; }
+      window.google.accounts.id.initialize({
+        client_id:   GOOGLE_CLIENT_ID,
+        callback:    (r: any) => handleGoogleCredential.current(r),
+        auto_select: false,
+      });
+      setGsiReady(true);
+      setGsiLoading(false);
+    });
+  }, []);
+
+  /* ── Render Google button after GSI ready + div mounted ── */
+  useEffect(() => {
+    if (!gsiReady || gUser || isSubscribed) return;
+    // Small delay ensures React has committed the ref div to DOM
+    const t = setTimeout(() => {
+      if (gButtonRef.current) {
+        window.google?.accounts.id.renderButton(gButtonRef.current, {
+          theme: 'outline',
+          size:  'large',
+          width: '320',
+          text:  'signin_with',
+          shape: 'rectangular',
+        });
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [gsiReady, gUser, isSubscribed]);
 
   function handleSignOut() {
     window.google?.accounts.id.disableAutoSelect();
@@ -531,14 +545,26 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
 
               {!gUser ? (
                 <div className="space-y-2">
-                  {GOOGLE_CLIENT_ID && gsiReady ? (
-                    <div ref={gButtonRef} className="w-full" />
+                  {gsiLoading ? (
+                    /* Loading state while GSI script fetches */
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                      <svg className="w-4 h-4 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Loading sign-in…</span>
+                    </div>
+                  ) : GOOGLE_CLIENT_ID && gsiReady ? (
+                    /* Google renders button into this div */
+                    <div ref={gButtonRef} className="min-h-[44px]" />
                   ) : (
-                    <div className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 rounded-xl px-4 py-3">
-                      Google sign-in not configured. Contact the app owner to set up <code>VITE_GOOGLE_CLIENT_ID</code>.
+                    /* VITE_GOOGLE_CLIENT_ID not set in Netlify env vars */
+                    <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Google Sign-In not configured</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Add <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in Netlify → Environment variables, then redeploy.</p>
+                      </div>
                     </div>
                   )}
-                  <p className="text-xs text-slate-400 dark:text-slate-500">Used only to verify your identity and restore your subscription on any device. The app works without this — login is only required for Pro features.</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Used only to verify your identity and restore your subscription on any device. The rest of the app works without login.</p>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5">
