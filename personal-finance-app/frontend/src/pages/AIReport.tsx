@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getRows } from '../lib/api';
 
 /* ─── Subscription token helpers ─────────────────────────────────────── */
@@ -147,6 +147,7 @@ function ReportRenderer({ text }: { text: string }) {
 /* ─── Main component ─────────────────────────────────────────────────── */
 type Provider = 'anthropic' | 'groq' | 'google';
 type Mode = 'pro' | 'own';
+type ProView = 'cta' | 'restore' | 'manual' | 'token_revealed';
 
 export default function AIReport() {
   /* subscription state */
@@ -155,6 +156,16 @@ export default function AIReport() {
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError]   = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [proView, setProView]     = useState<ProView>('cta');
+
+  /* email & restore state */
+  const [paymentEmail, setPaymentEmail]   = useState('');
+  const [restoreEmail, setRestoreEmail]   = useState('');
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreError, setRestoreError]   = useState('');
+  const [manualToken, setManualToken]     = useState('');
+  const [manualError, setManualError]     = useState('');
+  const [newToken, setNewToken]           = useState('');  // shown after payment
 
   /* own-key state */
   const [apiKey, setApiKey]       = useState('');
@@ -315,6 +326,10 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
 
   /* ── Razorpay subscription flow ── */
   async function handleSubscribe() {
+    if (!paymentEmail.trim() || !paymentEmail.includes('@')) {
+      setSubError('Enter a valid email to receive your subscription token');
+      return;
+    }
     setSubLoading(true);
     setSubError('');
     try {
@@ -339,7 +354,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
           name:        'MyFinance Pro',
           description: orderData.label,
           order_id:    orderData.orderId,
-          prefill: { name: 'MyFinance User', email: '' },
+          prefill: { name: '', email: paymentEmail.trim() },
           theme:   { color: '#7c3aed' },
           handler: async (response: any) => {
             try {
@@ -351,7 +366,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
                   razorpay_order_id:   response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature:  response.razorpay_signature,
-                  email: '',
+                  email: paymentEmail.trim(),
                   plan:  orderData.plan,
                 }),
               });
@@ -360,7 +375,9 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
 
               saveToken(verifyData.subscriptionToken);
               setSubToken(verifyData.subscriptionToken);
+              setNewToken(verifyData.subscriptionToken);
               setSubMode('pro');
+              setProView('token_revealed');
               resolve();
             } catch (err: any) {
               reject(err);
@@ -377,6 +394,46 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
     } finally {
       setSubLoading(false);
     }
+  }
+
+  /* ── Restore subscription by email ── */
+  async function handleRestore() {
+    if (!restoreEmail.trim() || !restoreEmail.includes('@')) {
+      setRestoreError('Enter the email you used when subscribing');
+      return;
+    }
+    setRestoreLoading(true);
+    setRestoreError('');
+    try {
+      const res = await fetch('/api/restore-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: restoreEmail.trim() }),
+      });
+      const data: any = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Could not restore subscription');
+      saveToken(data.subscriptionToken);
+      setSubToken(data.subscriptionToken);
+      setSubMode('pro');
+      setProView('cta');
+    } catch (err: any) {
+      setRestoreError(err.message);
+    } finally {
+      setRestoreLoading(false);
+    }
+  }
+
+  /* ── Manual token entry ── */
+  function handleManualToken() {
+    const t = manualToken.trim();
+    if (!t.includes('.')) { setManualError('Invalid token format'); return; }
+    if (isTokenExpired(t)) { setManualError('This token has expired'); return; }
+    saveToken(t);
+    setSubToken(t);
+    setSubMode('pro');
+    setProView('cta');
+    setManualToken('');
+    setManualError('');
   }
 
   /* ── Download report as printable HTML ── */
@@ -477,32 +534,124 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
       {subMode === 'pro' && (
         <div className="space-y-4">
           {isSubscribed ? (
-            /* Subscribed state */
-            <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-600 text-white">PRO</span>
-                  <span className="text-sm font-semibold text-violet-800 dark:text-violet-200">Active Subscription</span>
-                </div>
-                <button
-                  onClick={() => { clearToken(); setSubToken(''); setSubMode('own'); }}
-                  className="text-xs text-slate-400 hover:text-red-500 transition-colors"
-                >
-                  Sign out
-                </button>
-              </div>
-              {tokenInfo && (
-                <div className="text-xs text-violet-700 dark:text-violet-300 space-y-0.5">
-                  <p>Plan: <strong className="capitalize">{tokenInfo.plan}</strong></p>
-                  <p>Expires: <strong>{new Date(tokenInfo.expiry!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></p>
+            /* ── Active subscription ── */
+            <div className="space-y-3">
+              {/* Token revealed after fresh payment */}
+              {proView === 'token_revealed' && newToken && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Save your subscription token</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">Copy and store this somewhere safe. You'll need it to restore your subscription on a new device or after clearing your browser.</p>
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-amber-200 dark:border-amber-800 p-3 flex items-center gap-2">
+                    <code className="flex-1 text-xs text-slate-700 dark:text-slate-300 break-all font-mono leading-relaxed">{newToken}</code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(newToken); }}
+                      className="flex-shrink-0 p-1.5 rounded-lg bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 transition-colors"
+                      title="Copy token"
+                    >
+                      <svg className="w-4 h-4 text-amber-700 dark:text-amber-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <button onClick={() => setProView('cta')} className="text-xs text-amber-600 dark:text-amber-400 underline">I've saved it, dismiss</button>
                 </div>
               )}
-              <p className="text-xs text-violet-600 dark:text-violet-400">
-                AI runs on our servers — your data never leaves your device unencrypted.
+
+              {/* Subscription badge */}
+              <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-600 text-white">PRO</span>
+                    <span className="text-sm font-semibold text-violet-800 dark:text-violet-200">Active Subscription</span>
+                  </div>
+                  <button
+                    onClick={() => { clearToken(); setSubToken(''); setSubMode('own'); setProView('cta'); setNewToken(''); }}
+                    className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+                {tokenInfo && (
+                  <div className="text-xs text-violet-700 dark:text-violet-300 space-y-0.5">
+                    {tokenInfo.email && <p>Email: <strong>{tokenInfo.email}</strong></p>}
+                    <p>Plan: <strong className="capitalize">{tokenInfo.plan}</strong></p>
+                    <p>Expires: <strong>{new Date(tokenInfo.expiry!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></p>
+                  </div>
+                )}
+                <p className="text-xs text-violet-600 dark:text-violet-400">AI runs on our servers — your API key is never needed on your device.</p>
+              </div>
+            </div>
+          ) : proView === 'restore' ? (
+            /* ── Restore by email ── */
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setProView('cta'); setRestoreError(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                </button>
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Restore Subscription</h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Enter the email you used when subscribing. Your subscription token will be restored automatically.</p>
+              <input
+                type="email"
+                value={restoreEmail}
+                onChange={e => setRestoreEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRestore(); }}
+                placeholder="your@email.com"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              {restoreError && <p className="text-xs text-red-600 dark:text-red-400">{restoreError}</p>}
+              <button
+                onClick={handleRestore}
+                disabled={restoreLoading}
+                className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {restoreLoading ? (
+                  <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Restoring…</>
+                ) : 'Restore my subscription'}
+              </button>
+              <p className="text-center text-xs text-slate-400">
+                Have your token?{' '}
+                <button onClick={() => { setProView('manual'); setRestoreError(''); }} className="text-violet-600 dark:text-violet-400 underline">Enter it manually</button>
               </p>
             </div>
+          ) : proView === 'manual' ? (
+            /* ── Manual token entry ── */
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setProView('cta'); setManualError(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                </button>
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Enter Subscription Token</h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Paste the token you saved after subscribing.</p>
+              <textarea
+                value={manualToken}
+                onChange={e => setManualToken(e.target.value)}
+                placeholder="Paste your token here…"
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              />
+              {manualError && <p className="text-xs text-red-600 dark:text-red-400">{manualError}</p>}
+              <button
+                onClick={handleManualToken}
+                className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm transition-colors"
+              >
+                Activate
+              </button>
+            </div>
           ) : (
-            /* Upgrade CTA */
+            /* ── Upgrade CTA ── */
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               {/* Banner */}
               <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 text-white">
@@ -535,7 +684,7 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
                 </ul>
               </div>
 
-              {/* Plan selector */}
+              {/* Plan selector + email */}
               <div className="px-5 py-4 space-y-3">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Choose a plan</p>
                 <div className="flex gap-3">
@@ -561,9 +710,19 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
                   ))}
                 </div>
 
-                {subError && (
-                  <p className="text-xs text-red-600 dark:text-red-400">{subError}</p>
-                )}
+                {/* Email field */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Your email — to recover subscription on any device</label>
+                  <input
+                    type="email"
+                    value={paymentEmail}
+                    onChange={e => setPaymentEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+
+                {subError && <p className="text-xs text-red-600 dark:text-red-400">{subError}</p>}
 
                 <button
                   onClick={handleSubscribe}
@@ -589,6 +748,11 @@ Give helpful, practical financial advice. Use ₹ for INR amounts.`;
                 <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                   Secure payment via Razorpay · UPI, Cards, Net Banking accepted
                 </p>
+                <div className="flex items-center justify-center gap-3 pt-1">
+                  <button onClick={() => { setProView('restore'); setSubError(''); }} className="text-xs text-violet-600 dark:text-violet-400 underline">Already subscribed? Restore</button>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <button onClick={() => { setProView('manual'); setSubError(''); }} className="text-xs text-violet-600 dark:text-violet-400 underline">Enter token manually</button>
+                </div>
               </div>
             </div>
           )}

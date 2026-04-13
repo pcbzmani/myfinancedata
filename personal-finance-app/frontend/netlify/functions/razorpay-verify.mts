@@ -1,12 +1,13 @@
 import type { Config } from '@netlify/functions';
 import { createHmac }   from 'crypto';
+import { getStore }     from '@netlify/blobs';
 
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? '';
 const TOKEN_SECRET        = process.env.TOKEN_SECRET        ?? '';
 
 const PLAN_DURATION: Record<string, number> = {
-  monthly: 30  * 24 * 60 * 60 * 1000,   // 30 days
-  yearly:  365 * 24 * 60 * 60 * 1000,   // 365 days
+  monthly: 30  * 24 * 60 * 60 * 1000,
+  yearly:  365 * 24 * 60 * 60 * 1000,
 };
 
 const CORS = {
@@ -20,7 +21,6 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
 }
 
-/** Build a self-contained, HMAC-signed subscription token (no DB needed) */
 function buildToken(email: string, plan: string): string {
   const expiry  = Date.now() + (PLAN_DURATION[plan] ?? PLAN_DURATION.monthly);
   const payload = Buffer.from(JSON.stringify({ email, plan, expiry })).toString('base64');
@@ -29,9 +29,7 @@ function buildToken(email: string, plan: string): string {
 }
 
 export default async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   if (!RAZORPAY_KEY_SECRET || !TOKEN_SECRET) {
@@ -48,7 +46,7 @@ export default async (req: Request) => {
     return json({ error: 'Missing payment fields' }, 400);
   }
 
-  // Razorpay signature verification: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+  // Verify Razorpay payment signature
   const expected = createHmac('sha256', RAZORPAY_KEY_SECRET)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest('hex');
@@ -57,10 +55,26 @@ export default async (req: Request) => {
     return json({ error: 'Payment verification failed' }, 403);
   }
 
-  // Issue a subscription token
-  const subscriptionToken = buildToken(email || 'user', plan || 'monthly');
+  const userEmail       = (email || '').trim().toLowerCase();
+  const subscriptionToken = buildToken(userEmail || 'user', plan || 'monthly');
 
-  return json({ subscriptionToken, plan: plan || 'monthly' });
+  // Store email → token in Netlify Blobs for recovery
+  if (userEmail) {
+    try {
+      const store = getStore('subscriptions');
+      await store.setJSON(userEmail, {
+        subscriptionToken,
+        plan:       plan || 'monthly',
+        paymentId:  razorpay_payment_id,
+        createdAt:  new Date().toISOString(),
+      });
+    } catch (e) {
+      // Non-fatal — token is still returned to user
+      console.error('Blobs write failed:', e);
+    }
+  }
+
+  return json({ subscriptionToken, plan: plan || 'monthly', email: userEmail });
 };
 
 export const config: Config = {
