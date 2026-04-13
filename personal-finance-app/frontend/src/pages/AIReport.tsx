@@ -181,7 +181,10 @@ export default function AIReport() {
   /* ── Load Google Identity Services ── */
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) { setGsiLoading(false); return; }
+    // Timeout fallback: if GSI doesn't load in 5s (e.g. Brave/ad-blockers), show manual option
+    const timeout = setTimeout(() => setGsiLoading(false), 5000);
     loadGSI().then(() => {
+      clearTimeout(timeout);
       if (!window.google?.accounts) { setGsiLoading(false); return; }
       window.google.accounts.id.initialize({
         client_id:   GOOGLE_CLIENT_ID,
@@ -191,6 +194,7 @@ export default function AIReport() {
       setGsiReady(true);
       setGsiLoading(false);
     });
+    return () => clearTimeout(timeout);
   }, []);
 
   /* ── Render Google button after GSI ready + div mounted ── */
@@ -554,6 +558,25 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
                   ) : GOOGLE_CLIENT_ID && gsiReady ? (
                     /* Google renders button into this div */
                     <div ref={gButtonRef} className="min-h-[44px]" />
+                  ) : GOOGLE_CLIENT_ID ? (
+                    /* GSI blocked by browser (Brave, ad-blocker, etc.) */
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3">
+                        <svg className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Google Sign-In was blocked</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Your browser or an extension is blocking Google's sign-in script (common in Brave, Firefox with strict privacy, or ad-blockers).
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Try one of these:</p>
+                      <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1 ml-3">
+                        <li>• Open this page in <strong className="text-slate-700 dark:text-slate-300">Chrome</strong> or <strong className="text-slate-700 dark:text-slate-300">Firefox</strong></li>
+                        <li>• In Brave: click the <strong className="text-slate-700 dark:text-slate-300">Shield icon</strong> in the address bar → disable shields for this site</li>
+                        <li>• Disable your ad-blocker extension for <strong className="text-slate-700 dark:text-slate-300">pcbzmani.netlify.app</strong></li>
+                      </ul>
+                    </div>
                   ) : (
                     /* VITE_GOOGLE_CLIENT_ID not set in Netlify env vars */
                     <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
