@@ -3,8 +3,9 @@
 
 # VITE_VAPID_PUBLIC_KEY is intentionally bundled into the client (public key by design).
 # VAPID_EMAIL appears in split.html as a contact address — not a secret.
+# VITE_GOOGLE_CLIENT_ID is a public OAuth identifier, safe to bundle into frontend JS.
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "VAPID_PUBLIC_KEY,VITE_VAPID_PUBLIC_KEY,VAPID_EMAIL"
+  SECRETS_SCAN_OMIT_KEYS = "VAPID_PUBLIC_KEY,VITE_VAPID_PUBLIC_KEY,VAPID_EMAIL,VITE_GOOGLE_CLIENT_ID"
 
 # SPA routing — send all requests to index.html (functions take priority)
 [[redirects]]
