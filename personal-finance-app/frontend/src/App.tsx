@@ -12,6 +12,7 @@ import Vault from './pages/Vault';
 import Split from './pages/Split';
 import Settings from './pages/Settings';
 import AIReport from './pages/AIReport';
+import Calculators from './pages/Calculators';
 import Learn from './pages/Learn';
 import {
   notificationsGranted,
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="vault" element={<Vault />} />
           <Route path="split" element={<Split />} />
           <Route path="ai" element={<AIReport />} />
+          <Route path="calculators" element={<Calculators />} />
           <Route path="learn" element={<Learn />} />
           <Route path="settings" element={<Settings />} />
         </Route>

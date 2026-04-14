@@ -99,6 +99,21 @@ function BookIcon() {
   );
 }
 
+function CalculatorIcon() {
+  return (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <line x1="8" y1="6" x2="16" y2="6" />
+      <line x1="8" y1="10" x2="10" y2="10" />
+      <line x1="14" y1="10" x2="16" y2="10" />
+      <line x1="8" y1="14" x2="10" y2="14" />
+      <line x1="14" y1="14" x2="16" y2="14" />
+      <line x1="8" y1="18" x2="10" y2="18" />
+      <line x1="14" y1="18" x2="16" y2="18" />
+    </svg>
+  );
+}
+
 function SunIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -144,6 +159,7 @@ const nav = [
   { to: '/vault', label: 'Vault', Icon: LockIcon },
   { to: '/split', label: 'Split', Icon: SplitIcon },
   { to: '/ai', label: 'AI Report', Icon: SparkleIcon },
+  { to: '/calculators', label: 'Calculators', Icon: CalculatorIcon },
   { to: '/learn', label: 'Learn', Icon: BookIcon },
   { to: '/settings', label: 'Settings', Icon: CogIcon },
 ];

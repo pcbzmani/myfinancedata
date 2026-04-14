@@ -119,10 +119,7 @@ function ReportRenderer({ text }: { text: string }) {
 }
 
 /* ─── Plan details ────────────────────────────────────────────────────── */
-const PLANS = {
-  monthly: { price: '₹199', period: '/month', saves: '',        label: '1-month Pro' },
-  yearly:  { price: '₹1,499', period: '/year', saves: 'Save 37%', label: '1-year Pro'  },
-};
+const PLAN = { price: '₹99', period: '/year', label: '1-year Pro', saves: 'Best value' };
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 export default function AIReport() {
@@ -136,7 +133,6 @@ export default function AIReport() {
   const [subToken, setSubToken]   = useState<string>(getStoredToken);
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError]   = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [newToken, setNewToken]   = useState('');
   const [showSavedToken, setShowSavedToken] = useState(false);
   const [restoreChecked, setRestoreChecked] = useState(false);
@@ -304,7 +300,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
       const orderRes = await fetch('/api/razorpay-order', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ plan: selectedPlan }),
+        body:    JSON.stringify({ plan: 'yearly' }),
       });
       const orderData: any = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.error ?? 'Could not create payment order');
@@ -527,6 +523,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
               {[
                 'Full financial health report from your transactions & investments',
                 'Ask anything — investment strategy, savings rate, insurance gaps',
+                'Pro Finance Calculators: SIP, Loan EMI, Avg Stock Price, Gold charge',
                 'Claude AI (Anthropic) runs on secure servers — your key never exposed',
                 'Your financial data stays on your device',
                 'Download PDF reports',
@@ -606,24 +603,27 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Choose a plan</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Unlock Pro — ₹99/year</span>
                 </div>
 
-                <div className="flex gap-3">
-                  {(['monthly', 'yearly'] as const).map(plan => (
-                    <button
-                      key={plan}
-                      onClick={() => setSelectedPlan(plan)}
-                      className={`flex-1 rounded-xl border-2 p-3 text-left transition-all ${selectedPlan === plan ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-violet-300'}`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 capitalize">{plan}</span>
-                        {PLANS[plan].saves && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{PLANS[plan].saves}</span>}
-                      </div>
-                      <span className="text-xl font-bold text-violet-700 dark:text-violet-400">{PLANS[plan].price}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-0.5">{PLANS[plan].period}</span>
-                    </button>
-                  ))}
+                {/* Single plan card */}
+                <div className="rounded-xl border-2 border-violet-500 bg-violet-50 dark:bg-violet-900/20 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">1-Year Pro</span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">Best value</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-3xl font-bold text-violet-700 dark:text-violet-400">₹99</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">/year</span>
+                  </div>
+                  <ul className="space-y-1">
+                    {['AI financial health reports', 'Unlimited AI questions', 'Pro calculators (SIP, EMI, Gold…)', 'PDF export', 'Auto-renews after 1 year'].map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <svg className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 {subError && <p className="text-xs text-red-600 dark:text-red-400">{subError}</p>}
@@ -636,7 +636,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
                   {subLoading ? (
                     <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Opening payment…</>
                   ) : (
-                    <><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscribe — {PLANS[selectedPlan].price}{PLANS[selectedPlan].period}</>
+                    <><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Get Pro — ₹99/year</>
                   )}
                 </button>
                 <p className="text-center text-xs text-slate-400 dark:text-slate-500">Secure payment via Razorpay · UPI, Cards, Net Banking</p>

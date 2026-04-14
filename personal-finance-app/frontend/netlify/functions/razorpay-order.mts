@@ -4,8 +4,7 @@ const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID ?? '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? '';
 
 const PLANS: Record<string, { amount: number; label: string }> = {
-  monthly: { amount:  19900, label: '1-month Pro' },  // ₹199
-  yearly:  { amount: 149900, label: '1-year Pro'  },  // ₹1,499
+  yearly: { amount: 9900, label: '1-year Pro' },  // ₹99/year
 };
 
 const CORS = {
@@ -29,11 +28,8 @@ export default async (req: Request) => {
     return json({ error: 'Payment service not configured' }, 503);
   }
 
-  let plan = 'monthly';
-  try {
-    const body = await req.json();
-    if (body.plan && PLANS[body.plan]) plan = body.plan;
-  } catch { /* default plan */ }
+  const plan = 'yearly';
+  try { await req.json(); } catch { /* ignore */ }
 
   const { amount, label } = PLANS[plan];
   const receipt = `sub_${plan}_${Date.now()}`;
