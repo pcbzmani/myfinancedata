@@ -3,6 +3,12 @@ import { precacheAndRoute } from 'workbox-precaching';
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Activate new service worker immediately — don't wait for old tabs to close
+self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // Precache all static assets
 precacheAndRoute(self.__WB_MANIFEST);
 

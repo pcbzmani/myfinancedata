@@ -399,8 +399,8 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
         </p>
       </div>
 
-      {/* ── SIGNED IN + SUBSCRIBED ── */}
-      {gUser && isSubscribed && (
+      {/* ── SUBSCRIBED (token in localStorage — Google sign-in not required to use AI) ── */}
+      {isSubscribed && (
         <div className="space-y-4">
 
           {/* New token banner */}
@@ -428,22 +428,33 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
           {/* User + subscription badge */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {gUser.picture && <img src={gUser.picture} alt="" className="w-9 h-9 rounded-full ring-2 ring-violet-200 dark:ring-violet-800" />}
+              {gUser?.picture
+                ? <img src={gUser.picture} alt="" className="w-9 h-9 rounded-full ring-2 ring-violet-200 dark:ring-violet-800" />
+                : <div className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/40 ring-2 ring-violet-200 dark:ring-violet-800 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-violet-600 dark:text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+              }
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{gUser.name}</span>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {gUser?.name ?? tokenInfo?.email ?? 'Pro Subscriber'}
+                  </span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-violet-600 text-white">PRO</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{gUser.email}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {gUser?.email ?? tokenInfo?.email ?? 'Subscription active'}
+                </p>
               </div>
             </div>
             <div className="text-right space-y-1">
-              {tokenInfo && (
+              {tokenInfo?.expiry && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Expires {new Date(tokenInfo.expiry!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               )}
-              <button onClick={handleSignOut} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Sign out</button>
+              <button onClick={handleSignOut} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                {gUser ? 'Sign out' : 'Remove subscription'}
+              </button>
             </div>
           </div>
 
@@ -512,8 +523,8 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
         </div>
       )}
 
-      {/* ── NOT SIGNED IN or NOT SUBSCRIBED ── */}
-      {(!gUser || !isSubscribed) && (
+      {/* ── NOT SUBSCRIBED — show upgrade flow ── */}
+      {!isSubscribed && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
 
           {/* Banner */}

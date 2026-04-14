@@ -320,12 +320,12 @@ function ProGate() {
             Get unlimited access to all calculators — SIP, Loan EMI, Average Stock Price, Gold charges, FD maturity and more — for just <strong className="text-violet-600 dark:text-violet-400">₹99/year</strong>.
           </p>
           <a
-            href="/ai-report"
+            href="/ai"
             className="block w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm transition-colors text-center"
           >
             Unlock Pro — ₹99/year
           </a>
-          <p className="text-xs text-slate-400 dark:text-slate-500">Already subscribed? Open the AI Report tab and sign in with Google to restore your subscription.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">Already subscribed? Your subscription is stored on this device — it will be detected automatically when you visit this page.</p>
         </div>
       </div>
     </div>
