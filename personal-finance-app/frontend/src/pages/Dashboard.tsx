@@ -102,7 +102,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function buildMonthly(txns: any[], period: number = 1) {
+function buildMonthly(txns: any[], period: number = 1, currency?: string) {
   const months: Record<string, { income: number; expense: number }> = {};
   const now = new Date();
   for (let i = period - 1; i >= 0; i--) {
@@ -112,6 +112,8 @@ function buildMonthly(txns: any[], period: number = 1) {
   }
   txns.forEach(t => {
     if (!t.date) return;
+    // Only include transactions matching the selected currency (if specified)
+    if (currency && normCur(t) !== currency) return;
     const d = new Date(t.date);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!(key in months)) return;
@@ -172,6 +174,9 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(initMonth);
   const [chartType, setChartType] = useState<'area' | 'line' | 'bar'>('area');
   const [chartPeriod, setChartPeriod] = useState<1 | 3 | 6 | 12>(1);
+  // Currency filter for the chart & savings-rate badge. `null` = not yet initialised
+  // (will be set to the dominant currency once transactions load).
+  const [chartCurrency, setChartCurrency] = useState<string | null>(null);
 
   // Market data
   const [rates, setRates]               = useState<Rates>(EMPTY_RATES);
@@ -255,25 +260,61 @@ export default function Dashboard() {
   }, {});
   const dashSummaryRows = Object.entries(byCurrency).map(([cur, v]) => ({ cur, ...v }));
 
-  const totalIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
-  const totalExpense = monthTxns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+  // Dominant currency & list of currencies actually used in transactions (stable, sorted)
+  const currencyCounts = txns.reduce((acc: Record<string, number>, t) => {
+    const cur = normCur(t); acc[cur] = (acc[cur] || 0) + 1; return acc;
+  }, {});
+  const dominantCurrency = txns.length > 0
+    ? (Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'QAR')
+    : 'QAR';
+  const availableCurrencies = Object.keys(currencyCounts).sort((a, b) =>
+    (currencyCounts[b] - currencyCounts[a]) || a.localeCompare(b)
+  );
+  // Resolve the active chart currency — default to dominant, fall back to QAR
+  const activeChartCurrency = chartCurrency && availableCurrencies.includes(chartCurrency)
+    ? chartCurrency
+    : dominantCurrency;
+
+  // Savings-rate badge + chart/pie should always be scoped to a single currency,
+  // otherwise mixing QAR + INR + USD produces a meaningless number.
+  const currencyMonthTxns = monthTxns.filter(t => normCur(t) === activeChartCurrency);
+  const totalIncome = currencyMonthTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const totalExpense = currencyMonthTxns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
   const netSavings = totalIncome - totalExpense;
   const totalInvested = investments.reduce((s, i) => s + Number(i.amountInvested || 0), 0);
   const currentPortfolio = investments.reduce((s, i) => s + Number(i.currentValue || 0), 0);
   const portfolioGain = currentPortfolio - totalInvested;
   const activePolicies = insurance.filter(i => String(i.status).toLowerCase() === 'active').length;
-  const totalPremium = insurance.reduce((s, i) => s + Number(i.premium || 0), 0);
+  // Annualised premium, per-currency. Raw `premium` values can be monthly / quarterly /
+  // yearly / custom — summing them naively produces a meaningless number. We annualise
+  // each premium to yearly, then group by currency so mixed-currency portfolios don't
+  // get silently added together.
+  const annualPremiumByCurrency = insurance.reduce((acc: Record<string, number>, i) => {
+    const cur = (i.currency && String(i.currency).trim()) || 'INR';
+    const freq = (i.frequency || 'yearly') as string;
+    const cm = Math.max(1, Number(i.customMonths) || 1);
+    const cu = (i.customUnit || 'months') as 'months' | 'days';
+    const mult: Record<string, number> = { monthly: 12, quarterly: 4, 'half-yearly': 2, yearly: 1 };
+    let annual = 0;
+    const prem = Number(i.premium) || 0;
+    if (freq === 'custom') {
+      annual = cu === 'days'
+        ? (cm > 0 ? prem * (365 / cm) : 0)
+        : (cm > 0 ? prem * (12 / cm) : 0);
+    } else {
+      annual = prem * (mult[freq] ?? 1);
+    }
+    acc[cur] = (acc[cur] || 0) + annual;
+    return acc;
+  }, {});
   const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
   const gainPct = totalInvested > 0 ? `${portfolioGain >= 0 ? '+' : ''}${((portfolioGain / totalInvested) * 100).toFixed(1)}%` : '—';
-  const dominantCurrency = txns.length > 0
-    ? (Object.entries(txns.reduce((acc: Record<string, number>, t) => {
-        const cur = normCur(t); acc[cur] = (acc[cur] || 0) + 1; return acc;
-      }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'QAR')
-    : 'QAR';
-  const monthly = buildMonthly(txns, chartPeriod);
+  const monthly = buildMonthly(txns, chartPeriod, activeChartCurrency);
   const recent = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
+  // Pie chart — expenses by category, scoped to the active chart currency so that
+  // mixing currencies doesn't distort category sizes.
   const pieData = Object.entries(
-    monthTxns.filter(t => t.type === 'expense').reduce((acc: Record<string, number>, t) => {
+    currencyMonthTxns.filter(t => t.type === 'expense').reduce((acc: Record<string, number>, t) => {
       acc[t.category] = (acc[t.category] || 0) + Number(t.amount || 0); return acc;
     }, {})
   ).map(([name, value]) => ({ name, value }));
@@ -356,12 +397,15 @@ export default function Dashboard() {
             >Today</button>
           )}
           {totalIncome > 0 && (
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${
-              savingsRate >= 20 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 text-emerald-700'
-              : savingsRate >= 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300'
-              : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-700 text-rose-600'
-            }`}>
-              <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings</span>
+            <div
+              title={`Savings rate for ${activeChartCurrency} this month`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${
+                savingsRate >= 20 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 text-emerald-700'
+                : savingsRate >= 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-700 text-rose-600'
+              }`}
+            >
+              <span className="text-xs font-medium opacity-70 hidden sm:inline">Savings {availableCurrencies.length > 1 ? `(${activeChartCurrency})` : ''}</span>
               <span>{savingsRate}%</span>
             </div>
           )}
@@ -403,9 +447,22 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-start gap-2 mb-3">
             <div>
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">Cash Flow</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500">{chartPeriod === 1 ? 'Current month' : `Last ${chartPeriod} months`} · {dominantCurrency}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{chartPeriod === 1 ? 'Current month' : `Last ${chartPeriod} months`} · {activeChartCurrency}</p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
+              {/* Currency selector — only shown when the user actually has multiple currencies */}
+              {availableCurrencies.length > 1 && (
+                <select
+                  value={activeChartCurrency}
+                  onChange={e => setChartCurrency(e.target.value)}
+                  title="Chart currency"
+                  className="text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-700"
+                >
+                  {availableCurrencies.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              )}
               {/* Period toggle */}
               <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden text-xs">
                 {([1, 3, 6, 12] as const).map(p => (
@@ -437,7 +494,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Bar dataKey="income" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Income" />
                 <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" />
               </BarChart>
@@ -446,7 +503,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 5 }} />
               </LineChart>
@@ -459,7 +516,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [fmt(v, dominantCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Income" dot={false} />
                 <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#ge)" name="Expense" dot={false} />
               </AreaChart>
@@ -469,7 +526,7 @@ export default function Dashboard() {
 
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">Expenses by Category</h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'} · {activeChartCurrency}</p>
           {pieData.length === 0 ? (
             <div className="h-[200px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
               <p className="text-3xl mb-2">📊</p><p className="text-sm">No expenses yet</p>
@@ -480,7 +537,7 @@ export default function Dashboard() {
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => [fmt(v), '']} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Legend iconType="circle" iconSize={7} formatter={(v) => <span className="text-xs text-slate-600 dark:text-slate-300">{v}</span>} />
               </PieChart>
             </ResponsiveContainer>
@@ -544,7 +601,16 @@ export default function Dashboard() {
             <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Insurance</h2>
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Active Policies</span><span className="font-semibold text-slate-700 dark:text-slate-200">{activePolicies}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Annual Premium</span><span className="font-semibold text-amber-600">{fmt(totalPremium)}</span></div>
+              {Object.keys(annualPremiumByCurrency).length === 0 ? (
+                <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Annual Premium</span><span className="font-semibold text-amber-600">—</span></div>
+              ) : (
+                Object.entries(annualPremiumByCurrency).map(([cur, amt]) => (
+                  <div key={cur} className="flex justify-between text-sm">
+                    <span className="text-slate-400 dark:text-slate-500">Annual Premium <span className="text-[10px] font-semibold text-slate-300">({cur})</span></span>
+                    <span className="font-semibold text-amber-600">{fmt(amt as number, cur)}</span>
+                  </div>
+                ))
+              )}
             </div>
             <Link to="/insurance" className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-3 block">Manage policies →</Link>
           </div>
