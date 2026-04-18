@@ -908,6 +908,21 @@ export default function Settings() {
             <li>• All data can be deleted by clearing your browser's localStorage and deleting your Google Sheets</li>
           </ul>
         </div>
+
+        {/* Legal / Policies */}
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+          <p className="text-xs font-semibold text-violet-500 uppercase tracking-wider mb-2">Legal &amp; Support</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+            <a href="/privacy-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</a>
+            <a href="/refund-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Refund Policy</a>
+            <a href="mailto:pcbzmani@gmail.com" className="text-violet-600 dark:text-violet-400 hover:underline">Contact developer</a>
+            <a href="https://github.com/pcbzmani/myfinancedata/issues" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Report a bug</a>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+            Pro subscription is non-refundable. For refund-related queries or feature requests, email{' '}
+            <a href="mailto:pcbzmani@gmail.com" className="underline hover:text-violet-600">pcbzmani@gmail.com</a>.
+          </p>
+        </div>
       </div>
     </div>
   );
