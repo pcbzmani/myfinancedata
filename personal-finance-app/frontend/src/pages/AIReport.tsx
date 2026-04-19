@@ -669,6 +669,13 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
                   )}
                 </button>
                 <p className="text-center text-xs text-slate-400 dark:text-slate-500">Secure payment via Razorpay · UPI, Cards, Net Banking</p>
+                <p className="text-center text-[11px] text-slate-400 dark:text-slate-500">
+                  By subscribing, you agree to our{' '}
+                  <a href="/privacy-policy.html" target="_blank" rel="noopener" className="underline hover:text-violet-600">Privacy Policy</a>
+                  {' '}and{' '}
+                  <a href="/refund-policy.html" target="_blank" rel="noopener" className="underline hover:text-violet-600">Refund Policy</a>
+                  {' '}(no refunds; contact <a href="mailto:pcbzmani@gmail.com" className="underline hover:text-violet-600">pcbzmani@gmail.com</a> for feature requests).
+                </p>
               </div>
             )}
           </div>

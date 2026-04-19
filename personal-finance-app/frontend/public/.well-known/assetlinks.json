@@ -3,6 +3,9 @@
   "target": {
     "namespace": "android_app",
     "package_name": "app.netlify.pcbzmani.twa",
-    "sha256_cert_fingerprints": ["25:F5:AE:44:E5:19:4F:60:BD:71:7C:66:FC:9F:7E:1E:7C:43:90:37:1B:E5:2D:F8:BD:6D:11:BC:4F:47:1F:9C"]
+    "sha256_cert_fingerprints": [
+      "25:F5:AE:44:E5:19:4F:60:BD:71:7C:66:FC:9F:7E:1E:7C:43:90:37:1B:E5:2D:F8:BD:6D:11:BC:4F:47:1F:9C",
+      "22:90:05:62:24:AA:DD:85:E2:FA:A0:B7:52:A2:FD:02:A8:5F:44:0B:A7:77:A0:11:F9:4F:36:49:3D:11:57:E8"
+    ]
   }
 }]
