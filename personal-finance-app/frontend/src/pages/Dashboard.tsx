@@ -126,6 +126,31 @@ function buildMonthly(txns: any[], period: number = 1, currency?: string) {
   }));
 }
 
+function buildDaily(txns: any[], period: number = 1, currency?: string) {
+  const days: Record<string, { income: number; expense: number }> = {};
+  const now = new Date();
+  const totalDays = period * 30;
+  for (let i = totalDays - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    days[key] = { income: 0, expense: 0 };
+  }
+  txns.forEach(t => {
+    if (!t.date) return;
+    if (currency && normCur(t) !== currency) return;
+    const raw = String(t.date).split('T')[0];
+    if (!(raw in days)) return;
+    if (t.type === 'income') days[raw].income += Number(t.amount) || 0;
+    else days[raw].expense += Number(t.amount) || 0;
+  });
+  return Object.entries(days).map(([key, v]) => {
+    const [y, m, day] = key.split('-');
+    const label = new Date(Number(y), Number(m) - 1, Number(day))
+      .toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    return { label, ...v };
+  });
+}
+
 function BarChartIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -310,6 +335,8 @@ export default function Dashboard() {
   const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
   const gainPct = totalInvested > 0 ? `${portfolioGain >= 0 ? '+' : ''}${((portfolioGain / totalInvested) * 100).toFixed(1)}%` : '—';
   const monthly = buildMonthly(txns, chartPeriod, activeChartCurrency);
+  const daily   = buildDaily(txns, chartPeriod, activeChartCurrency);
+  const dailyInterval = Math.max(0, Math.floor(daily.length / 6) - 1);
   const recent = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
   // Pie chart — expenses by category, scoped to the active chart currency so that
   // mixing currencies doesn't distort category sizes.
@@ -499,22 +526,22 @@ export default function Dashboard() {
                 <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" />
               </BarChart>
             ) : chartType === 'line' ? (
-              <LineChart data={monthly}>
+              <LineChart data={daily}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={dailyInterval} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={false} activeDot={{ r: 4 }} />
               </LineChart>
             ) : (
-              <AreaChart data={monthly}>
+              <AreaChart data={daily}>
                 <defs>
                   <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} /><stop offset="95%" stopColor="#7c3aed" stopOpacity={0} /></linearGradient>
                   <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={dailyInterval} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Income" dot={false} />
