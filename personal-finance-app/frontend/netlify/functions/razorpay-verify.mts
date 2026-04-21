@@ -62,11 +62,15 @@ export default async (req: Request) => {
   if (userEmail) {
     try {
       const store = getStore('subscriptions');
+      const now      = Date.now();
+      const duration = PLAN_DURATION[plan || 'yearly'] ?? PLAN_DURATION.yearly;
       await store.setJSON(userEmail, {
         subscriptionToken,
-        plan:       plan || 'monthly',
+        plan:       plan || 'yearly',
         paymentId:  razorpay_payment_id,
-        createdAt:  new Date().toISOString(),
+        createdAt:  new Date(now).toISOString(),
+        expiresAt:  new Date(now + duration).toISOString(),
+        amount:     plan === 'yearly' ? 99 : 99,
       });
     } catch (e) {
       // Non-fatal — token is still returned to user

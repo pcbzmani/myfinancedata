@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import AIReport from './pages/AIReport';
 import Calculators from './pages/Calculators';
 import Learn from './pages/Learn';
+import Admin from './pages/Admin';
 import {
   notificationsGranted,
   isNotifDisabled,
@@ -49,6 +50,8 @@ export default function App() {
           <Route path="learn" element={<Learn />} />
           <Route path="settings" element={<Settings />} />
         </Route>
+        {/* Admin — hidden route, password-protected at page level */}
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
