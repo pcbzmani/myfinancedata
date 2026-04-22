@@ -61,7 +61,7 @@ export default function Admin() {
 
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-violet-400">MyFinance Admin</h1>
+          <h1 className="text-2xl font-bold text-violet-400">PanamKasu Admin</h1>
           <p className="text-slate-400 text-sm mt-1">Subscriber dashboard & API usage</p>
         </div>
 

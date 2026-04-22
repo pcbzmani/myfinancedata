@@ -318,7 +318,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
           key:         orderData.keyId,
           amount:      orderData.amount,
           currency:    orderData.currency,
-          name:        'MyFinance Pro',
+          name:        'PanamKasu Pro',
           description: orderData.label,
           order_id:    orderData.orderId,
           prefill:     { name: gUser?.name ?? '', email },
@@ -382,7 +382,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
       }
       return out.join('\n');
     }
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>MyFinance — Financial Health Report</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11pt;color:#1e293b;line-height:1.6}.header{background:#7c3aed;color:#fff;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;font-size:10pt}.header strong{font-size:11pt}.content{padding:24px 32px}h1{font-size:18pt;font-weight:700;color:#1e293b;margin:18px 0 6px;padding-bottom:6px;border-bottom:2px solid #7c3aed}h2{font-size:12pt;font-weight:700;color:#6d28d9;margin:16px 0 4px}h3{font-size:10.5pt;font-weight:600;color:#475569;margin:12px 0 3px}p{margin:4px 0;font-size:10pt;color:#334155}li{margin:3px 0 3px 20px;font-size:10pt;color:#334155;list-style:disc}li.ol{list-style:decimal}strong{color:#1e293b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:9.5pt}th{background:#ede9fe;color:#4c1d95;font-weight:600;text-align:left;padding:5px 8px;border:1px solid #c4b5fd}td{padding:4px 8px;border:1px solid #e2e8f0;color:#334155}tr:nth-child(even) td{background:#f8fafc}.footer{margin-top:32px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:8pt;color:#94a3b8;display:flex;justify-content:space-between}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:0}.content{padding:20px 28px}}</style></head><body><div class="header"><strong>MyFinance — Financial Health Report</strong><span>Generated: ${date}</span></div><div class="content">${mdToHtml(report)}<div class="footer"><span>MyFinance Pro</span><span>${date}</span></div></div><script>window.onload=function(){window.print()};<\/script></body></html>`;
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>PanamKasu — Financial Health Report</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11pt;color:#1e293b;line-height:1.6}.header{background:#7c3aed;color:#fff;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;font-size:10pt}.header strong{font-size:11pt}.content{padding:24px 32px}h1{font-size:18pt;font-weight:700;color:#1e293b;margin:18px 0 6px;padding-bottom:6px;border-bottom:2px solid #7c3aed}h2{font-size:12pt;font-weight:700;color:#6d28d9;margin:16px 0 4px}h3{font-size:10.5pt;font-weight:600;color:#475569;margin:12px 0 3px}p{margin:4px 0;font-size:10pt;color:#334155}li{margin:3px 0 3px 20px;font-size:10pt;color:#334155;list-style:disc}li.ol{list-style:decimal}strong{color:#1e293b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:9.5pt}th{background:#ede9fe;color:#4c1d95;font-weight:600;text-align:left;padding:5px 8px;border:1px solid #c4b5fd}td{padding:4px 8px;border:1px solid #e2e8f0;color:#334155}tr:nth-child(even) td{background:#f8fafc}.footer{margin-top:32px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:8pt;color:#94a3b8;display:flex;justify-content:space-between}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:0}.content{padding:20px 28px}}</style></head><body><div class="header"><strong>PanamKasu — Financial Health Report</strong><span>Generated: ${date}</span></div><div class="content">${mdToHtml(report)}<div class="footer"><span>PanamKasu Pro</span><span>${date}</span></div></div><script>window.onload=function(){window.print()};<\/script></body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
   }
@@ -531,7 +531,7 @@ Give practical, India-specific financial advice. Use ₹ for amounts.`;
           <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-5 text-white">
             <div className="flex items-center gap-2 mb-1">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span className="font-bold text-lg">MyFinance Pro</span>
+              <span className="font-bold text-lg">PanamKasu Pro</span>
             </div>
             <p className="text-sm text-violet-100">AI-powered financial analysis based on your real data — no API key needed.</p>
           </div>

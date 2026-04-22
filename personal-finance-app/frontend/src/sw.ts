@@ -37,7 +37,7 @@ async function checkAndNotify() {
   const entryRes = await cache.match('entry-date');
   if (entryRes && (await entryRes.text()) === today) return;
 
-  await self.registration.showNotification('MyFinance Reminder', {
+  await self.registration.showNotification('PanamKasu Reminder', {
     body: "Don't forget to log today's financial entries!",
     icon: '/pwa-192x192.png',
     badge: '/pwa-64x64.png',

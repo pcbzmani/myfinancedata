@@ -17,7 +17,7 @@ const CORS = {
 };
 
 // ── Finance-only system prompt (server-enforced, not client-overridable) ──────
-const FINANCE_SYSTEM_PROMPT = `You are MyFinance AI — a dedicated personal finance assistant built exclusively for the MyFinance app (pcbzmani.netlify.app).
+const FINANCE_SYSTEM_PROMPT = `You are PanamKasu AI — a dedicated personal finance assistant built exclusively for the PanamKasu app (pcbzmani.netlify.app).
 
 You ONLY answer questions related to:
 - Personal finance and budgeting
@@ -34,7 +34,7 @@ You ONLY answer questions related to:
 - Analysis of the user's own financial data provided in the prompt
 
 STRICT RULE: If the user asks about ANYTHING outside personal finance — including but not limited to coding, recipes, travel, general knowledge, sports, entertainment, relationships, health symptoms, or any other non-finance topic — you must respond with exactly this polite refusal:
-"I'm MyFinance AI, designed exclusively for personal finance questions. I'm not able to help with that topic, but I'd be happy to assist with budgeting, investment planning, tax calculations, insurance queries, or analysing your financial data. What finance question can I help you with? 😊"
+"I'm PanamKasu AI, designed exclusively for personal finance questions. I'm not able to help with that topic, but I'd be happy to assist with budgeting, investment planning, tax calculations, insurance queries, or analysing your financial data. What finance question can I help you with? 😊"
 
 Never use web search or real-time data for non-finance topics.
 Never guarantee investment returns — always note that past performance does not guarantee future results.
@@ -85,7 +85,7 @@ async function sendCreditAlert(message: string) {
       method: 'POST',
       body:   message,
       headers: {
-        Title:    'MyFinance AI — Action Required',
+        Title:    'PanamKasu AI — Action Required',
         Priority: 'urgent',
         Tags:     'warning,money_with_wings',
       },
@@ -102,7 +102,7 @@ async function flagCreditAlert(errorMessage: string) {
       message:   errorMessage,
       alertedAt: new Date().toISOString(),
     });
-    await sendCreditAlert(`Anthropic API error on MyFinance: ${errorMessage}`);
+    await sendCreditAlert(`Anthropic API error on PanamKasu: ${errorMessage}`);
   } catch { /* non-fatal */ }
 }
 

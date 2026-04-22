@@ -23,7 +23,7 @@ export default async () => {
   }
 
   const payload = JSON.stringify({
-    title: 'MyFinance Reminder',
+    title: 'PanamKasu Reminder',
     body: "Don't forget to log today's financial entries!",
     url: '/transactions',
   });
