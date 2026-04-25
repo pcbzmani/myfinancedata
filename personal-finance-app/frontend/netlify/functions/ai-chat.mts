@@ -4,7 +4,7 @@ import { getStore } from '@netlify/blobs';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
 const TOKEN_SECRET      = process.env.TOKEN_SECRET ?? '';
-const ALERT_TOPIC       = process.env.NTFY_ALERT_TOPIC ?? '';   // e.g. "myfinance-pcbzmani"
+const ALERT_TOPIC       = process.env.NTFY_ALERT_TOPIC ?? '';
 
 const ALLOWED_ORIGIN = process.env.URL ?? 'https://pcbzmani.netlify.app';
 const MAX_MESSAGE_LEN = 4000;
