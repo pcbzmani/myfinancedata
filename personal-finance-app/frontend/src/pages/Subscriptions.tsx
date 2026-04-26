@@ -105,6 +105,20 @@ const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', mon
 const diffDays = (d: Date) => Math.ceil((d.getTime() - Date.now()) / 86400000);
 
 
+/** Calculate the new endDate after one renewal cycle, using the previous endDate as the base */
+function nextEndDate(prevEndDate: string, frequency: Frequency, customMonths = 1, customUnit: CustomUnit = 'months'): string {
+  if (!prevEndDate || frequency === 'one-time') return prevEndDate;
+  const d = new Date(prevEndDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return prevEndDate;
+  advanceByFreq(d, frequency, customMonths, customUnit);
+  return d.toISOString().split('T')[0];
+}
+
+interface RenewalCheck {
+  sub: any;
+  newEndDate: string;
+}
+
 export default function Subscriptions() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +135,12 @@ export default function Subscriptions() {
   const [search, setSearch] = useState('');
   const formRef = useRef<HTMLDivElement>(null);
 
+  // Renewal prompt state
+  const [renewalQueue, setRenewalQueue] = useState<RenewalCheck[]>([]);
+  const [renewalIdx, setRenewalIdx] = useState(0);
+  const [renewalDate, setRenewalDate] = useState(localToday());
+  const [renewalSaving, setRenewalSaving] = useState(false);
+
   useEffect(() => {
     loadItems();
     getMarketRates().then(d => {
@@ -128,6 +148,34 @@ export default function Subscriptions() {
         setFxRates({ qarInr: d.qarInr.price, usdInr: d.usdInr.price });
     }).catch(() => {});
   }, []);
+
+  // After items load, find subscriptions that are past their endDate (renewal pending)
+  useEffect(() => {
+    if (loading || items.length === 0) return;
+    const today = localToday();
+    const pending: RenewalCheck[] = items
+      .filter(i =>
+        i.status === 'active' &&
+        i.frequency !== 'one-time' &&
+        i.endDate && i.endDate < today &&
+        // Only prompt if endDate is within last 90 days (not ancient forgotten subs)
+        (new Date(today).getTime() - new Date(i.endDate).getTime()) / 86400000 <= 90
+      )
+      .map(i => ({
+        sub: i,
+        newEndDate: nextEndDate(
+          i.endDate,
+          i.frequency as Frequency,
+          Number(i.customMonths) || 1,
+          (i.customUnit || 'months') as CustomUnit
+        ),
+      }));
+    if (pending.length > 0) {
+      setRenewalQueue(pending);
+      setRenewalIdx(0);
+      setRenewalDate(localToday());
+    }
+  }, [loading, items.length]);
 
   async function loadItems() {
     setLoading(true);
@@ -257,6 +305,47 @@ export default function Subscriptions() {
     }
   }
 
+  /** User confirmed they renewed the subscription */
+  async function handleRenewalConfirm() {
+    const current = renewalQueue[renewalIdx];
+    if (!current) return;
+    setRenewalSaving(true);
+    try {
+      const { sub, newEndDate } = current;
+      // Add an expense transaction for the renewal
+      await addRow('transactions', {
+        id: crypto.randomUUID(),
+        type: 'expense',
+        category: 'Other',
+        amount: Number(sub.cost),
+        currency: sub.currency,
+        description: `Subscription Renewal: ${sub.name}`,
+        date: renewalDate,
+      });
+      // Extend the endDate (startDate stays the same)
+      await updateRow('subscriptions', sub.id, { endDate: newEndDate });
+      setItems(prev => prev.map(i => i.id === sub.id ? { ...i, endDate: newEndDate } : i));
+      setRenewalIdx(idx => idx + 1);
+      setRenewalDate(localToday());
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setRenewalSaving(false);
+    }
+  }
+
+  /** User said they did NOT renew — mark subscription as cancelled */
+  async function handleRenewalSkip() {
+    const current = renewalQueue[renewalIdx];
+    if (!current) return;
+    try {
+      await updateRow('subscriptions', current.sub.id, { status: 'cancelled' });
+      setItems(prev => prev.map(i => i.id === current.sub.id ? { ...i, status: 'cancelled' } : i));
+    } catch { /* non-fatal */ }
+    setRenewalIdx(idx => idx + 1);
+    setRenewalDate(localToday());
+  }
+
   const activeItems = items.filter(i => i.status === 'active');
   const q = search.toLowerCase();
   const filtered = items.filter(i => {
@@ -332,6 +421,67 @@ export default function Subscriptions() {
           className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
         />
       </div>
+
+      {/* ── Renewal prompt modal ───────────────────────────────────────────── */}
+      {renewalQueue.length > 0 && renewalIdx < renewalQueue.length && (() => {
+        const { sub, newEndDate } = renewalQueue[renewalIdx];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">🔄</span>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Renewal Check</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{renewalIdx + 1} of {renewalQueue.length} subscriptions</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-200 mb-1">
+                Your <span className="font-semibold text-violet-600">{sub.name}</span> subscription ended on{' '}
+                <span className="font-medium">{sub.endDate}</span>.
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Did you renew it?</p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Renewal date (when did you actually pay?)</label>
+                <input
+                  type="date"
+                  value={renewalDate}
+                  max={localToday()}
+                  onChange={e => setRenewalDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  New end date will be: <span className="font-semibold text-violet-600">{newEndDate}</span>
+                  {' '}· Cost: <span className="font-semibold">{sub.currency} {Number(sub.cost).toLocaleString()}</span>
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRenewalConfirm}
+                  disabled={renewalSaving}
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  {renewalSaving ? 'Saving…' : '✓ Yes, I renewed it'}
+                </button>
+                <button
+                  onClick={handleRenewalSkip}
+                  disabled={renewalSaving}
+                  className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-300 hover:text-rose-600 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                >
+                  ✕ No, I cancelled it
+                </button>
+              </div>
+              <button
+                onClick={() => setRenewalIdx(renewalQueue.length)} // dismiss all
+                className="mt-3 w-full text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-center"
+              >
+                Remind me later
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Error */}
       {error && (

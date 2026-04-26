@@ -31,27 +31,34 @@ export default async (req: Request) => {
   }
 
   try {
-    // ── 1. Subscribers ────────────────────────────────────────────────────────
+    // ── 1. Subscribers (with pagination) ─────────────────────────────────────
     const subStore = getStore('subscriptions');
-    const subList  = await subStore.list();
     const subscribers: any[] = [];
 
-    for (const entry of subList.blobs) {
-      const data: any = await subStore.get(entry.key, { type: 'json' }).catch(() => null);
-      if (!data) continue;
-      const now       = Date.now();
-      const expiresMs = data.expiresAt ? new Date(data.expiresAt).getTime() : null;
-      subscribers.push({
-        email:      entry.key,
-        plan:       data.plan,
-        paymentId:  data.paymentId,
-        subscribedAt: data.createdAt,
-        expiresAt:  data.expiresAt ?? null,
-        amount:     data.amount ?? 99,
-        active:     expiresMs ? expiresMs > now : true,
-        daysLeft:   expiresMs ? Math.max(0, Math.floor((expiresMs - now) / 86_400_000)) : null,
-      });
-    }
+    let cursor: string | undefined;
+    do {
+      const page: any = await subStore.list(cursor ? { cursor } : {});
+      for (const entry of (page.blobs ?? [])) {
+        if (entry.key === 'credit-alert') continue; // skip sentinel keys
+        const data: any = await subStore.get(entry.key, { type: 'json' }).catch(() => null);
+        if (!data) continue;
+        const now       = Date.now();
+        const expiresMs = data.expiresAt ? new Date(data.expiresAt).getTime() : null;
+        // email is stored in data.email for new records; older records used the key as email
+        const email = data.email ?? (entry.key.includes('@') ? entry.key : null);
+        subscribers.push({
+          email:       email ?? entry.key,
+          plan:        data.plan,
+          paymentId:   data.paymentId,
+          subscribedAt: data.createdAt,
+          expiresAt:   data.expiresAt ?? null,
+          amount:      data.amount ?? 99,
+          active:      expiresMs ? expiresMs > now : true,
+          daysLeft:    expiresMs ? Math.max(0, Math.floor((expiresMs - now) / 86_400_000)) : null,
+        });
+      }
+      cursor = page.cursor;
+    } while (cursor);
 
     // Sort newest first
     subscribers.sort((a, b) =>

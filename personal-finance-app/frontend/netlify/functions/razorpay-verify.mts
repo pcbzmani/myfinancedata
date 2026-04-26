@@ -58,24 +58,25 @@ export default async (req: Request) => {
   const userEmail       = (email || '').trim().toLowerCase();
   const subscriptionToken = buildToken(userEmail || 'user', plan || 'monthly');
 
-  // Store email → token in Netlify Blobs for recovery
-  if (userEmail) {
-    try {
-      const store = getStore('subscriptions');
-      const now      = Date.now();
-      const duration = PLAN_DURATION[plan || 'yearly'] ?? PLAN_DURATION.yearly;
-      await store.setJSON(userEmail, {
-        subscriptionToken,
-        plan:       plan || 'yearly',
-        paymentId:  razorpay_payment_id,
-        createdAt:  new Date(now).toISOString(),
-        expiresAt:  new Date(now + duration).toISOString(),
-        amount:     plan === 'yearly' ? 99 : 99,
-      });
-    } catch (e) {
-      // Non-fatal — token is still returned to user
-      console.error('Blobs write failed:', e);
-    }
+  // Store subscriber in Netlify Blobs (keyed by email; fall back to paymentId)
+  try {
+    const store    = getStore('subscriptions');
+    const now      = Date.now();
+    const resolvedPlan = (plan && plan in PLAN_DURATION) ? plan : 'yearly';
+    const duration = PLAN_DURATION[resolvedPlan];
+    const storeKey = userEmail || razorpay_payment_id; // always store, even without email
+    await store.setJSON(storeKey, {
+      subscriptionToken,
+      email:     userEmail || null,
+      plan:      resolvedPlan,
+      paymentId: razorpay_payment_id,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + duration).toISOString(),
+      amount:    resolvedPlan === 'yearly' ? 99 : 49,
+    });
+  } catch (e) {
+    // Non-fatal — token is still returned to user
+    console.error('Blobs write failed:', e);
   }
 
   return json({ subscriptionToken, plan: plan || 'monthly', email: userEmail });

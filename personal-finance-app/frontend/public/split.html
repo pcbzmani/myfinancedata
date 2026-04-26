@@ -333,8 +333,18 @@ select option{background:var(--surface2);}
       </div>
     </div>
 
+    <!-- Search bar for expenses -->
+    <div style="position:relative;margin-bottom:10px">
+      <input type="text" id="expSearch" placeholder="Search expenses…"
+        oninput="renderExpenses()"
+        style="width:100%;padding-left:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem;outline:none"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.9rem">🔍</span>
+    </div>
+
     <div class="filter-row">
       <button class="filter-chip active" onclick="filterCat('all',this)">All</button>
+      <button class="filter-chip" onclick="filterCat('__mine__',this)">👤 Mine</button>
       <button class="filter-chip" onclick="filterCat('🍽️ Food',this)">🍽️ Food</button>
       <button class="filter-chip" onclick="filterCat('🚗 Transport',this)">🚗 Transport</button>
       <button class="filter-chip" onclick="filterCat('🏨 Accommodation',this)">🏨 Accommodation</button>
@@ -1239,16 +1249,22 @@ function catClass(cat){
 function renderExpenses(){
   const g=G();if(!g)return;
   const list=document.getElementById('expenseList');
-  let exps=activeFilter==='all'?g.expenses:g.expenses.filter(e=>e.category===activeFilter);
+  const me=getMyMember(g);
+  const q=(document.getElementById('expSearch')?.value||'').toLowerCase().trim();
+  let exps=g.expenses;
+  if(activeFilter==='__mine__') exps=exps.filter(e=>e.paidBy===me);
+  else if(activeFilter!=='all') exps=exps.filter(e=>e.category===activeFilter);
+  if(q) exps=exps.filter(e=>(e.desc||'').toLowerCase().includes(q)||(e.category||'').toLowerCase().includes(q)||(e.paidBy||'').toLowerCase().includes(q));
   document.getElementById('expCountBadge').textContent=`${exps.length} item${exps.length!==1?'s':''}`;
   if(!exps.length){
-    list.innerHTML=`<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">No expenses</div><div>${activeFilter!=='all'?'None in this category':'Add your first expense above'}</div></div>`;
+    list.innerHTML=`<div class="empty"><div class="empty-icon">💸</div><div class="empty-title">No expenses</div><div>${q?'No results for "'+q+'"':activeFilter!=='all'?'None in this filter':'Add your first expense above'}</div></div>`;
     return;
   }
   list.innerHTML=exps.map(e=>{
     const emoji=e.category.split(' ')[0];
     const splitPrev=Object.entries(e.splits).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${getCur(e.currency).sym}${parseFloat(v).toFixed(0)}`).join(' · ');
     const foreign=e.currency!==g.currency;
+    const isMe=e.paidBy===me;
     return `<div class="expense-item">
       <div class="expense-icon ${catClass(e.category)}">${emoji}</div>
       <div class="expense-info">
@@ -1257,7 +1273,7 @@ function renderExpenses(){
       </div>
       <div>
         <div class="expense-amount">${fmt(e.amount,e.currency)}${foreign?`<span class="cur-badge">${e.currency}</span>`:''}</div>
-        <div class="expense-paid-by">Paid by ${e.paidBy}</div>
+        <div class="expense-paid-by" style="${isMe?'color:var(--accent)':''}">Paid by ${isMe?'You':e.paidBy}</div>
       </div>
       <div style="display:flex;gap:5px">
         <button class="icon-btn" onclick="editExpense(${e.id})" title="Edit">✏️</button>
@@ -1315,27 +1331,83 @@ function renderBalances(){
     </div>`;
   }).join('');
   const settlements=computeSettlements(bal);
+  const me=getMyMember(g);
   const sel=document.getElementById('settlementsList');
   if(!settlements.length){
     sel.innerHTML=`<div style="color:var(--accent);font-size:0.84rem;padding:12px 0">✅ All settled up!</div>`;
   }else{
-    sel.innerHTML=settlements.map(s=>`
-      <div class="settlement-item">
+    sel.innerHTML=settlements.map(s=>{
+      const fromIsMe=s.from===me;
+      const toIsMe=s.to===me;
+      const fromLabel=fromIsMe?'<b style="color:var(--warn)">You</b>':`<b>${s.from}</b>`;
+      const toLabel=toIsMe?'<b style="color:var(--accent)">You</b>':`<b>${s.to}</b>`;
+      return `<div class="settlement-item">
         <div class="member-avatar" style="background:rgba(248,113,113,0.1);color:#f87171;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem">${s.from[0]}</div>
-        <div style="font-size:0.86rem"><b>${s.from}</b> pays <b>${c.sym}${s.amount.toFixed(2)} ${g.currency}</b></div>
+        <div style="font-size:0.86rem">${fromLabel} pays <b>${c.sym}${s.amount.toFixed(2)}</b></div>
         <div class="settlement-arrow">→</div>
         <div class="member-avatar" style="background:rgba(110,231,183,0.1);color:#6ee7b7;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem">${s.to[0]}</div>
-        <div style="font-size:0.86rem"><b>${s.to}</b></div>
-        <button class="settle-btn" onclick="markSettled('${s.from}','${s.to}',${s.amount})">Mark Settled</button>
-      </div>`).join('');
+        <div style="font-size:0.86rem">${toLabel}</div>
+        <button class="settle-btn" onclick="markSettled('${s.from}','${s.to}',${s.amount})">${fromIsMe?'💸 Pay Now':'Mark Settled'}</button>
+      </div>`;
+    }).join('');
   }
+
+  // Category breakdown in balances tab
+  const catTotals={};
+  g.expenses.forEach(exp=>{
+    const cat=exp.category||'Other';
+    catTotals[cat]=(catTotals[cat]||0)+exp.amount;
+  });
+  const catEntries=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  let catBreakdown=document.getElementById('catBreakdown');
+  if(!catBreakdown){
+    const div=document.createElement('div');div.id='catBreakdown';
+    div.style.cssText='margin-top:24px';
+    sel.parentNode.appendChild(div);
+    catBreakdown=div;
+  }
+  if(!catEntries.length){catBreakdown.innerHTML='';return;}
+  const grandTotal=catEntries.reduce((s,[,v])=>s+v,0);
+  catBreakdown.innerHTML=`
+    <div class="section-header"><div class="section-title">By Category</div></div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      ${catEntries.map(([cat,amt])=>{
+        const pct=grandTotal>0?((amt/grandTotal)*100).toFixed(0):0;
+        const emoji=cat.split(' ')[0];
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:1.1rem">${emoji}</div>
+          <div style="flex:1">
+            <div style="font-size:0.84rem;font-weight:500">${cat.replace(/^[^ ]+ /,'')}</div>
+            <div style="margin-top:4px;height:4px;background:var(--border);border-radius:99px">
+              <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:99px"></div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem">${c.sym}${amt.toFixed(2)}</div>
+            <div style="font-size:0.7rem;color:var(--muted)">${pct}%</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function markSettled(from,to,amount){
   const g=G();if(!g)return;
+  const me=getMyMember(g);
   const splits={};g.members.forEach(m=>splits[m]=0);splits[to]=amount;
-  g.expenses.unshift({id:Date.now(),desc:`💰 Settlement: ${from} → ${to}`,amount,currency:g.currency,category:'🛒 Other',paidBy:from,date:new Date().toISOString().split('T')[0],splits,splitMode:'amount'});
+  const newId=Date.now();
+  const today=new Date().toISOString().split('T')[0];
+  const desc=`💰 Settlement: ${from===me?'You':from} → ${to===me?'You':to}`;
+  g.expenses.unshift({id:newId,desc,amount,currency:g.currency,category:'🛒 Other',paidBy:from,date:today,splits,splitMode:'amount'});
   persist();renderExpenses();renderBalances();updateSummary();syncToSheet();
+  // Notify parent (PanamKasu) to record the settlement as a transaction
+  // This fires when *I* am the one paying in the settlement
+  if(window.parent!==window&&from===me){
+    window.parent.postMessage({type:'splitit_expense',expense:{
+      id:String(newId),desc:`Settlement to ${to} [SplitIt]`,
+      amount,currency:g.currency,category:'🛒 Other',paidBy:from,date:today
+    }},'*');
+  }
   toast('Settlement recorded ✓');
 }
 

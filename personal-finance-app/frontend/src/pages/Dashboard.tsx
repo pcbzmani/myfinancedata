@@ -345,6 +345,19 @@ export default function Dashboard() {
       acc[t.category] = (acc[t.category] || 0) + Number(t.amount || 0); return acc;
     }, {})
   ).map(([name, value]) => ({ name, value }));
+  const pieTotal = pieData.reduce((s, d) => s + d.value, 0);
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.05) return null; // skip tiny slices
+    const RADIAN = Math.PI / 180;
+    const r = innerRadius + (outerRadius - innerRadius) * 0.65;
+    const x = cx + r * Math.cos(-midAngle * RADIAN);
+    const y = cy + r * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight={700}>
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -526,13 +539,13 @@ export default function Dashboard() {
                 <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Expense" />
               </BarChart>
             ) : chartType === 'line' ? (
-              <LineChart data={daily}>
+              <LineChart data={monthly}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={dailyInterval} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} name="Income" dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 5 }} />
               </LineChart>
             ) : (
               <AreaChart data={daily}>
@@ -552,19 +565,47 @@ export default function Dashboard() {
         </div>
 
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">Expenses by Category</h2>
+          <div className="flex items-start justify-between mb-1">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Expenses by Category</h2>
+            {availableCurrencies.length > 1 && (
+              <select
+                value={activeChartCurrency}
+                onChange={e => setChartCurrency(e.target.value)}
+                title="Pie currency"
+                className="text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-700"
+              >
+                {availableCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+          </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{MONTH_OPTIONS.find(o => o.key === selectedMonth)?.label ?? 'This month'} · {activeChartCurrency}</p>
           {pieData.length === 0 ? (
             <div className="h-[200px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
               <p className="text-3xl mb-2">📊</p><p className="text-sm">No expenses yet</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={210}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="45%"
+                  innerRadius={40}
+                  outerRadius={68}
+                  dataKey="value"
+                  paddingAngle={3}
+                  labelLine={false}
+                  label={renderPieLabel}
+                >
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Tooltip
+                  formatter={(v: number) => [
+                    `${fmt(v, activeChartCurrency)} (${pieTotal > 0 ? ((v / pieTotal) * 100).toFixed(1) : 0}%)`,
+                    ''
+                  ]}
+                  contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
+                />
                 <Legend iconType="circle" iconSize={7} formatter={(v) => <span className="text-xs text-slate-600 dark:text-slate-300">{v}</span>} />
               </PieChart>
             </ResponsiveContainer>
