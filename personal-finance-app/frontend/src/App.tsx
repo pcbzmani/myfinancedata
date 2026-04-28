@@ -15,6 +15,7 @@ import AIReport from './pages/AIReport';
 import Calculators from './pages/Calculators';
 import Learn from './pages/Learn';
 import Admin from './pages/Admin';
+import IncomeTax from './pages/IncomeTax';
 import {
   notificationsGranted,
   isNotifDisabled,
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="split" element={<Split />} />
           <Route path="ai" element={<AIReport />} />
           <Route path="calculators" element={<Calculators />} />
+          <Route path="tax" element={<IncomeTax />} />
           <Route path="learn" element={<Learn />} />
           <Route path="settings" element={<Settings />} />
         </Route>

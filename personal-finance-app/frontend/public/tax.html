@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Income Tax — PanamKasu</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #0b5394;
+  --primary-light: #cfe2f3;
+  --accent: #ff9933;
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --border: #e1e5ec;
+  --text: #1a2332;
+  --muted: #5e6b7e;
+  --success: #2e7d32;
+  --warn: #b26a00;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+header {
+  background: linear-gradient(135deg, var(--primary) 0%, #1a73a8 100%);
+  color: white;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+header .logo { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+header .logo-mark {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white;
+}
+header .meta { font-size: 13px; opacity: 0.9; }
+.container {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 20px auto;
+  padding: 0 20px;
+  height: calc(100vh - 120px);
+}
+@media (max-width: 980px) {
+  .container { grid-template-columns: 1fr; height: auto; }
+  .sidebar { order: 2; }
+}
+.chat-panel {
+  background: var(--panel);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 600px;
+}
+.chat-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #fafbfc;
+}
+.chat-header h2 { font-size: 16px; color: var(--primary); }
+.chat-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.msg.bot {
+  background: #eef3fa;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.msg.user {
+  background: var(--primary);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.msg b { color: var(--primary); }
+.msg.user b { color: #ffd28a; }
+.msg ul { margin: 6px 0 0 20px; }
+.msg li { margin: 3px 0; }
+.msg pre {
+  background: rgba(0,0,0,0.06);
+  padding: 8px;
+  border-radius: 6px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12.5px;
+  overflow-x: auto;
+  margin-top: 6px;
+}
+.msg.user pre { background: rgba(255,255,255,0.2); }
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-self: flex-start;
+  max-width: 85%;
+}
+.option-btn {
+  background: white;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-weight: 500;
+}
+.option-btn:hover { background: var(--primary); color: white; }
+.option-btn.multi.selected { background: var(--primary); color: white; }
+.input-row {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: #fafbfc;
+  display: flex;
+  gap: 8px;
+}
+.input-row input, .input-row select {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+  font-family: inherit;
+}
+.input-row input:focus, .input-row select:focus { border-color: var(--primary); }
+.input-row button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 18px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.input-row button:hover { background: #084273; }
+.input-row button.secondary { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.card h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row span:last-child { font-weight: 600; }
+.summary-row.highlight {
+  margin-top: 6px;
+  padding: 7px 0;
+  font-size: 14px;
+  color: var(--primary);
+  border-top: 2px solid var(--primary);
+  border-bottom: none;
+}
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.checklist-item input[type=checkbox] { margin-top: 3px; }
+.checklist-item.done span { text-decoration: line-through; color: var(--muted); }
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.tag.success { background: #e8f5e9; color: var(--success); }
+.tag.warn { background: #fff4e0; color: var(--warn); }
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 12px;
+  margin-top: 12px;
+}
+.controls-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.controls-bar button {
+  flex: 1;
+  background: white;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.controls-bar button:hover { background: var(--primary-light); border-color: var(--primary); }
+@media print {
+  header, .input-row, .controls-bar { display: none; }
+  .container { grid-template-columns: 1fr; height: auto; }
+  .messages { overflow: visible; }
+}
+.bot-typing { font-style: italic; color: var(--muted); font-size: 13px; padding: 4px 14px; }
+.section-link {
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 12px;
+}
+
+/* ===== Support / Donation ===== */
+.support-card {
+  background: linear-gradient(135deg, #fff4e0 0%, #ffe0c2 100%);
+  border: 1px solid #f0c98c;
+}
+.support-card h3 { color: #b26a00; }
+.support-card p { font-size: 13px; color: #6b4a17; margin-bottom: 10px; line-height: 1.5; }
+.support-btn {
+  width: 100%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+.support-btn:hover { background: #e68a2e; }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h2 {
+  font-size: 18px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.modal .modal-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.modal label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  margin-top: 12px;
+}
+.modal input[type="text"],
+.modal input[type="number"],
+.modal input[type="email"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.modal input:focus { outline: none; border-color: var(--primary); }
+.modal .amount-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.modal .amount-presets button {
+  flex: 1;
+  min-width: 60px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+}
+.modal .amount-presets button:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.modal .modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.modal .modal-actions button {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.modal .btn-pay { background: var(--accent); color: white; }
+.modal .btn-pay:hover { background: #e68a2e; }
+.modal .btn-pay:disabled { background: #ccc; cursor: not-allowed; }
+.modal .btn-cancel { background: white; color: var(--muted); border: 1px solid var(--border); }
+.modal .btn-cancel:hover { background: var(--bg); }
+.modal .modal-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 14px;
+  line-height: 1.5;
+}
+.modal .modal-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  margin-top: 12px;
+  display: none;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--success);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+  z-index: 1100;
+  animation: fadeIn 0.3s ease;
+}
+.toast.error { background: #c62828; }
+
+/* ── PanamKasu embed overrides ── */
+body { margin: 0; }
+header { display: none !important; }  /* hide original header — PanamKasu provides nav */
+footer { display: none !important; }  /* hide original footer */
+.container { margin: 0 auto; padding: 12px 16px; height: auto; }
+@media (max-width: 980px) { .container { padding: 8px; } }
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #60a5fa;
+    --primary-light: #1e3a5f;
+    --accent: #fbbf24;
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --success: #4ade80;
+    --warn: #fbbf24;
+  }
+  body { background: var(--bg); color: var(--text); }
+  input, select { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+  input::placeholder { color: #64748b; }
+  .option-btn { background: #1e293b; color: #60a5fa; border-color: #3b82f6; }
+  .option-btn:hover { background: #3b82f6; color: white; }
+  .option-btn.multi.selected { background: #3b82f6; color: white; }
+  .msg.bot { background: #1e293b; color: #e2e8f0; }
+  .msg.bot b { color: #60a5fa; }
+  .msg.user { background: #2563eb; }
+  .sidebar { background: #1e293b; border-color: #334155; }
+  .sidebar summary-card { background: #0f172a; }
+  .tag.neutral { background: #1e293b; color: #94a3b8; }
+  .tag.success { background: #14532d; color: #4ade80; }
+  .tag.warn { background: #451a03; color: #fbbf24; }
+  .chat-header { background: #1e293b; }
+  .modal { background: #1e293b; color: #e2e8f0; }
+  .modal input { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+  .amount-presets button { background: #0f172a; color: #60a5fa; border-color: #3b82f6; }
+  .amount-presets button:hover { background: #3b82f6; color: white; }
+  table { color: #e2e8f0; }
+  th { background: #1e3a5f; color: #93c5fd; border-color: #334155; }
+  td { border-color: #334155; }
+  tr:nth-child(even) { background: #162032; }
+  .input-row { background: #1e293b; border-color: #334155; }
+  .input-row input { background: #0f172a; border-color: #334155; }
+  .send-btn { background: #3b82f6; }
+  .sidebar-section { border-color: #334155; }
+  .summary-card { background: #0f172a; border-color: #334155; }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">IT</div>
+    <div>
+      <div>ITR Filing Assistant</div>
+      <div style="font-size: 11px; opacity: 0.85; font-weight: 400;">Indian Income Tax — FY 2025-26 / AY 2026-27</div>
+    </div>
+  </div>
+  <div class="meta">Powered by your knowledge base</div>
+</header>
+
+<div class="container">
+  <div class="chat-panel">
+    <div class="chat-header">
+      <h2>Tax Assistant</h2>
+      <p>I'll guide you through filing your Income Tax Return step by step.</p>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="input-row" id="inputRow" style="display:none;">
+      <input type="text" id="userInput" placeholder="Type your answer..." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="card">
+      <h3>Tax Computation</h3>
+      <div id="summary">
+        <div class="summary-row"><span>Status</span><span id="sumStatus">—</span></div>
+        <div class="summary-row"><span>Gross Total Income</span><span id="sumGTI">—</span></div>
+        <div class="summary-row"><span>Total Deductions</span><span id="sumDed">—</span></div>
+        <div class="summary-row"><span>Taxable Income</span><span id="sumTI">—</span></div>
+        <div class="summary-row"><span>Tax (New regime)</span><span id="sumNew">—</span></div>
+        <div class="summary-row"><span>Tax (Old regime)</span><span id="sumOld">—</span></div>
+        <div class="summary-row highlight"><span>Recommended</span><span id="sumRec">—</span></div>
+      </div>
+      <div class="controls-bar">
+        <button onclick="restart()">Restart</button>
+        <button onclick="window.print()">Print</button>
+        <button onclick="exportSummary()">Save</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>ITR Form <span id="formTag" class="tag">awaiting</span></h3>
+      <div id="formInfo" style="font-size:13px;color:var(--muted);">
+        Fill in your profile and I'll recommend the right ITR form.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Document Checklist</h3>
+      <div id="checklist" style="font-size:13px;color:var(--muted);">
+        Will appear once we identify your income sources.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Quick Help</h3>
+      <div style="font-size:13px;line-height:1.6;">
+        <strong>Portal:</strong> incometax.gov.in<br>
+        <strong>Helpline:</strong> 1800 103 0025<br>
+        <strong>Due date:</strong> 31 July 2026 (non-audit)<br>
+        <strong>Audit cases:</strong> 31 October 2026<br>
+        <strong>Belated:</strong> 31 December 2026
+      </div>
+    </div>
+
+    <div class="card support-card">
+      <h3>Support this work</h3>
+      <p>If this assistant helped you file your ITR, consider <a href="https://razorpay.me/@pcbzmani" target="_blank" style="color:var(--accent);">donating to support PanamKasu ☕</a></p>
+      <button class="support-btn" title="Donate to support PanamKasu" onclick="openSupportModal()">
+        <span style="font-size:16px;">&#10084;</span> Make a donation
+      </button>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  This assistant uses your local knowledge base on Indian Income Tax. Verify against latest CBDT notifications before filing.
+</footer>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  step: 'welcome',
+  profile: {
+    name: '',
+    age: null,
+    residentialStatus: '',
+    sources: [],
+    salary: { gross: 0, hraReceived: 0, hraExempt: 0, professionalTax: 0, employerNps: 0, ownNps: 0 },
+    rentPaidYearly: 0,
+    metroCity: false,
+    houseProperty: { type: '', rent: 0, municipalTax: 0, interest: 0 },
+    business: { turnover: 0, profit: 0, presumptive: false, presumptiveType: '' },
+    capitalGains: { stcg111A: 0, stcgOther: 0, ltcg112A: 0, ltcgOther: 0 },
+    otherSources: { savingsInterest: 0, fdInterest: 0, dividend: 0, gifts: 0, lottery: 0 },
+    deductions: { sec80C: 0, sec80CCD1B: 0, sec80D: 0, sec80E: 0, sec80G: 0, sec80TTA_TTB: 0, sec24b: 0, otherDeductions: 0 },
+    foreignAsset: false,
+    director: false,
+    unlistedShares: false,
+    multipleHouses: false
+  },
+  computation: {
+    gti: 0, totalDeductions: 0, taxableNew: 0, taxableOld: 0,
+    taxNew: 0, taxOld: 0, regime: '—'
+  },
+  pendingInput: null,
+  awaitingMulti: false,
+  multiSelected: []
+};
+
+const messagesDiv = document.getElementById('messages');
+const inputRow = document.getElementById('inputRow');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return '₹ ' + Math.round(n).toLocaleString('en-IN');
+}
+function inLakh(n) { return (n/100000).toFixed(2) + 'L'; }
+
+function botSay(html, options) {
+  setTimeout(() => {
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = html;
+    messagesDiv.appendChild(div);
+    if (options) renderOptions(options);
+    scrollDown();
+  }, 250);
+}
+
+function userSay(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.textContent = text;
+  messagesDiv.appendChild(div);
+  scrollDown();
+}
+
+function renderOptions(options) {
+  const wrap = document.createElement('div');
+  wrap.className = 'options';
+  wrap.id = 'currentOptions';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    if (opt.multi) btn.classList.add('multi');
+    btn.textContent = opt.label;
+    btn.dataset.value = opt.value;
+    btn.onclick = () => handleOption(opt, btn);
+    wrap.appendChild(btn);
+  });
+  if (state.awaitingMulti) {
+    const done = document.createElement('button');
+    done.className = 'option-btn';
+    done.style.background = 'var(--accent)';
+    done.style.color = 'white';
+    done.style.borderColor = 'var(--accent)';
+    done.textContent = 'Done ✓';
+    done.onclick = () => completeMulti();
+    wrap.appendChild(done);
+  }
+  messagesDiv.appendChild(wrap);
+  scrollDown();
+}
+
+function clearOptions() {
+  const old = document.getElementById('currentOptions');
+  if (old) old.remove();
+}
+
+function showInput(placeholder, type='text') {
+  inputRow.style.display = 'flex';
+  userInput.placeholder = placeholder;
+  userInput.type = type;
+  userInput.value = '';
+  userInput.focus();
+}
+function hideInput() { inputRow.style.display = 'none'; }
+
+function scrollDown() { messagesDiv.scrollTop = messagesDiv.scrollHeight; }
+
+function handleOption(opt, btn) {
+  if (opt.multi) {
+    if (state.multiSelected.includes(opt.value)) {
+      state.multiSelected = state.multiSelected.filter(v => v !== opt.value);
+      btn.classList.remove('selected');
+    } else {
+      state.multiSelected.push(opt.value);
+      btn.classList.add('selected');
+    }
+  } else {
+    clearOptions();
+    userSay(opt.label);
+    routeAnswer(opt.value);
+  }
+}
+
+function completeMulti() {
+  if (state.multiSelected.length === 0) return;
+  clearOptions();
+  const labels = state.multiSelected.join(', ');
+  userSay(labels);
+  state.awaitingMulti = false;
+  routeAnswer(state.multiSelected.slice());
+  state.multiSelected = [];
+}
+
+sendBtn.onclick = () => {
+  if (!userInput.value.trim()) return;
+  const v = userInput.value.trim();
+  userSay(v);
+  userInput.value = '';
+  hideInput();
+  if (state.pendingInput) state.pendingInput(v);
+};
+userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendBtn.click(); });
+
+// ============================================================
+// CONVERSATION FLOW
+// ============================================================
+function start() {
+  botSay(`<b>Namaste!</b> I'm your ITR filing assistant. I'll guide you step-by-step through your Income Tax Return for <b>FY 2025-26 (AY 2026-27)</b>.<br><br>I'll ask a few questions to understand your income, recommend the right ITR form, compute your tax under both regimes, and walk you through filing on the e-filing portal.<br><br>Ready to start?`,
+    [
+      { label: '🚀 Yes, let\'s begin', value: 'begin' },
+      { label: '📚 I just want to learn', value: 'learn' }
+    ]);
+}
+
+function routeAnswer(value) {
+  switch (state.step) {
+    case 'welcome': handleWelcome(value); break;
+    case 'name': handleName(value); break;
+    case 'age': handleAge(value); break;
+    case 'residential': handleResidential(value); break;
+    case 'foreignAsset': handleForeignAsset(value); break;
+    case 'director': handleDirector(value); break;
+    case 'sources': handleSources(value); break;
+    case 'salaryGross': handleSalaryGross(value); break;
+    case 'salaryHRA': handleSalaryHRA(value); break;
+    case 'rentPaid': handleRentPaid(value); break;
+    case 'metroCity': handleMetroCity(value); break;
+    case 'employerNps': handleEmployerNps(value); break;
+    case 'hpType': handleHPType(value); break;
+    case 'hpRent': handleHPRent(value); break;
+    case 'hpMunicipal': handleHPMunicipal(value); break;
+    case 'hpInterest': handleHPInterest(value); break;
+    case 'multipleHouses': handleMultipleHouses(value); break;
+    case 'businessTurnover': handleBusinessTurnover(value); break;
+    case 'businessProfitMode': handleBusinessProfitMode(value); break;
+    case 'businessProfit': handleBusinessProfit(value); break;
+    case 'cgSTCG111A': handleCGSTCG111A(value); break;
+    case 'cgSTCGOther': handleCGSTCGOther(value); break;
+    case 'cgLTCG112A': handleCGLTCG112A(value); break;
+    case 'cgLTCGOther': handleCGLTCGOther(value); break;
+    case 'osSavings': handleOsSavings(value); break;
+    case 'osFD': handleOsFD(value); break;
+    case 'osDividend': handleOsDividend(value); break;
+    case 'osGifts': handleOsGifts(value); break;
+    case 'ded80C': handleDed80C(value); break;
+    case 'ded80CCD1B': handleDed80CCD1B(value); break;
+    case 'ded80D': handleDed80D(value); break;
+    case 'ded80E': handleDed80E(value); break;
+    case 'ded80G': handleDed80G(value); break;
+    case 'ded80TTA': handleDed80TTA(value); break;
+    case 'review': handleReview(value); break;
+    case 'guide': handleGuideMenu(value); break;
+  }
+}
+
+// --- WELCOME ---
+function handleWelcome(v) {
+  if (v === 'learn') {
+    botSay(`Sure! You can ask me anything about Indian income tax. Try questions like:<br><ul><li>What is the difference between old and new regime?</li><li>How is HRA exemption calculated?</li><li>What is Section 80C?</li><li>How are capital gains taxed?</li></ul><br>Or click <b>Restart</b> any time to begin guided ITR filing.`);
+    botSay(`💡 The full knowledge base is in your IncomeTaxManager folder — open <b>README.md</b> to explore 15 detailed reference documents.`);
+    showInput('Ask any tax question...');
+    state.pendingInput = (q) => {
+      botSay(answerQuestion(q));
+      showInput('Ask another question...');
+    };
+    return;
+  }
+  state.step = 'name';
+  botSay(`Great! Let's begin. <br><br>What's your <b>name</b> (or the taxpayer's name)?`);
+  showInput('e.g., Rajesh Kumar');
+  state.pendingInput = (v) => { state.profile.name = v; routeAnswer(v); };
+}
+
+// --- NAME ---
+function handleName(v) {
+  state.profile.name = v;
+  state.step = 'age';
+  botSay(`Hello <b>${v}</b>! What is your <b>age</b> (in years)?<br><br><i>Senior citizens (60+) and super senior citizens (80+) get higher exemption limits in the old regime.</i>`);
+  showInput('e.g., 35', 'number');
+  state.pendingInput = (v) => routeAnswer(parseInt(v, 10));
+}
+
+// --- AGE ---
+function handleAge(v) {
+  state.profile.age = v;
+  state.step = 'residential';
+  let ageNote = '';
+  if (v >= 80) ageNote = ' You are a <b>Super Senior Citizen</b> (80+) — old regime gives basic exemption up to Rs 5 lakh.';
+  else if (v >= 60) ageNote = ' You are a <b>Senior Citizen</b> (60+) — old regime gives basic exemption up to Rs 3 lakh.';
+  hideInput();
+  botSay(`Noted — age ${v}.${ageNote}<br><br>What is your <b>residential status</b> for FY 2025-26?<br><br><i>If you stayed in India for 182+ days, you're typically Resident.</i>`,
+    [
+      { label: 'Resident & Ordinarily Resident (ROR)', value: 'ROR' },
+      { label: 'Resident but Not Ordinarily Resident (RNOR)', value: 'RNOR' },
+      { label: 'Non-Resident (NR)', value: 'NR' },
+      { label: 'Not sure — help me decide', value: 'help' }
+    ]);
+}
+
+// --- RESIDENTIAL ---
+function handleResidential(v) {
+  if (v === 'help') {
+    botSay(`<b>Quick test:</b><ul><li>Were you in India for <b>182+ days</b> in FY 2025-26 (Apr 2025 – Mar 2026)? → Resident.</li><li>OR in India for 60+ days this year AND 365+ days in the prior 4 years? → Resident.</li><li>If Resident — were you Resident in 2 of last 10 years AND 730+ days in last 7? → ROR. Else RNOR.</li><li>Otherwise → Non-Resident.</li></ul>`,
+      [
+        { label: 'ROR', value: 'ROR' },
+        { label: 'RNOR', value: 'RNOR' },
+        { label: 'NR', value: 'NR' }
+      ]);
+    return;
+  }
+  state.profile.residentialStatus = v;
+  document.getElementById('sumStatus').textContent = v;
+  state.step = 'foreignAsset';
+  botSay(`Do you have any <b>foreign assets, foreign income, or foreign bank accounts</b> (or signing authority on one)?<br><br><i>This is a critical disclosure — non-disclosure attracts the Black Money Act with Rs 10 lakh per year penalty.</i>`,
+    [
+      { label: 'No', value: false },
+      { label: 'Yes', value: true }
+    ]);
+}
+
+// --- FOREIGN ASSETS ---
+function handleForeignAsset(v) {
+  state.profile.foreignAsset = v;
+  if (v && state.profile.residentialStatus === 'ROR') {
+    botSay(`📌 You'll need to file <b>Schedule FA</b> with full disclosure. ITR-1 is not allowed.`);
+  }
+  state.step = 'director';
+  botSay(`Are you a <b>director in any company</b>, or do you hold any <b>unlisted equity shares</b>?<br><br><i>Either disqualifies ITR-1 / ITR-4.</i>`,
+    [
+      { label: 'No', value: false },
+      { label: 'Yes', value: true }
+    ]);
+}
+
+// --- DIRECTOR / UNLISTED ---
+function handleDirector(v) {
+  state.profile.director = v;
+  state.profile.unlistedShares = v;
+  state.step = 'sources';
+  state.awaitingMulti = true;
+  botSay(`What are your <b>income sources</b> for FY 2025-26?<br><br>Select all that apply, then click <b>Done ✓</b>.`,
+    [
+      { label: '💼 Salary / Pension', value: 'salary', multi: true },
+      { label: '🏠 House Property (rent / own home)', value: 'house', multi: true },
+      { label: '🏪 Business / Profession', value: 'business', multi: true },
+      { label: '📈 Capital Gains (shares / property)', value: 'capital', multi: true },
+      { label: '💰 Other Sources (interest / dividend)', value: 'other', multi: true }
+    ]);
+}
+
+// --- SOURCES ---
+function handleSources(v) {
+  state.profile.sources = v;
+  if (v.length === 0) {
+    botSay(`Please select at least one income source.`);
+    state.awaitingMulti = true;
+    handleDirector(state.profile.director); // re-prompt
+    return;
+  }
+  proceedToNextSource();
+}
+
+function proceedToNextSource() {
+  const remaining = state.profile.sources.filter(s => !state.profile['_done_'+s]);
+  if (remaining.length === 0) {
+    proceedToDeductions();
+    return;
+  }
+  const next = remaining[0];
+  state.profile['_done_'+next] = true;
+  switch (next) {
+    case 'salary': askSalary(); break;
+    case 'house': askHouse(); break;
+    case 'business': askBusiness(); break;
+    case 'capital': askCapital(); break;
+    case 'other': askOther(); break;
+  }
+}
+
+// --- SALARY ---
+function askSalary() {
+  state.step = 'salaryGross';
+  botSay(`<b>Salary / Pension</b> 💼<br>Let's capture your salary details.<br><br>What is your <b>annual gross salary</b> (CTC excluding reimbursements / EPF employer share)?<br><br><i>This is what's in Box 1 of Form 16, before any deductions.</i>`);
+  showInput('e.g., 1500000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v));
+}
+function handleSalaryGross(v) {
+  state.profile.salary.gross = v;
+  state.step = 'salaryHRA';
+  botSay(`Did you receive <b>HRA (House Rent Allowance)</b> as part of your salary?<br><br><i>Only relevant if you'll consider the old regime.</i>`,
+    [
+      { label: 'No / Not sure', value: 0 },
+      { label: 'Yes — enter amount', value: 'yes' }
+    ]);
+}
+function handleSalaryHRA(v) {
+  if (v === 'yes') {
+    botSay(`Enter the <b>annual HRA</b> received (₹).`);
+    showInput('e.g., 240000', 'number');
+    state.pendingInput = v => { state.profile.salary.hraReceived = parseFloat(v); routeAnswerNext('rentPaid'); };
+    return;
+  }
+  state.profile.salary.hraReceived = 0;
+  routeAnswerNext('rentPaid');
+}
+function routeAnswerNext(nextStep) { state.step = nextStep; runStep(nextStep); }
+function runStep(s) {
+  if (s === 'rentPaid') {
+    if (state.profile.salary.hraReceived === 0) { state.profile.rentPaidYearly = 0; runStep('employerNps'); return; }
+    botSay(`Annual <b>rent paid</b> by you (₹)?`);
+    showInput('e.g., 360000', 'number');
+    state.pendingInput = v => { state.profile.rentPaidYearly = parseFloat(v); routeAnswerNext('metroCity'); };
+  } else if (s === 'metroCity') {
+    botSay(`Do you live in a <b>metro city</b> (Mumbai, Delhi, Kolkata, Chennai)?`,
+      [{ label: 'Yes (50% HRA cap)', value: true }, { label: 'No (40% HRA cap)', value: false }]);
+  } else if (s === 'employerNps') {
+    botSay(`Does your employer contribute to <b>NPS (Tier-1)</b> on your behalf?<br><i>Section 80CCD(2) — deductible in both regimes.</i>`,
+      [
+        { label: 'No', value: 0 },
+        { label: 'Yes — enter amount', value: 'yes' }
+      ]);
+  }
+}
+function handleRentPaid(v) { state.profile.rentPaidYearly = v; runStep('metroCity'); }
+function handleMetroCity(v) {
+  state.profile.metroCity = v;
+  state.profile.salary.hraExempt = computeHRAExempt(state.profile.salary, state.profile.rentPaidYearly, v);
+  if (state.profile.salary.hraExempt > 0) {
+    botSay(`📌 Your <b>HRA exemption</b> works out to ${fmt(state.profile.salary.hraExempt)} (old regime only).`);
+  }
+  runStep('employerNps');
+}
+function computeHRAExempt(sal, rent, metro) {
+  // basic+DA = ~50% of gross salary as proxy (since user gave gross)
+  const basic = sal.gross * 0.5;
+  const a = sal.hraReceived;
+  const b = rent - 0.10 * basic;
+  const c = (metro ? 0.5 : 0.4) * basic;
+  return Math.max(0, Math.min(a, Math.max(0, b), c));
+}
+function handleEmployerNps(v) {
+  if (v === 'yes') {
+    botSay(`Enter the annual <b>employer NPS contribution</b> (₹).`);
+    showInput('e.g., 90000', 'number');
+    state.pendingInput = v => { state.profile.salary.employerNps = parseFloat(v); proceedToNextSource(); };
+    return;
+  }
+  state.profile.salary.employerNps = 0;
+  proceedToNextSource();
+}
+
+// --- HOUSE PROPERTY ---
+function askHouse() {
+  state.step = 'hpType';
+  botSay(`<b>House Property</b> 🏠<br>Tell me about your house.`,
+    [
+      { label: 'Self-occupied (live in it)', value: 'SOP' },
+      { label: 'Let-out (rented out)', value: 'LOP' },
+      { label: 'Both', value: 'BOTH' }
+    ]);
+}
+function handleHPType(v) {
+  state.profile.houseProperty.type = v;
+  if (v === 'SOP') {
+    state.step = 'hpInterest';
+    botSay(`Annual <b>home loan interest</b> paid (₹)?<br><i>Section 24(b) — up to Rs 2 lakh deductible in old regime for self-occupied.</i>`);
+    showInput('e.g., 180000', 'number');
+    state.pendingInput = v => { state.profile.houseProperty.interest = parseFloat(v) || 0; routeAnswerNext('multipleHouses'); };
+  } else {
+    state.step = 'hpRent';
+    botSay(`Annual <b>rent received</b> (₹)?`);
+    showInput('e.g., 240000', 'number');
+    state.pendingInput = v => { state.profile.houseProperty.rent = parseFloat(v); routeAnswerNext('hpMunicipal'); };
+  }
+}
+function handleHPRent(v) { state.profile.houseProperty.rent = v; runStep('hpMunicipal'); }
+function runHPStep(s) {
+  if (s === 'hpMunicipal') {
+    state.step = 'hpMunicipal';
+    botSay(`<b>Municipal taxes paid</b> on the property (₹/year)?`);
+    showInput('e.g., 12000', 'number');
+    state.pendingInput = v => { state.profile.houseProperty.municipalTax = parseFloat(v) || 0; routeAnswerNext('hpInterest'); };
+  } else if (s === 'hpInterest') {
+    state.step = 'hpInterest';
+    botSay(`Annual <b>home loan interest</b> on this property (₹)? Enter 0 if no loan.`);
+    showInput('e.g., 200000', 'number');
+    state.pendingInput = v => { state.profile.houseProperty.interest = parseFloat(v) || 0; routeAnswerNext('multipleHouses'); };
+  } else if (s === 'multipleHouses') {
+    state.step = 'multipleHouses';
+    botSay(`Do you own <b>more than one house property</b>?<br><i>If yes, ITR-1 / ITR-4 not eligible.</i>`,
+      [{ label: 'No', value: false }, { label: 'Yes', value: true }]);
+  }
+}
+function handleHPMunicipal(v) { state.profile.houseProperty.municipalTax = v; runHPStep('hpInterest'); }
+function handleHPInterest(v) { state.profile.houseProperty.interest = v; runHPStep('multipleHouses'); }
+function handleMultipleHouses(v) { state.profile.multipleHouses = v; proceedToNextSource(); }
+
+// override runStep for hp
+const origRunStep = runStep;
+runStep = function(s) {
+  if (s.startsWith('hp')) runHPStep(s);
+  else if (['multipleHouses'].includes(s)) runHPStep(s);
+  else origRunStep(s);
+};
+
+// --- BUSINESS ---
+function askBusiness() {
+  state.step = 'businessTurnover';
+  botSay(`<b>Business / Profession</b> 🏪<br>Annual <b>gross turnover / receipts</b> (₹)?`);
+  showInput('e.g., 4500000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v));
+}
+function handleBusinessTurnover(v) {
+  state.profile.business.turnover = v;
+  state.step = 'businessProfitMode';
+  let suggestion = '';
+  if (v <= 7500000) suggestion = ' (You may be eligible for <b>Section 44ADA</b> presumptive — 50% of receipts treated as profit, no books required.)';
+  else if (v <= 30000000) suggestion = ' (You may be eligible for <b>Section 44AD</b> presumptive — 8% / 6% (digital) of turnover treated as profit.)';
+  botSay(`Are you using <b>presumptive taxation</b>?${suggestion}`,
+    [
+      { label: 'Yes, 44ADA (profession, 50%)', value: '44ADA' },
+      { label: 'Yes, 44AD (business, 6-8%)', value: '44AD' },
+      { label: 'No, regular books', value: 'regular' }
+    ]);
+}
+function handleBusinessProfitMode(v) {
+  if (v === '44ADA') {
+    state.profile.business.presumptive = true;
+    state.profile.business.presumptiveType = '44ADA';
+    state.profile.business.profit = state.profile.business.turnover * 0.5;
+    botSay(`📌 Presumptive profit @ 50% = <b>${fmt(state.profile.business.profit)}</b>. ITR-4 applies.`);
+    proceedToNextSource();
+  } else if (v === '44AD') {
+    state.profile.business.presumptive = true;
+    state.profile.business.presumptiveType = '44AD';
+    state.profile.business.profit = state.profile.business.turnover * 0.06; // assume digital
+    botSay(`📌 Presumptive profit @ 6% (assuming digital receipts) = <b>${fmt(state.profile.business.profit)}</b>. ITR-4 applies.`);
+    proceedToNextSource();
+  } else {
+    state.step = 'businessProfit';
+    botSay(`Enter your <b>actual net profit</b> (after expenses) for the year (₹).`);
+    showInput('e.g., 800000', 'number');
+    state.pendingInput = v => routeAnswer(parseFloat(v));
+  }
+}
+function handleBusinessProfit(v) {
+  state.profile.business.profit = v;
+  state.profile.business.presumptive = false;
+  proceedToNextSource();
+}
+
+// --- CAPITAL GAINS ---
+function askCapital() {
+  state.step = 'cgSTCG111A';
+  botSay(`<b>Capital Gains</b> 📈<br>I'll ask about each category.<br><br><b>Short-Term Capital Gain on listed equity / equity MF</b> (Section 111A — taxed at 20%): Enter amount or 0.`);
+  showInput('e.g., 50000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleCGSTCG111A(v) {
+  state.profile.capitalGains.stcg111A = v;
+  state.step = 'cgSTCGOther';
+  botSay(`<b>STCG on other assets</b> (property held < 24 months, debt MF post-Apr 2023, etc. — taxed at slab rates): Enter amount or 0.`);
+  showInput('e.g., 0', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleCGSTCGOther(v) {
+  state.profile.capitalGains.stcgOther = v;
+  state.step = 'cgLTCG112A';
+  botSay(`<b>LTCG on listed equity / equity MF</b> (Section 112A — 12.5% above Rs 1.25 lakh exemption): Enter the gross LTCG.`);
+  showInput('e.g., 200000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleCGLTCG112A(v) {
+  state.profile.capitalGains.ltcg112A = v;
+  state.step = 'cgLTCGOther';
+  botSay(`<b>LTCG on other assets</b> (property, gold, unlisted shares — 12.5% post-23 July 2024): Enter amount or 0.`);
+  showInput('e.g., 0', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleCGLTCGOther(v) {
+  state.profile.capitalGains.ltcgOther = v;
+  proceedToNextSource();
+}
+
+// --- OTHER SOURCES ---
+function askOther() {
+  state.step = 'osSavings';
+  botSay(`<b>Other Sources</b> 💰<br><b>Savings bank interest</b> for the year (₹)?<br><i>Section 80TTA Rs 10,000 deductible in old regime; 80TTB up to Rs 50,000-1,00,000 for senior citizens.</i>`);
+  showInput('e.g., 8000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleOsSavings(v) {
+  state.profile.otherSources.savingsInterest = v;
+  state.step = 'osFD';
+  botSay(`<b>Fixed deposit / RD interest</b> (₹)?`);
+  showInput('e.g., 25000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleOsFD(v) {
+  state.profile.otherSources.fdInterest = v;
+  state.step = 'osDividend';
+  botSay(`<b>Dividend income</b> received during the year (₹)?`);
+  showInput('e.g., 5000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleOsDividend(v) {
+  state.profile.otherSources.dividend = v;
+  state.step = 'osGifts';
+  botSay(`<b>Taxable gifts</b> from non-relatives in aggregate above Rs 50,000 (₹)?`);
+  showInput('e.g., 0', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleOsGifts(v) {
+  state.profile.otherSources.gifts = v;
+  proceedToNextSource();
+}
+
+// --- DEDUCTIONS (only relevant for old regime comparison) ---
+function proceedToDeductions() {
+  state.step = 'ded80C';
+  botSay(`Now let's capture <b>deductions</b> (relevant for the <b>old regime</b> comparison; new regime ignores most). Enter aggregate amounts; I'll cap them at the legal limits.`);
+  setTimeout(() => {
+    botSay(`<b>Section 80C</b> total — EPF + PPF + ELSS + LIC + tuition + home loan principal + NSC + ULIP + 5-year FD (max Rs 1,50,000)?`);
+    showInput('e.g., 150000', 'number');
+    state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+  }, 600);
+}
+function handleDed80C(v) {
+  state.profile.deductions.sec80C = Math.min(v, 150000);
+  state.step = 'ded80CCD1B';
+  botSay(`<b>Section 80CCD(1B)</b> — additional NPS Tier-1 contribution (max Rs 50,000)?`);
+  showInput('e.g., 50000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleDed80CCD1B(v) {
+  state.profile.deductions.sec80CCD1B = Math.min(v, 50000);
+  state.step = 'ded80D';
+  botSay(`<b>Section 80D</b> — health insurance premium (self/spouse/children/parents). Cap: Rs 25,000 (or Rs 50,000 if 60+) self-segment + similar for parents.`);
+  showInput('e.g., 25000', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleDed80D(v) {
+  state.profile.deductions.sec80D = Math.min(v, state.profile.age >= 60 ? 100000 : 75000);
+  state.step = 'ded80E';
+  botSay(`<b>Section 80E</b> — interest paid on education loan (no upper limit, applicable for 8 years)?`);
+  showInput('e.g., 0', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleDed80E(v) {
+  state.profile.deductions.sec80E = v;
+  state.step = 'ded80G';
+  botSay(`<b>Section 80G</b> — eligible donations (50% or 100% of qualifying amount; cash gift > Rs 2,000 not eligible)?`);
+  showInput('e.g., 0', 'number');
+  state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
+}
+function handleDed80G(v) {
+  state.profile.deductions.sec80G = v;
+  state.step = 'ded80TTA';
+  // auto compute 80TTA / TTB based on age and savings interest
+  if (state.profile.age >= 60) {
+    const cap = 100000;
+    const allInt = state.profile.otherSources.savingsInterest + state.profile.otherSources.fdInterest;
+    state.profile.deductions.sec80TTA_TTB = Math.min(allInt, cap);
+    botSay(`📌 <b>Section 80TTB</b> auto-applied — ${fmt(state.profile.deductions.sec80TTA_TTB)} (senior citizen interest deduction).`);
+  } else {
+    state.profile.deductions.sec80TTA_TTB = Math.min(state.profile.otherSources.savingsInterest, 10000);
+    botSay(`📌 <b>Section 80TTA</b> auto-applied — ${fmt(state.profile.deductions.sec80TTA_TTB)} (savings interest up to Rs 10,000).`);
+  }
+  finalizeReview();
+}
+
+// ============================================================
+// COMPUTATION ENGINE
+// ============================================================
+function computeAll() {
+  const p = state.profile;
+  const c = {};
+  const isSenior = p.age >= 60;
+  const isSuperSenior = p.age >= 80;
+
+  // Salary income
+  const stdDedNew = p.sources.includes('salary') ? 75000 : 0;
+  const stdDedOld = p.sources.includes('salary') ? 50000 : 0;
+  const grossSalary = p.salary.gross;
+  const hraExemptOld = p.salary.hraExempt;
+  const salaryNew = Math.max(0, grossSalary - stdDedNew);
+  const salaryOld = Math.max(0, grossSalary - hraExemptOld - stdDedOld);
+
+  // House property income
+  let hpNew = 0, hpOld = 0;
+  if (p.sources.includes('house')) {
+    const t = p.houseProperty.type;
+    if (t === 'SOP') {
+      // self-occupied: NIL annual value; interest deduction old regime up to 2L
+      hpOld = -Math.min(p.houseProperty.interest, 200000);
+      hpNew = 0; // SOP interest not allowed in new regime
+    } else { // LOP or BOTH (treat as LOP)
+      const nav = Math.max(0, p.houseProperty.rent - p.houseProperty.municipalTax);
+      const stdHP = nav * 0.30;
+      const incomeHP = nav - stdHP - p.houseProperty.interest;
+      hpOld = incomeHP;
+      hpNew = incomeHP; // for let-out, both regimes allow expenses
+    }
+  }
+
+  // Business income
+  const business = p.sources.includes('business') ? p.business.profit : 0;
+
+  // Capital gains
+  const cg = p.capitalGains;
+  const stcg111A = cg.stcg111A; // taxed at 20%
+  const stcgOther = cg.stcgOther; // slab
+  const ltcg112A_taxable = Math.max(0, cg.ltcg112A - 125000); // first 1.25L exempt
+  const ltcgOther = cg.ltcgOther; // 12.5%
+
+  // Other sources
+  const os = p.otherSources;
+  const otherSources = os.savingsInterest + os.fdInterest + os.dividend + os.gifts;
+
+  // GTI = sum (excluding special-rate items captured separately)
+  const slabIncomeBase = salaryNew + hpNew + business + stcgOther + otherSources;
+  const slabIncomeBaseOld = salaryOld + hpOld + business + stcgOther + otherSources;
+
+  const gti = slabIncomeBase + stcg111A + ltcg112A_taxable + ltcgOther;
+  const gtiOld = slabIncomeBaseOld + stcg111A + ltcg112A_taxable + ltcgOther;
+
+  // Deductions (old regime only; new only allows 80CCD(2) employer NPS)
+  const employerNpsOld = Math.min(p.salary.employerNps, p.salary.gross * 0.10);
+  const employerNpsNew = Math.min(p.salary.employerNps, p.salary.gross * 0.14);
+
+  const totalDedOld = p.deductions.sec80C + p.deductions.sec80CCD1B + p.deductions.sec80D
+                    + p.deductions.sec80E + p.deductions.sec80G + p.deductions.sec80TTA_TTB
+                    + employerNpsOld;
+  const totalDedNew = employerNpsNew;
+
+  // Taxable income (split slab vs special)
+  const slabTaxable_New = Math.max(0, slabIncomeBase - totalDedNew);
+  const slabTaxable_Old = Math.max(0, slabIncomeBaseOld - totalDedOld);
+
+  // ----- Tax computation -----
+  const taxNewSlab = computeNewRegimeTax(slabTaxable_New);
+  const taxOldSlab = computeOldRegimeTax(slabTaxable_Old, p.age);
+  const taxSpecial = stcg111A * 0.20 + ltcg112A_taxable * 0.125 + ltcgOther * 0.125;
+
+  // 87A rebate
+  // Total income for 87A purposes is slab taxable + special (without lottery 30% etc.)
+  const totalIncomeNew = slabTaxable_New + stcg111A + ltcg112A_taxable + ltcgOther;
+  const totalIncomeOld = slabTaxable_Old + stcg111A + ltcg112A_taxable + ltcgOther;
+
+  let rebateNew = 0, rebateOld = 0;
+  // 87A new regime (only on slab income, not special; effectively zero tax up to 12L slab income)
+  if (slabTaxable_New <= 1200000) rebateNew = Math.min(taxNewSlab, 60000);
+  // marginal relief
+  else if (slabTaxable_New > 1200000 && slabTaxable_New < 1275000) {
+    const excessIncome = slabTaxable_New - 1200000;
+    rebateNew = Math.max(0, taxNewSlab - excessIncome);
+  }
+  if (slabTaxable_Old <= 500000) rebateOld = Math.min(taxOldSlab, 12500);
+
+  const taxAfterRebateNew = Math.max(0, taxNewSlab - rebateNew) + taxSpecial;
+  const taxAfterRebateOld = Math.max(0, taxOldSlab - rebateOld) + taxSpecial;
+
+  // Surcharge
+  const surNew = computeSurcharge(totalIncomeNew, taxAfterRebateNew, true, stcg111A, ltcg112A_taxable + ltcgOther);
+  const surOld = computeSurcharge(totalIncomeOld, taxAfterRebateOld, false, stcg111A, ltcg112A_taxable + ltcgOther);
+
+  // Cess 4%
+  const cessNew = (taxAfterRebateNew + surNew) * 0.04;
+  const cessOld = (taxAfterRebateOld + surOld) * 0.04;
+
+  c.gti = gti;
+  c.totalDedOld = totalDedOld;
+  c.totalDedNew = totalDedNew;
+  c.taxableNew = totalIncomeNew;
+  c.taxableOld = totalIncomeOld;
+  c.taxNew = taxAfterRebateNew + surNew + cessNew;
+  c.taxOld = taxAfterRebateOld + surOld + cessOld;
+  c.regime = c.taxNew <= c.taxOld ? 'New Regime' : 'Old Regime';
+  c.savings = Math.abs(c.taxNew - c.taxOld);
+
+  state.computation = c;
+  return c;
+}
+
+function computeNewRegimeTax(income) {
+  let tax = 0;
+  const slabs = [
+    [400000, 0.0],
+    [800000, 0.05],
+    [1200000, 0.10],
+    [1600000, 0.15],
+    [2000000, 0.20],
+    [2400000, 0.25],
+    [Infinity, 0.30]
+  ];
+  let prev = 0;
+  for (const [limit, rate] of slabs) {
+    if (income <= prev) break;
+    const slice = Math.min(income, limit) - prev;
+    tax += slice * rate;
+    prev = limit;
+  }
+  return tax;
+}
+
+function computeOldRegimeTax(income, age) {
+  let exempt = 250000;
+  if (age >= 80) exempt = 500000;
+  else if (age >= 60) exempt = 300000;
+  let tax = 0;
+  if (income <= exempt) return 0;
+  // 5% slab
+  const fivePctEnd = 500000;
+  const twentyPctEnd = 1000000;
+  if (income > exempt) {
+    const slice = Math.min(income, fivePctEnd) - exempt;
+    tax += Math.max(0, slice) * 0.05;
+  }
+  if (income > fivePctEnd) {
+    const slice = Math.min(income, twentyPctEnd) - fivePctEnd;
+    tax += slice * 0.20;
+  }
+  if (income > twentyPctEnd) {
+    tax += (income - twentyPctEnd) * 0.30;
+  }
+  return tax;
+}
+
+function computeSurcharge(income, tax, isNewRegime, stcg111A, ltcgTotal) {
+  let rate = 0;
+  if (income > 50000000) rate = isNewRegime ? 0.25 : 0.37;
+  else if (income > 20000000) rate = 0.25;
+  else if (income > 10000000) rate = 0.15;
+  else if (income > 5000000) rate = 0.10;
+  // Surcharge cap on capital gains at 15%
+  const cgCap = Math.min(rate, 0.15);
+  // Approximate: apply blended rate
+  if (tax === 0) return 0;
+  const cgTax = stcg111A * 0.20 + ltcgTotal * 0.125;
+  const slabTax = tax - cgTax;
+  return Math.max(0, slabTax) * rate + cgTax * cgCap;
+}
+
+// ============================================================
+// REVIEW & RECOMMENDATION
+// ============================================================
+function finalizeReview() {
+  computeAll();
+  updateSidebar();
+  recommendForm();
+  buildChecklist();
+  state.step = 'review';
+  hideInput();
+  showReview();
+}
+
+function showReview() {
+  const c = state.computation;
+  const p = state.profile;
+  let html = `<b>📊 Tax Summary</b><br><br>`;
+  html += `<b>Profile:</b> ${p.name}, age ${p.age}, ${p.residentialStatus}<br>`;
+  html += `<b>Income sources:</b> ${p.sources.join(', ')}<br><br>`;
+  html += `<b>Tax under New Regime:</b> ${fmt(c.taxNew)}<br>`;
+  html += `<b>Tax under Old Regime:</b> ${fmt(c.taxOld)}<br>`;
+  html += `<b>Recommended:</b> <span style="color:var(--success);font-weight:600;">${c.regime}</span> — saves ${fmt(c.savings)}<br><br>`;
+  html += `<b>ITR Form recommended:</b> <span style="color:var(--primary);font-weight:600;">${state.recommendedForm}</span> — ${state.formReason}`;
+  botSay(html);
+
+  setTimeout(() => {
+    botSay(`What would you like to do next?`,
+      [
+        { label: '📝 Step-by-step filing guide', value: 'guide' },
+        { label: '🔍 Why this regime?', value: 'whyRegime' },
+        { label: '📋 View document checklist', value: 'docs' },
+        { label: '🔄 Adjust deductions (test scenarios)', value: 'adjust' },
+        { label: '❓ Ask a question', value: 'qa' },
+        { label: '🆕 Restart', value: 'restart' }
+      ]);
+    state.step = 'guide';
+  }, 800);
+}
+
+function handleGuideMenu(v) {
+  if (v === 'guide') showFilingGuide();
+  else if (v === 'whyRegime') explainRegime();
+  else if (v === 'docs') showDocsInline();
+  else if (v === 'adjust') adjustDeductions();
+  else if (v === 'qa') openQAMode();
+  else if (v === 'restart') restart();
+}
+
+function explainRegime() {
+  const c = state.computation;
+  const p = state.profile;
+  let html = `<b>Regime comparison breakdown:</b><br><br>`;
+  html += `<b>Old Regime</b><br>`;
+  html += `• Standard deduction: ${fmt(p.sources.includes('salary') ? 50000 : 0)}<br>`;
+  if (p.salary.hraExempt > 0) html += `• HRA exemption: ${fmt(p.salary.hraExempt)}<br>`;
+  html += `• Section 80C: ${fmt(p.deductions.sec80C)}<br>`;
+  html += `• Section 80CCD(1B): ${fmt(p.deductions.sec80CCD1B)}<br>`;
+  html += `• Section 80D: ${fmt(p.deductions.sec80D)}<br>`;
+  html += `• Section 80E: ${fmt(p.deductions.sec80E)}<br>`;
+  html += `• Section 80G: ${fmt(p.deductions.sec80G)}<br>`;
+  html += `• Section 80TTA/TTB: ${fmt(p.deductions.sec80TTA_TTB)}<br>`;
+  html += `• Total deductions: ${fmt(c.totalDedOld)}<br>`;
+  html += `<b>→ Tax: ${fmt(c.taxOld)}</b><br><br>`;
+  html += `<b>New Regime</b><br>`;
+  html += `• Standard deduction: ${fmt(p.sources.includes('salary') ? 75000 : 0)}<br>`;
+  html += `• Section 87A rebate (up to Rs 12 lakh income)<br>`;
+  html += `• Most other deductions NOT allowed<br>`;
+  html += `<b>→ Tax: ${fmt(c.taxNew)}</b><br><br>`;
+  html += `<b>Recommended:</b> ${c.regime} (saves ${fmt(c.savings)})`;
+  botSay(html);
+  setTimeout(() => showReviewMenu(), 600);
+}
+
+function showReviewMenu() {
+  botSay(`Anything else?`,
+    [
+      { label: '📝 Step-by-step filing guide', value: 'guide' },
+      { label: '📋 Document checklist', value: 'docs' },
+      { label: '🔄 Adjust deductions', value: 'adjust' },
+      { label: '❓ Ask a question', value: 'qa' },
+      { label: '🆕 Restart', value: 'restart' }
+    ]);
+}
+
+function showDocsInline() {
+  const items = state.checklist;
+  let html = `<b>📋 Documents you'll need:</b><br><ul>`;
+  items.forEach(i => html += `<li>${i}</li>`);
+  html += `</ul>`;
+  botSay(html);
+  setTimeout(() => showReviewMenu(), 600);
+}
+
+function adjustDeductions() {
+  state.step = 'ded80C';
+  proceedToDeductions();
+}
+
+function openQAMode() {
+  botSay(`Ask any tax question. Type <b>"menu"</b> to return.`);
+  showInput('Your question...');
+  state.pendingInput = q => {
+    if (q.toLowerCase() === 'menu') {
+      hideInput();
+      showReviewMenu();
+      return;
+    }
+    botSay(answerQuestion(q));
+    showInput('Another question...');
+  };
+}
+
+// ============================================================
+// FORM RECOMMENDATION
+// ============================================================
+function recommendForm() {
+  const p = state.profile;
+  const totalIncome = state.computation.gti;
+  const hasBusiness = p.sources.includes('business');
+  const hasCapital = p.sources.includes('capital') &&
+    (p.capitalGains.stcg111A + p.capitalGains.stcgOther + p.capitalGains.ltcg112A + p.capitalGains.ltcgOther) > 0;
+  const presumptive = p.business.presumptive;
+
+  let form = '', reason = '';
+
+  if (p.residentialStatus !== 'ROR') {
+    form = 'ITR-2 or ITR-3';
+    reason = 'You are RNOR/NR, so ITR-1 / ITR-4 not allowed.';
+  } else if (hasBusiness && presumptive && totalIncome <= 5000000 && !p.foreignAsset && !p.director && !p.unlistedShares && !hasCapital && !p.multipleHouses) {
+    form = 'ITR-4 (Sugam)';
+    reason = 'Resident with presumptive business/profession, total income ≤ Rs 50 lakh, no disqualifying conditions.';
+  } else if (hasBusiness) {
+    form = 'ITR-3';
+    reason = 'You have business or professional income with regular books or non-presumptive treatment.';
+  } else if (hasCapital || p.foreignAsset || p.director || p.unlistedShares || p.multipleHouses || totalIncome > 5000000) {
+    form = 'ITR-2';
+    reason = 'You have capital gains / multiple houses / foreign assets / director status / total income above Rs 50 lakh.';
+  } else {
+    form = 'ITR-1 (Sahaj)';
+    reason = 'Resident with salary, one house property, other sources; total income ≤ Rs 50 lakh; no disqualifying conditions.';
+  }
+
+  state.recommendedForm = form;
+  state.formReason = reason;
+  document.getElementById('formInfo').innerHTML = `<b>${form}</b><br><span style="color:var(--muted);">${reason}</span>`;
+  document.getElementById('formTag').textContent = form.split(' ')[0];
+  document.getElementById('formTag').className = 'tag success';
+}
+
+// ============================================================
+// CHECKLIST
+// ============================================================
+function buildChecklist() {
+  const items = ['PAN card', 'Aadhaar card (linked to PAN)', 'Bank account details (pre-validated)'];
+  const p = state.profile;
+  if (p.sources.includes('salary')) {
+    items.push('Form 16 from employer', 'Salary slips for cross-check', 'Form 12BB (if any declarations)');
+  }
+  if (p.sources.includes('house')) {
+    items.push('Rent agreement / receipts (for SOP HRA / LOP rental)');
+    items.push('Municipal tax receipts');
+    if (p.houseProperty.interest > 0) items.push('Home loan interest certificate from lender');
+  }
+  if (p.sources.includes('business')) {
+    items.push('Books of account (if not presumptive)');
+    items.push('Bank statements for business account');
+    if (p.business.turnover > 10000000) items.push('Tax audit report Form 3CB-3CD (if turnover > Rs 1 crore)');
+  }
+  if (p.sources.includes('capital')) {
+    items.push('Capital gains statement from broker / mutual fund');
+    items.push('FMV on 31 January 2018 for grandfathered listed equity');
+    if (p.capitalGains.ltcgOther > 0) items.push('Property sale deed and indexation calculation');
+  }
+  if (p.sources.includes('other')) {
+    items.push('Bank interest certificates / FD interest summary');
+    items.push('Dividend warrants / broker dividend summary');
+  }
+  items.push('Form 26AS (TDS / TCS download from portal)');
+  items.push('Annual Information Statement (AIS) and TIS');
+  if (p.foreignAsset) items.push('Foreign asset details for Schedule FA');
+  if (state.computation.regime === 'Old Regime') {
+    items.push('80C investment proofs (PPF, ELSS, LIC, etc.)');
+    if (p.deductions.sec80D > 0) items.push('Health insurance premium receipts');
+    if (p.deductions.sec80E > 0) items.push('Education loan interest certificate');
+    if (p.deductions.sec80G > 0) items.push('Form 10BE donation certificate');
+  }
+  state.checklist = items;
+  const cl = document.getElementById('checklist');
+  cl.innerHTML = items.map((i, idx) => `<div class="checklist-item"><input type="checkbox" id="ck${idx}" onchange="toggleCheck(${idx})"><label for="ck${idx}"><span>${i}</span></label></div>`).join('');
+}
+function toggleCheck(idx) {
+  const item = document.querySelectorAll('.checklist-item')[idx];
+  item.classList.toggle('done');
+}
+
+// ============================================================
+// FILING GUIDE
+// ============================================================
+function showFilingGuide() {
+  const form = state.recommendedForm;
+  const p = state.profile;
+  const c = state.computation;
+  const oldRegime = c.regime === 'Old Regime';
+
+  let html = `<b>📝 Step-by-Step Filing Guide for ${form}</b><br><br>`;
+  html += `<b>Step 1 — Login to portal</b><br>`;
+  html += `Go to <b>incometax.gov.in</b> and login with your PAN as User ID. If new, register first.<br><br>`;
+
+  html += `<b>Step 2 — Pre-filing checks</b><br>`;
+  html += `• Verify Aadhaar-PAN link (Profile → Aadhaar Linking)<br>`;
+  html += `• Pre-validate bank account for refund (Profile → My Bank Account)<br>`;
+  html += `• Update contact details<br><br>`;
+
+  html += `<b>Step 3 — Download supporting data</b><br>`;
+  html += `• Form 26AS: e-File → Income Tax Forms → View 26AS<br>`;
+  html += `• AIS & TIS: AIS tab on dashboard<br>`;
+  html += `• Compare with Form 16 / broker statements<br><br>`;
+
+  html += `<b>Step 4 — Start return</b><br>`;
+  html += `e-File → Income Tax Returns → File Income Tax Return → AY 2026-27 → Online → ${form}<br>`;
+  html += `Reason: ${c.taxNew + c.taxOld === 0 ? 'Refund / nil return' : 'Tax liability above exemption'}<br><br>`;
+
+  html += `<b>Step 5 — Choose tax regime</b><br>`;
+  if (oldRegime && p.sources.includes('business')) {
+    html += `📌 You're using <b>Old Regime</b> with business income. File <b>Form 10-IEA</b> BEFORE due date — once opted out of new, you can switch back only once.<br>`;
+  } else if (oldRegime) {
+    html += `📌 Select <b>Old Regime</b> in the regime selector.<br>`;
+  } else {
+    html += `📌 Select <b>New Regime (default)</b> — no separate form needed.<br>`;
+  }
+  html += `<br>`;
+
+  html += `<b>Step 6 — Fill Personal Information</b><br>`;
+  html += `Verify pre-filled details: name, DOB, address, residential status (${p.residentialStatus}), nature of employment.<br><br>`;
+
+  if (p.sources.includes('salary')) {
+    html += `<b>Step 7 — Schedule S (Salary)</b><br>`;
+    html += `• Employer name, TAN, gross salary<br>`;
+    html += `• Section 10 exemptions: HRA ${oldRegime ? fmt(p.salary.hraExempt) : '(skip — not allowed in new regime)'}<br>`;
+    html += `• Section 16: Standard deduction ${fmt(oldRegime ? 50000 : 75000)}<br>`;
+    if (oldRegime) html += `• Professional tax under 16(iii) (max Rs 2,500)<br>`;
+    html += `<br>`;
+  }
+
+  if (p.sources.includes('house')) {
+    html += `<b>Step 8 — Schedule HP (House Property)</b><br>`;
+    if (p.houseProperty.type === 'SOP') {
+      html += `• Address, ownership %, "Self-Occupied"<br>`;
+      html += `• Annual value: NIL<br>`;
+      if (oldRegime) html += `• Interest under 24(b): ${fmt(Math.min(p.houseProperty.interest, 200000))} (capped Rs 2 lakh)<br>`;
+      else html += `• ⚠ Interest deduction NOT allowed in new regime for SOP<br>`;
+    } else {
+      html += `• Annual rent: ${fmt(p.houseProperty.rent)}<br>`;
+      html += `• Municipal tax paid: ${fmt(p.houseProperty.municipalTax)}<br>`;
+      html += `• Standard deduction 30%: ${fmt((p.houseProperty.rent - p.houseProperty.municipalTax) * 0.30)}<br>`;
+      html += `• Interest: ${fmt(p.houseProperty.interest)}<br>`;
+    }
+    html += `<br>`;
+  }
+
+  if (p.sources.includes('business')) {
+    html += `<b>Step 9 — Schedule BP (Business / Profession)</b><br>`;
+    if (p.business.presumptive) {
+      html += `• ${p.business.presumptiveType}: gross receipts ${fmt(p.business.turnover)}, presumed profit ${fmt(p.business.profit)}<br>`;
+      html += `• No detailed P&L / books required<br>`;
+    } else {
+      html += `• P&L: gross receipts ${fmt(p.business.turnover)}, net profit ${fmt(p.business.profit)}<br>`;
+      html += `• Balance sheet, depreciation schedule, partner details (if firm)<br>`;
+      if (p.business.turnover > 10000000) html += `• ⚠ Tax audit under Section 44AB likely required<br>`;
+    }
+    html += `<br>`;
+  }
+
+  if (p.sources.includes('capital')) {
+    html += `<b>Step 10 — Schedule CG (Capital Gains)</b><br>`;
+    if (p.capitalGains.stcg111A > 0) html += `• STCG 111A (listed equity): ${fmt(p.capitalGains.stcg111A)} @ 20%<br>`;
+    if (p.capitalGains.stcgOther > 0) html += `• STCG other: ${fmt(p.capitalGains.stcgOther)} at slab rate<br>`;
+    if (p.capitalGains.ltcg112A > 0) html += `• LTCG 112A (listed equity, scrip-wise grandfathering): ${fmt(p.capitalGains.ltcg112A)} (Rs 1.25L exempt, balance @ 12.5%)<br>`;
+    if (p.capitalGains.ltcgOther > 0) html += `• LTCG other: ${fmt(p.capitalGains.ltcgOther)} @ 12.5%<br>`;
+    html += `<br>`;
+  }
+
+  if (p.sources.includes('other')) {
+    html += `<b>Step 11 — Schedule OS (Other Sources)</b><br>`;
+    if (p.otherSources.savingsInterest > 0) html += `• Savings bank interest: ${fmt(p.otherSources.savingsInterest)}<br>`;
+    if (p.otherSources.fdInterest > 0) html += `• FD/RD interest: ${fmt(p.otherSources.fdInterest)}<br>`;
+    if (p.otherSources.dividend > 0) html += `• Dividend: ${fmt(p.otherSources.dividend)}<br>`;
+    if (p.otherSources.gifts > 0) html += `• Taxable gifts: ${fmt(p.otherSources.gifts)}<br>`;
+    html += `<br>`;
+  }
+
+  if (oldRegime) {
+    html += `<b>Step 12 — Schedule VI-A (Deductions)</b><br>`;
+    if (p.deductions.sec80C > 0) html += `• 80C: ${fmt(p.deductions.sec80C)}<br>`;
+    if (p.deductions.sec80CCD1B > 0) html += `• 80CCD(1B) NPS: ${fmt(p.deductions.sec80CCD1B)}<br>`;
+    if (p.deductions.sec80D > 0) html += `• 80D: ${fmt(p.deductions.sec80D)}<br>`;
+    if (p.deductions.sec80E > 0) html += `• 80E: ${fmt(p.deductions.sec80E)}<br>`;
+    if (p.deductions.sec80G > 0) html += `• 80G donations: ${fmt(p.deductions.sec80G)} (carry Form 10BE certificate)<br>`;
+    if (p.deductions.sec80TTA_TTB > 0) html += `• 80TTA/TTB: ${fmt(p.deductions.sec80TTA_TTB)}<br>`;
+    html += `<br>`;
+  }
+
+  html += `<b>Step 13 — Schedule TDS / TCS / IT</b><br>`;
+  html += `Verify pre-filled TDS, TCS, advance tax, self-assessment tax against Form 26AS. Edit if needed.<br><br>`;
+
+  if (c.gti > 5000000) {
+    html += `<b>Step 14 — Schedule AL (Assets & Liabilities)</b><br>`;
+    html += `Mandatory since income > Rs 50 lakh. Disclose immovable property, jewellery, vehicles, financial assets, and corresponding liabilities (cost basis).<br><br>`;
+  }
+
+  if (p.foreignAsset) {
+    html += `<b>Step 15 — Schedule FA (Foreign Assets) ⚠ critical</b><br>`;
+    html += `Disclose every foreign asset, account, signing authority. Non-disclosure = Black Money Act prosecution + Rs 10 lakh/year penalty.<br><br>`;
+  }
+
+  html += `<b>Step ${p.foreignAsset ? '16' : '15'} — Validate, pay, submit</b><br>`;
+  html += `• Validate every schedule (use Validate button)<br>`;
+  html += `• If tax payable, pay self-assessment tax via Challan 280 → enter BSR/challan in Schedule IT<br>`;
+  html += `• Preview return → Submit → get Acknowledgement Number (ARN)<br><br>`;
+
+  html += `<b>Final Step — Verify return within 30 days</b><br>`;
+  html += `• <b>Aadhaar OTP</b> (instant, recommended)<br>`;
+  html += `• Net banking EVC<br>`;
+  html += `• Bank account / Demat EVC (pre-validated)<br>`;
+  html += `• DSC (companies / audit)<br>`;
+  html += `• Or post signed ITR-V to <b>CPC, Bengaluru – 560500</b> within 30 days<br><br>`;
+
+  html += `🎉 <b>Done!</b> CPC will process and issue intimation under Section 143(1) within ~3-9 months.`;
+
+  botSay(html);
+  setTimeout(() => showReviewMenu(), 800);
+}
+
+// ============================================================
+// ANSWER QUESTIONS — basic Q&A
+// ============================================================
+function answerQuestion(q) {
+  const lower = q.toLowerCase();
+  if (lower.includes('hra')) {
+    return `<b>HRA (House Rent Allowance)</b> — Section 10(13A): exempt to the least of (a) actual HRA received, (b) rent paid minus 10% of basic salary, (c) 50% of basic (metro) or 40% (non-metro).<br><br>Available <b>only under the old regime</b>. Rent receipts and rental agreement required; landlord PAN if rent > Rs 1 lakh/year.`;
+  }
+  if (lower.includes('80c')) {
+    return `<b>Section 80C</b> — combined cap Rs 1,50,000 for: PPF, EPF, ELSS, life insurance premium, NSC, 5-year tax-saving FD, SSY, ULIPs (premium ≤ Rs 2.5 lakh), home loan principal, tuition fees, stamp duty on house. <b>Old regime only.</b>`;
+  }
+  if (lower.includes('new regime') || lower.includes('old regime')) {
+    return `<b>New Regime</b> (default): slabs 0%/5%/10%/15%/20%/25%/30%, basic exemption Rs 4L, Section 87A makes income up to Rs 12L tax-free, standard deduction Rs 75,000. Most deductions (80C, HRA, etc.) NOT allowed.<br><br><b>Old Regime</b>: slabs 0%/5%/20%/30%, basic exemption Rs 2.5L (Rs 3L senior, Rs 5L super senior), all 80C/80D/HRA deductions allowed, standard deduction Rs 50,000, rebate Rs 12,500 if income ≤ Rs 5L.`;
+  }
+  if (lower.includes('capital gain')) {
+    return `<b>Capital Gains</b> are taxed by asset class and holding period:<br>• Listed equity STCG (Section 111A): 20%<br>• Listed equity LTCG (Section 112A): 12.5% above Rs 1.25 lakh exemption<br>• Other LTCG (post 23 July 2024): 12.5% without indexation; resident individuals/HUFs may opt 20% with indexation for property pre-23 July 2024<br>• STT must be paid for the special rates`;
+  }
+  if (lower.includes('itr-1') || lower.includes('itr 1') || lower.includes('sahaj')) {
+    return `<b>ITR-1 (Sahaj)</b>: For resident individuals (not RNOR), total income ≤ Rs 50 lakh, with salary, one house property, other sources, agricultural income ≤ Rs 5,000. Cannot file if: foreign asset, director, unlisted shares, multiple houses, capital gains (other than the limited 112A allowed in Budget 2025).`;
+  }
+  if (lower.includes('itr-2') || lower.includes('itr 2')) {
+    return `<b>ITR-2</b>: Individuals/HUFs without business income. Use when: total income > Rs 50 lakh, capital gains, multiple houses, foreign assets/income, director/unlisted shares, RNOR/NR.`;
+  }
+  if (lower.includes('itr-3') || lower.includes('itr 3')) {
+    return `<b>ITR-3</b>: Individuals/HUFs with business or professional income (regular books, F&O, partner remuneration from firm). Used when not eligible for presumptive ITR-4.`;
+  }
+  if (lower.includes('itr-4') || lower.includes('sugam')) {
+    return `<b>ITR-4 (Sugam)</b>: Resident individuals/HUFs/firms (not LLP) with presumptive 44AD/44ADA/44AE income, total income ≤ Rs 50 lakh, no disqualifying conditions.`;
+  }
+  if (lower.includes('80d')) {
+    return `<b>Section 80D</b>: Health insurance premium: Rs 25,000 self/spouse/children (Rs 50,000 if 60+); same for parents. Includes Rs 5,000 preventive check-up. Cash payment not allowed (except check-up). Max claim Rs 1,00,000 (self+parents senior).`;
+  }
+  if (lower.includes('tds')) {
+    return `<b>TDS</b>: Tax Deducted at Source — payer deducts before paying. Major sections: 192 salary (slab), 194A interest (10%), 194C contractor (1%/2%), 194I rent (10%/2%), 194J professional (10%). Form 16 (salary), Form 16A (others). Verify in Form 26AS. Deposit by 7th of next month; 30 April for March.`;
+  }
+  if (lower.includes('44ad') || lower.includes('44ada') || lower.includes('presumptive')) {
+    return `<b>Presumptive taxation:</b><br>• <b>44AD</b>: Small business turnover ≤ Rs 2 cr (Rs 3 cr digital), profit deemed 8% (6% digital).<br>• <b>44ADA</b>: Specified profession receipts ≤ Rs 50 lakh (Rs 75 lakh digital), profit deemed 50%.<br>• <b>44AE</b>: Goods carriage owners (≤ 10 vehicles), Rs 1,000/ton/month (heavy) or Rs 7,500/month/other.<br>No books / audit. Advance tax 100% by 15 March.`;
+  }
+  if (lower.includes('refund')) {
+    return `Refund processed automatically by CPC after Section 143(1) processing if TDS/TCS/advance tax > tax payable. Credited to pre-validated bank account via ECS. Track on portal under Status → Refund/Demand. Interest under Section 244A at 0.5% per month.`;
+  }
+  if (lower.includes('verify') || lower.includes('verification')) {
+    return `Verify return within <b>30 days</b> of filing via: (a) Aadhaar OTP — instant, (b) net banking EVC, (c) bank/demat EVC, (d) DSC (companies), or (e) post signed ITR-V to CPC Bengaluru 560500. If not verified within 30 days, return becomes invalid (treated as not filed).`;
+  }
+  if (lower.includes('due date')) {
+    return `<b>FY 2025-26 due dates:</b><br>• 31 July 2026 — non-audit individuals<br>• 31 October 2026 — tax audit cases (44AB)<br>• 30 November 2026 — transfer pricing<br>• 31 December 2026 — belated/revised<br>• 31 March 2030 — updated return (ITR-U, 48 months)`;
+  }
+  if (lower.includes('aadhaar')) {
+    return `Aadhaar-PAN linkage is mandatory under Section 139AA. Unlinked PAN becomes <b>inoperative</b> — higher TDS rates (typically 20%), cannot file return, refunds blocked. Link via portal with Rs 1,000 fee (delayed linking).`;
+  }
+  if (lower.includes('section 87a') || lower.includes('rebate')) {
+    return `<b>Section 87A rebate</b>:<br>• <b>New regime</b>: Up to Rs 60,000 if total income ≤ Rs 12 lakh — effectively no tax up to Rs 12 lakh (Rs 12.75 lakh salaried with standard deduction). Marginal relief above.<br>• <b>Old regime</b>: Up to Rs 12,500 if total income ≤ Rs 5 lakh.<br>Not available on special-rate income (lottery, capital gains).`;
+  }
+  if (lower.includes('foreign')) {
+    return `<b>Foreign assets / income</b>: ROR taxpayers must disclose all foreign assets in <b>Schedule FA</b> regardless of income. Non-disclosure attracts Black Money Act — Rs 10 lakh per year penalty plus prosecution. RNOR/NR exempt from foreign income on most categories.`;
+  }
+  return `Sorry, I don't have a specific quick answer for that. Refer to the comprehensive knowledge base in your IncomeTaxManager folder (especially README.md and the 15 reference docs). You can also restart and let me guide you through filing.`;
+}
+
+// ============================================================
+// SIDEBAR UPDATER
+// ============================================================
+function updateSidebar() {
+  const c = state.computation;
+  document.getElementById('sumStatus').textContent = state.profile.residentialStatus || '—';
+  document.getElementById('sumGTI').textContent = fmt(c.gti);
+  document.getElementById('sumDed').textContent = `Old: ${fmt(c.totalDedOld)}`;
+  document.getElementById('sumTI').textContent = `${fmt(Math.min(c.taxableNew, c.taxableOld))}`;
+  document.getElementById('sumNew').textContent = fmt(c.taxNew);
+  document.getElementById('sumOld').textContent = fmt(c.taxOld);
+  document.getElementById('sumRec').textContent = c.regime || '—';
+}
+
+// ============================================================
+// EXPORT / RESTART
+// ============================================================
+function exportSummary() {
+  const p = state.profile;
+  const c = state.computation;
+  const text = `ITR FILING SUMMARY — FY 2025-26 / AY 2026-27
+==============================================
+
+Taxpayer: ${p.name}
+Age: ${p.age}
+Residential Status: ${p.residentialStatus}
+Income Sources: ${p.sources.join(', ')}
+
+INCOME:
+- Salary (gross): ${fmt(p.salary.gross)}
+- HRA exempt: ${fmt(p.salary.hraExempt)}
+- House property: ${p.houseProperty.type || '—'}, interest ${fmt(p.houseProperty.interest)}
+- Business profit: ${fmt(p.business.profit)} (${p.business.presumptive ? p.business.presumptiveType : 'regular'})
+- STCG 111A: ${fmt(p.capitalGains.stcg111A)}
+- LTCG 112A: ${fmt(p.capitalGains.ltcg112A)}
+- LTCG other: ${fmt(p.capitalGains.ltcgOther)}
+- Other sources: ${fmt(p.otherSources.savingsInterest + p.otherSources.fdInterest + p.otherSources.dividend + p.otherSources.gifts)}
+
+DEDUCTIONS (Old regime):
+- 80C: ${fmt(p.deductions.sec80C)}
+- 80CCD(1B): ${fmt(p.deductions.sec80CCD1B)}
+- 80D: ${fmt(p.deductions.sec80D)}
+- 80E: ${fmt(p.deductions.sec80E)}
+- 80G: ${fmt(p.deductions.sec80G)}
+- 80TTA/TTB: ${fmt(p.deductions.sec80TTA_TTB)}
+- Total: ${fmt(c.totalDedOld)}
+
+TAX COMPUTATION:
+- Gross Total Income: ${fmt(c.gti)}
+- Tax (New Regime): ${fmt(c.taxNew)}
+- Tax (Old Regime): ${fmt(c.taxOld)}
+- Recommended: ${c.regime}
+- Saving: ${fmt(c.savings)}
+
+ITR FORM: ${state.recommendedForm}
+Reason: ${state.formReason}
+
+DOCUMENT CHECKLIST:
+${(state.checklist || []).map(i => '- ' + i).join('\n')}
+
+Generated by ITR Filing Assistant — verify with current CBDT notifications before filing.`;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ITR_Summary_${p.name.replace(/\s+/g,'_')}_AY2026-27.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function restart() {
+  if (confirm('Restart and clear all data?')) {
+    location.reload();
+  }
+}
+
+// Init
+start();
+
+// Support link (donation replaced with direct link)
+function openSupportModal() {
+  window.open('https://razorpay.me/@pcbzmani', '_blank');
+}
+
+</script>
+
+</body>

@@ -919,7 +919,7 @@ export default function Settings() {
             <a href="https://github.com/pcbzmani/myfinancedata/issues" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Report a bug</a>
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-            Pro subscription is non-refundable. For refund-related queries or feature requests, email{' '}
+            PanamKasu is free. For feature requests or feedback, email{' '}
             <a href="mailto:pcbzmani@gmail.com" className="underline hover:text-violet-600">pcbzmani@gmail.com</a>.
           </p>
         </div>
