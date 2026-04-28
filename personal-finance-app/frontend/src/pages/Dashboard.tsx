@@ -151,6 +151,16 @@ function buildDaily(txns: any[], period: number = 1, currency?: string) {
   });
 }
 
+function buildCumulative(txns: any[], period: number = 1, currency?: string) {
+  const daily = buildDaily(txns, period, currency);
+  let cumIncome = 0, cumExpense = 0;
+  return daily.map(d => {
+    cumIncome += d.income;
+    cumExpense += d.expense;
+    return { label: d.label, income: cumIncome, expense: cumExpense };
+  });
+}
+
 function BarChartIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -202,6 +212,7 @@ export default function Dashboard() {
   // Currency filter for the chart & savings-rate badge. `null` = not yet initialised
   // (will be set to the dominant currency once transactions load).
   const [chartCurrency, setChartCurrency] = useState<string | null>(null);
+  const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
 
   // Market data
   const [rates, setRates]               = useState<Rates>(EMPTY_RATES);
@@ -334,8 +345,9 @@ export default function Dashboard() {
   }, {});
   const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
   const gainPct = totalInvested > 0 ? `${portfolioGain >= 0 ? '+' : ''}${((portfolioGain / totalInvested) * 100).toFixed(1)}%` : '—';
-  const monthly = buildMonthly(txns, chartPeriod, activeChartCurrency);
-  const daily   = buildDaily(txns, chartPeriod, activeChartCurrency);
+  const monthly    = buildMonthly(txns, chartPeriod, activeChartCurrency);
+  const daily      = buildDaily(txns, chartPeriod, activeChartCurrency);
+  const cumulative = buildCumulative(txns, chartPeriod, activeChartCurrency);
   const dailyInterval = Math.max(0, Math.floor(daily.length / 6) - 1);
   const recent = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
   // Pie chart — expenses by category, scoped to the active chart currency so that
@@ -525,8 +537,8 @@ export default function Dashboard() {
           </div>
           {/* Legend */}
           <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-violet-500" />Income</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-rose-400" />Expense</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-violet-500" />{chartType === 'area' ? 'Cumulative Income' : 'Income'}</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-rose-400" />{chartType === 'area' ? 'Cumulative Expense' : 'Expense'}</span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             {chartType === 'bar' ? (
@@ -548,7 +560,7 @@ export default function Dashboard() {
                 <Line type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} name="Expense" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 5 }} />
               </LineChart>
             ) : (
-              <AreaChart data={daily}>
+              <AreaChart data={cumulative}>
                 <defs>
                   <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} /><stop offset="95%" stopColor="#7c3aed" stopOpacity={0} /></linearGradient>
                   <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
@@ -557,8 +569,8 @@ export default function Dashboard() {
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={dailyInterval} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(v: number) => [fmt(v, activeChartCurrency), '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Income" dot={false} />
-                <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#ge)" name="Expense" dot={false} />
+                <Area type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={2.5} fill="url(#gi)" name="Cumulative Income" dot={false} />
+                <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#ge)" name="Cumulative Expense" dot={false} />
               </AreaChart>
             )}
           </ResponsiveContainer>
@@ -596,8 +608,18 @@ export default function Dashboard() {
                   paddingAngle={3}
                   labelLine={false}
                   label={renderPieLabel}
+                  onClick={(_, index) => setActivePieIndex(activePieIndex === index ? null : index)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  {pieData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={PIE_COLORS[i % PIE_COLORS.length]}
+                      opacity={activePieIndex === null || activePieIndex === i ? 1 : 0.18}
+                      stroke={activePieIndex === i ? '#fff' : 'none'}
+                      strokeWidth={activePieIndex === i ? 2 : 0}
+                    />
+                  ))}
                 </Pie>
                 <Tooltip
                   formatter={(v: number) => [

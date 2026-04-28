@@ -1,9 +1,7 @@
 import type { Config } from '@netlify/functions';
-import { createHmac } from 'crypto';
 import { getStore } from '@netlify/blobs';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
-const TOKEN_SECRET      = process.env.TOKEN_SECRET ?? '';
 const ALERT_TOPIC       = process.env.NTFY_ALERT_TOPIC ?? '';
 
 const ALLOWED_ORIGIN = process.env.URL ?? 'https://pcbzmani.netlify.app';
@@ -42,23 +40,6 @@ Keep answers practical, concise, and focused on the Indian financial context whe
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
-}
-
-/** Verify a subscription token issued by razorpay-verify.mts */
-function verifyToken(token: string): { valid: boolean; email?: string; reason?: string } {
-  if (!TOKEN_SECRET) return { valid: false, reason: 'Server not configured' };
-  const parts = token.split('.');
-  if (parts.length !== 2) return { valid: false, reason: 'Malformed token' };
-  const [payload64, sig] = parts;
-  const expected = createHmac('sha256', TOKEN_SECRET).update(payload64).digest('hex');
-  if (expected !== sig) return { valid: false, reason: 'Invalid token signature' };
-  try {
-    const decoded = JSON.parse(Buffer.from(payload64, 'base64').toString('utf-8'));
-    if (decoded.expiry < Date.now()) return { valid: false, reason: 'Subscription expired' };
-    return { valid: true, email: decoded.email };
-  } catch {
-    return { valid: false, reason: 'Corrupt token payload' };
-  }
 }
 
 /** Track monthly token usage in Netlify Blobs */
@@ -106,6 +87,29 @@ async function flagCreditAlert(errorMessage: string) {
   } catch { /* non-fatal */ }
 }
 
+const FREE_DAILY_LIMIT = 2;
+
+/** IP-based rate limiting — 2 free AI calls per day per IP */
+async function checkRateLimit(req: Request): Promise<{ allowed: boolean; used: number; remaining: number }> {
+  try {
+    const ip = req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || 'unknown';
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `free-ratelimit-${ip}-${today}`;
+    const store = getStore('api-usage');
+    const existing: any = await store.get(key, { type: 'json' }).catch(() => null);
+    const used = existing?.count ?? 0;
+    if (used >= FREE_DAILY_LIMIT) {
+      return { allowed: false, used, remaining: 0 };
+    }
+    // Increment counter (TTL not supported by Blobs, so key accumulates; we scope by date)
+    await store.setJSON(key, { count: used + 1, date: today, ip });
+    return { allowed: true, used: used + 1, remaining: FREE_DAILY_LIMIT - used - 1 };
+  } catch {
+    // If Blobs fails, allow the call rather than blocking users
+    return { allowed: true, used: 1, remaining: FREE_DAILY_LIMIT - 1 };
+  }
+}
+
 export default async (req: Request) => {
   // Preflight
   if (req.method === 'OPTIONS') {
@@ -123,12 +127,16 @@ export default async (req: Request) => {
   }
 
   // Note: systemPrompt from client is intentionally ignored — server enforces finance-only prompt
-  const { subscriptionToken, message } = body;
+  const { message } = body;
 
-  // --- Verify subscription token ---
-  const check = verifyToken(subscriptionToken ?? '');
-  if (!check.valid) {
-    return json({ error: check.reason ?? 'Not subscribed' }, 403);
+  // --- Free tier: IP-based rate limiting (2 calls/day) ---
+  const rateCheck = await checkRateLimit(req);
+  if (!rateCheck.allowed) {
+    return json({
+      error: 'Daily limit reached',
+      detail: `You've used your 2 free AI requests for today. Resets at midnight. Support PanamKasu with a donation to continue using AI features.`,
+      limitExceeded: true,
+    }, 429);
   }
 
   if (!ANTHROPIC_API_KEY) {
@@ -176,7 +184,7 @@ export default async (req: Request) => {
     const usage = data.usage ?? {};
     await trackUsage(usage.input_tokens ?? 0, usage.output_tokens ?? 0);
 
-    return json({ text: data.content?.[0]?.text ?? '' });
+    return json({ text: data.content?.[0]?.text ?? '', remaining: rateCheck.remaining });
   } catch (err: any) {
     return json({ error: err.message ?? 'Internal error' }, 500);
   }
