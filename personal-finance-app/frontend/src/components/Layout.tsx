@@ -179,7 +179,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
     try { localStorage.setItem('sidebar_collapsed', String(collapsed)); } catch { /* ignore */ }
   }, [collapsed]);
 
-  const activeClass = 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-200/50';
+  const activeClass = 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-amber-200/60/50';
   const inactiveClass = 'text-slate-500 dark:text-slate-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-400';
 
   const ThemeToggle = ({ showLabel }: { showLabel?: boolean }) => (
@@ -202,7 +202,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
         <div className={`pt-5 pb-4 flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
           {!collapsed && (
             <div className="flex items-center gap-3 min-w-0">
-              <img src="/icon.svg" alt="PanamKasu" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200 flex-shrink-0" />
+              <img src="/icon.svg" alt="PanamKasu" className="w-9 h-9 rounded-xl shadow-lg shadow-amber-200/60 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none truncate">PanamKasu</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">Personal Finance</p>
@@ -210,7 +210,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
             </div>
           )}
           {collapsed && (
-            <img src="/icon.svg" alt="PanamKasu" className="w-8 h-8 rounded-xl shadow-lg shadow-violet-200" />
+            <img src="/icon.svg" alt="PanamKasu" className="w-8 h-8 rounded-xl shadow-lg shadow-amber-200/60" />
           )}
           <button
             onClick={() => setCollapsed(c => !c)}
@@ -280,7 +280,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex flex-col transform transition-transform duration-200 md:hidden ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-5 pt-6 pb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icon.svg" alt="PanamKasu" className="w-9 h-9 rounded-xl shadow-lg shadow-violet-200" />
+            <img src="/icon.svg" alt="PanamKasu" className="w-9 h-9 rounded-xl shadow-lg shadow-amber-200/60" />
             <div>
               <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-none">PanamKasu</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Personal Finance</p>

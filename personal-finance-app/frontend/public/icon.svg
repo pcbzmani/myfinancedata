@@ -1,80 +1,97 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
+    <!-- App icon background -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7c3aed"/>
-      <stop offset="50%" stop-color="#6d28d9"/>
-      <stop offset="100%" stop-color="#4c1d95"/>
+      <stop offset="0%" stop-color="#0f1a14"/>
+      <stop offset="100%" stop-color="#0a0f0d"/>
     </linearGradient>
-    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    <!-- Gold coin ring gradient -->
+    <radialGradient id="coinRingGrad" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#f0d878"/>
+      <stop offset="45%" stop-color="#c4a03c"/>
+      <stop offset="100%" stop-color="#7a5c10"/>
+    </radialGradient>
+    <!-- Growth green gradient -->
+    <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5ccc7c"/>
+      <stop offset="100%" stop-color="#2d6644"/>
     </linearGradient>
-    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fde68a"/>
-      <stop offset="100%" stop-color="#f59e0b"/>
+    <!-- Spend/gold gradient -->
+    <linearGradient id="spendGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c4a03c" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#e8d080" stop-opacity="0.55"/>
     </linearGradient>
-    <linearGradient id="barGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#c4b5fd"/>
-      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0.7"/>
-    </linearGradient>
-    <linearGradient id="barGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ede9fe"/>
-      <stop offset="100%" stop-color="#ddd6fe" stop-opacity="0.8"/>
-    </linearGradient>
-    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#10b981"/>
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.2"/>
-    </filter>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
+    <!-- Clip for left half of coin -->
+    <clipPath id="leftHalf">
+      <rect x="96" y="0" width="160" height="512"/>
+    </clipPath>
+    <!-- Clip for right half of coin -->
+    <clipPath id="rightHalf">
+      <rect x="256" y="0" width="160" height="512"/>
+    </clipPath>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Drop shadow -->
+    <filter id="coinShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#c4a03c" flood-opacity="0.35"/>
     </filter>
   </defs>
 
-  <!-- Background rounded square -->
-  <rect width="512" height="512" rx="108" fill="url(#bgGrad)"/>
-
-  <!-- Shine overlay top -->
-  <rect width="512" height="256" rx="108" fill="url(#shineGrad)"/>
-  <rect y="256" width="512" height="256" rx="0" fill="url(#shineGrad)" opacity="0"/>
+  <!-- App background rounded square -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
 
   <!-- Subtle border -->
-  <rect x="2" y="2" width="508" height="508" rx="106" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.12"/>
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="rgba(196,160,60,0.18)" stroke-width="2"/>
 
-  <!-- Bar chart: 3 bars (left to right, ascending) -->
-  <rect x="80" y="320" width="90" height="140" rx="14" fill="url(#barGrad1)" opacity="0.85"/>
-  <rect x="210" y="240" width="90" height="220" rx="14" fill="url(#barGrad2)" opacity="0.9"/>
-  <rect x="340" y="148" width="90" height="312" rx="14" fill="white" opacity="0.92"/>
+  <!-- ═══ COIN (centred, 300px diameter) ═══ -->
+  <g transform="translate(106, 106)" filter="url(#coinShadow)">
+    <!-- Outer gold ring -->
+    <circle cx="150" cy="150" r="140" stroke="url(#coinRingGrad)" stroke-width="7" fill="none"/>
 
-  <!-- Trend line over bars -->
-  <polyline
-    points="125,315 255,235 385,143"
-    fill="none"
-    stroke="url(#arrowGrad)"
-    stroke-width="11"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    filter="url(#glow)"
-  />
+    <!-- Left half — dark green (growth / investment) -->
+    <path d="M150 10 A140 140 0 0 0 150 290 Z" fill="#1a2e20"/>
+    <!-- Right half — dark gold (spending / tracking) -->
+    <path d="M150 10 A140 140 0 0 1 150 290 Z" fill="#1e1608"/>
 
-  <!-- Arrow head at tip -->
-  <circle cx="385" cy="143" r="16" fill="url(#arrowGrad)" opacity="0.9"/>
-  <polyline
-    points="370,128 385,112 400,128"
-    fill="none"
-    stroke="url(#arrowGrad)"
-    stroke-width="9"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+    <!-- LEFT: ascending bar chart with growth arrow (clipped to left half) -->
+    <g clip-path="url(#leftHalf)" transform="translate(-106,-106)">
+      <!-- Bars -->
+      <rect x="138" y="226" width="22" height="50" rx="5" fill="#3a8f55" opacity="0.75"/>
+      <rect x="168" y="196" width="22" height="80" rx="5" fill="#4aad68" opacity="0.88"/>
+      <rect x="198" y="158" width="22" height="118" rx="5" fill="#5ccc7c" filter="url(#glow)"/>
+      <!-- Upward trend arrow on tallest bar -->
+      <polyline points="209,152 209,128 224,142" stroke="#7de89a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#glow)"/>
+      <!-- Small leaf accent -->
+      <path d="M164,186 Q152,160 174,148 Q178,172 164,186Z" fill="#4aad68" opacity="0.75"/>
+      <line x1="164" y1="186" x2="170" y2="158" stroke="#7de89a" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
 
-  <!-- Gold coin badge (bottom-right accent) -->
-  <circle cx="390" cy="390" r="54" fill="url(#coinGrad)" filter="url(#shadow)"/>
-  <circle cx="390" cy="390" r="44" fill="none" stroke="#fbbf24" stroke-width="3" stroke-opacity="0.6"/>
-  <!-- ₹ symbol on coin -->
-  <text x="390" y="405" font-family="Georgia, serif" font-size="46" font-weight="bold"
-    fill="#92400e" text-anchor="middle" opacity="0.85">₹</text>
+    <!-- RIGHT: spending waves + coin circles (clipped to right half) -->
+    <g clip-path="url(#rightHalf)" transform="translate(-106,-106)">
+      <!-- Spend wave lines -->
+      <path d="M256 226 Q288 202 318 218 Q348 234 378 210" stroke="url(#spendGrad)" stroke-width="6.5" stroke-linecap="round" fill="none" opacity="0.9"/>
+      <path d="M256 252 Q292 228 326 244 Q356 258 386 234" stroke="url(#spendGrad)" stroke-width="4.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+      <!-- Coin circles -->
+      <circle cx="304" cy="176" r="26" stroke="#c4a03c" stroke-width="4.5" fill="none" opacity="0.92"/>
+      <text x="304" y="185" text-anchor="middle" font-size="22" fill="#c4a03c" font-family="Georgia,serif" font-weight="700">₹</text>
+      <circle cx="350" cy="166" r="17" stroke="#c4a03c" stroke-width="3.5" fill="none" opacity="0.62"/>
+      <circle cx="372" cy="196" r="12" stroke="#c4a03c" stroke-width="2.5" fill="none" opacity="0.38"/>
+      <!-- Outflow arrow -->
+      <polyline points="326,260 362,260 350,246" stroke="#c4a03c" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.72"/>
+    </g>
+
+    <!-- Centre divider line -->
+    <line x1="150" y1="10" x2="150" y2="290" stroke="#0a0f0d" stroke-width="5"/>
+
+    <!-- Centre balance dot -->
+    <circle cx="150" cy="150" r="13" fill="#0a0f0d"/>
+    <circle cx="150" cy="150" r="8" fill="url(#coinRingGrad)"/>
+
+    <!-- Decorative inner rings -->
+    <circle cx="150" cy="150" r="127" stroke="rgba(196,160,60,0.14)" stroke-width="2" fill="none"/>
+    <circle cx="150" cy="150" r="113" stroke="rgba(74,124,89,0.10)" stroke-width="1.5" fill="none"/>
+  </g>
 </svg>
