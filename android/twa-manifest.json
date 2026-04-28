@@ -1,0 +1,52 @@
+{
+  "packageId": "app.netlify.pcbzmani.twa",
+  "host": "panamkasu.netlify.app",
+  "name": "PanamKasu",
+  "launcherName": "PanamKasu",
+  "display": "standalone",
+  "themeColor": "#c47d0e",
+  "navigationColor": "#c47d0e",
+  "navigationColorDark": "#0a0f0d",
+  "navigationDividerColor": "#c47d0e",
+  "navigationDividerColorDark": "#0a0f0d",
+  "backgroundColor": "#0a0f0d",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://panamkasu.netlify.app/pwa-512x512.png",
+  "maskableIconUrl": "https://panamkasu.netlify.app/maskable-icon-512x512.png",
+  "monochromeIconUrl": "https://panamkasu.netlify.app/pwa-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 2,
+  "appVersionName": "2.0.0",
+  "shortcuts": [
+    {
+      "name": "Transactions",
+      "shortName": "Transactions",
+      "url": "/transactions",
+      "icons": [{ "src": "https://panamkasu.netlify.app/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Investments",
+      "shortName": "Investments",
+      "url": "/investments",
+      "icons": [{ "src": "https://panamkasu.netlify.app/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Insurance",
+      "shortName": "Insurance",
+      "url": "/insurance",
+      "icons": [{ "src": "https://panamkasu.netlify.app/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://panamkasu.netlify.app/manifest.webmanifest",
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://panamkasu.netlify.app/",
+  "minSdkVersion": 19,
+  "orientation": "portrait"
+}
