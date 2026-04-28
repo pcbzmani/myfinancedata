@@ -286,135 +286,13 @@ footer {
 }
 .support-btn:hover { background: #e68a2e; }
 
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: fadeIn 0.2s ease;
-}
-.modal-overlay.active { display: flex; }
-.modal {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 440px;
-  padding: 24px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal h2 {
-  font-size: 18px;
-  color: var(--primary);
-  margin-bottom: 4px;
-}
-.modal .modal-sub {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 18px;
-}
-.modal label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 6px;
-  margin-top: 12px;
-}
-.modal input[type="text"],
-.modal input[type="number"],
-.modal input[type="email"] {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-}
-.modal input:focus { outline: none; border-color: var(--primary); }
-.modal .amount-presets {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-.modal .amount-presets button {
-  flex: 1;
-  min-width: 60px;
-  padding: 6px 8px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text);
-}
-.modal .amount-presets button:hover {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.modal .modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-.modal .modal-actions button {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-}
-.modal .btn-pay { background: var(--accent); color: white; }
-.modal .btn-pay:hover { background: #e68a2e; }
-.modal .btn-pay:disabled { background: #ccc; cursor: not-allowed; }
-.modal .btn-cancel { background: white; color: var(--muted); border: 1px solid var(--border); }
-.modal .btn-cancel:hover { background: var(--bg); }
-.modal .modal-note {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 14px;
-  line-height: 1.5;
-}
-.modal .modal-error {
-  background: #ffebee;
-  color: #c62828;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  margin-top: 12px;
-  display: none;
-}
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--success);
-  color: white;
-  padding: 12px 18px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-  z-index: 1100;
-  animation: fadeIn 0.3s ease;
-}
-.toast.error { background: #c62828; }
-
 /* ── PanamKasu embed overrides ── */
 body { margin: 0; }
 header { display: none !important; }  /* hide original header — PanamKasu provides nav */
 footer { display: none !important; }  /* hide original footer */
-.container { margin: 0 auto; padding: 12px 16px; height: auto; }
-@media (max-width: 980px) { .container { padding: 8px; } }
+/* Fill the iframe viewport; header is hidden so subtract only top+bottom padding (24px) */
+.container { margin: 0 auto; padding: 12px 16px; height: calc(100vh - 24px); }
+@media (max-width: 980px) { .container { padding: 8px; height: auto; } }
 
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
@@ -439,8 +317,8 @@ footer { display: none !important; }  /* hide original footer */
   .msg.bot { background: #1e293b; color: #e2e8f0; }
   .msg.bot b { color: #60a5fa; }
   .msg.user { background: #2563eb; }
-  .sidebar { background: #1e293b; border-color: #334155; }
-  .sidebar summary-card { background: #0f172a; }
+  .sidebar { border-color: #334155; }
+  .card { background: var(--panel); border-color: #334155; }
   .tag.neutral { background: #1e293b; color: #94a3b8; }
   .tag.success { background: #14532d; color: #4ade80; }
   .tag.warn { background: #451a03; color: #fbbf24; }
@@ -746,7 +624,7 @@ function routeAnswer(value) {
 function handleWelcome(v) {
   if (v === 'learn') {
     botSay(`Sure! You can ask me anything about Indian income tax. Try questions like:<br><ul><li>What is the difference between old and new regime?</li><li>How is HRA exemption calculated?</li><li>What is Section 80C?</li><li>How are capital gains taxed?</li></ul><br>Or click <b>Restart</b> any time to begin guided ITR filing.`);
-    botSay(`💡 The full knowledge base is in your IncomeTaxManager folder — open <b>README.md</b> to explore 15 detailed reference documents.`);
+    botSay(`💡 For authoritative reference, visit <b>incometax.gov.in</b> or consult CBDT notifications. You can also restart any time to begin guided ITR filing.`);
     showInput('Ask any tax question...');
     state.pendingInput = (q) => {
       botSay(answerQuestion(q));
@@ -984,12 +862,15 @@ function handleHPMunicipal(v) { state.profile.houseProperty.municipalTax = v; ru
 function handleHPInterest(v) { state.profile.houseProperty.interest = v; runHPStep('multipleHouses'); }
 function handleMultipleHouses(v) { state.profile.multipleHouses = v; proceedToNextSource(); }
 
-// override runStep for hp
-const origRunStep = runStep;
+// runStep handles all non-routeAnswer step transitions (salary sub-steps + HP sub-steps)
+// Note: defined after runHPStep so it can reference it cleanly
+const _origRunStep = runStep;
 runStep = function(s) {
-  if (s.startsWith('hp')) runHPStep(s);
-  else if (['multipleHouses'].includes(s)) runHPStep(s);
-  else origRunStep(s);
+  if (s.startsWith('hp') || s === 'multipleHouses') {
+    runHPStep(s);
+  } else {
+    _origRunStep(s);
+  }
 };
 
 // --- BUSINESS ---
@@ -1074,7 +955,7 @@ function handleCGLTCGOther(v) {
 // --- OTHER SOURCES ---
 function askOther() {
   state.step = 'osSavings';
-  botSay(`<b>Other Sources</b> 💰<br><b>Savings bank interest</b> for the year (₹)?<br><i>Section 80TTA Rs 10,000 deductible in old regime; 80TTB up to Rs 50,000-1,00,000 for senior citizens.</i>`);
+  botSay(`<b>Other Sources</b> 💰<br><b>Savings bank interest</b> for the year (₹)?<br><i>Section 80TTA: up to Rs 10,000 for savings interest (non-senior, old regime). 80TTB: up to Rs 50,000 for all interest income (senior citizens 60+, old regime).</i>`);
   showInput('e.g., 8000', 'number');
   state.pendingInput = v => routeAnswer(parseFloat(v) || 0);
 }
@@ -1147,10 +1028,10 @@ function handleDed80G(v) {
   state.step = 'ded80TTA';
   // auto compute 80TTA / TTB based on age and savings interest
   if (state.profile.age >= 60) {
-    const cap = 100000;
+    const cap = 50000; // 80TTB: max ₹50,000 for seniors (savings + FD interest)
     const allInt = state.profile.otherSources.savingsInterest + state.profile.otherSources.fdInterest;
     state.profile.deductions.sec80TTA_TTB = Math.min(allInt, cap);
-    botSay(`📌 <b>Section 80TTB</b> auto-applied — ${fmt(state.profile.deductions.sec80TTA_TTB)} (senior citizen interest deduction).`);
+    botSay(`📌 <b>Section 80TTB</b> auto-applied — ${fmt(state.profile.deductions.sec80TTA_TTB)} (senior citizen interest deduction, max ₹50,000).`);
   } else {
     state.profile.deductions.sec80TTA_TTB = Math.min(state.profile.otherSources.savingsInterest, 10000);
     botSay(`📌 <b>Section 80TTA</b> auto-applied — ${fmt(state.profile.deductions.sec80TTA_TTB)} (savings interest up to Rs 10,000).`);
@@ -1416,6 +1297,10 @@ function showReviewMenu() {
 
 function showDocsInline() {
   const items = state.checklist;
+  if (!items || items.length === 0) {
+    botSay(`📋 Please complete the guided session first — the checklist will be generated after you enter your income details.`);
+    return;
+  }
   let html = `<b>📋 Documents you'll need:</b><br><ul>`;
   items.forEach(i => html += `<li>${i}</li>`);
   html += `</ul>`;
@@ -1719,7 +1604,7 @@ function answerQuestion(q) {
   if (lower.includes('foreign')) {
     return `<b>Foreign assets / income</b>: ROR taxpayers must disclose all foreign assets in <b>Schedule FA</b> regardless of income. Non-disclosure attracts Black Money Act — Rs 10 lakh per year penalty plus prosecution. RNOR/NR exempt from foreign income on most categories.`;
   }
-  return `Sorry, I don't have a specific quick answer for that. Refer to the comprehensive knowledge base in your IncomeTaxManager folder (especially README.md and the 15 reference docs). You can also restart and let me guide you through filing.`;
+  return `I don't have a quick answer for that specific question. For authoritative guidance, visit <b>incometax.gov.in</b> or call the helpline at <b>1800 103 0025</b> (toll-free). You can also restart and let me guide you through your ITR filing step by step.`;
 }
 
 // ============================================================
@@ -1729,8 +1614,8 @@ function updateSidebar() {
   const c = state.computation;
   document.getElementById('sumStatus').textContent = state.profile.residentialStatus || '—';
   document.getElementById('sumGTI').textContent = fmt(c.gti);
-  document.getElementById('sumDed').textContent = `Old: ${fmt(c.totalDedOld)}`;
-  document.getElementById('sumTI').textContent = `${fmt(Math.min(c.taxableNew, c.taxableOld))}`;
+  document.getElementById('sumDed').textContent = `Old: ${fmt(c.totalDedOld)} / New: ${fmt(c.totalDedNew)}`;
+  document.getElementById('sumTI').textContent = `Old: ${fmt(c.taxableOld)} / New: ${fmt(c.taxableNew)}`;
   document.getElementById('sumNew').textContent = fmt(c.taxNew);
   document.getElementById('sumOld').textContent = fmt(c.taxOld);
   document.getElementById('sumRec').textContent = c.regime || '—';
@@ -1742,6 +1627,11 @@ function updateSidebar() {
 function exportSummary() {
   const p = state.profile;
   const c = state.computation;
+  // Guard: require computation to have been run
+  if (!state.recommendedForm || !p.name) {
+    alert('Please complete the guided session first before saving the summary.');
+    return;
+  }
   const text = `ITR FILING SUMMARY — FY 2025-26 / AY 2026-27
 ==============================================
 
