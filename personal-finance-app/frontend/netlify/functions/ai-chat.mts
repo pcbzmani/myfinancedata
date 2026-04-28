@@ -4,7 +4,7 @@ import { getStore } from '@netlify/blobs';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
 const ALERT_TOPIC       = process.env.NTFY_ALERT_TOPIC ?? '';
 
-const ALLOWED_ORIGIN = process.env.URL ?? 'https://pcbzmani.netlify.app';
+const ALLOWED_ORIGIN = process.env.URL ?? 'https://panamkasu.netlify.app';
 const MAX_MESSAGE_LEN = 4000;
 
 const CORS = {
@@ -15,7 +15,7 @@ const CORS = {
 };
 
 // ── Finance-only system prompt (server-enforced, not client-overridable) ──────
-const FINANCE_SYSTEM_PROMPT = `You are PanamKasu AI — a dedicated personal finance assistant built exclusively for the PanamKasu app (pcbzmani.netlify.app).
+const FINANCE_SYSTEM_PROMPT = `You are PanamKasu AI — a dedicated personal finance assistant built exclusively for the PanamKasu app (panamkasu.netlify.app).
 
 You ONLY answer questions related to:
 - Personal finance and budgeting
