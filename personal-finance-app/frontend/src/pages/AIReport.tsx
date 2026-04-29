@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { getRows } from '../lib/api';
+import RazorpayDonation from '../components/RazorpayDonation';
 
 /* ─── Daily usage tracking (localStorage) ────────────────────────────── */
 const FREE_LIMIT = 2;
@@ -338,15 +339,7 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
           <div className="bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-700 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Love PanamKasu? Support the app ❤️</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">PanamKasu is free to use. If it's saving you time and money, consider a small donation to help keep the servers running.</p>
-            <a
-              href="https://razorpay.me/@pcbzmani"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              Donate to Support PanamKasu
-            </a>
+            <RazorpayDonation variant="button" label="Donate to Support PanamKasu" />
           </div>
         </div>
       )}
@@ -377,26 +370,8 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
         </div>
       )}
 
-      {/* ── Optional donation section (always visible at bottom) ── */}
-      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl p-5">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-2xl">☕</span>
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Support PanamKasu</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">This app is free forever. If it helps you, buy me a coffee!</p>
-          </div>
-        </div>
-        <a
-          href="https://razorpay.me/@pcbzmani"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-sm font-medium text-amber-700 dark:text-amber-300 transition-colors"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Donate via Razorpay — any amount
-        </a>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Donations keep the AI credits funded. Thank you! 🙏</p>
-      </div>
+      {/* ── Donation card (always visible at bottom) ── */}
+      <RazorpayDonation variant="card" />
 
     </div>
   );

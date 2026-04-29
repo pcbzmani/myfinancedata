@@ -3,10 +3,6 @@ import type { Config } from '@netlify/functions';
 const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID ?? '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? '';
 
-const PLANS: Record<string, { amount: number; label: string }> = {
-  yearly: { amount: 9900, label: '1-year Pro' },  // ₹99/year
-};
-
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -28,18 +24,38 @@ export default async (req: Request) => {
     return json({ error: 'Payment service not configured' }, 503);
   }
 
-  const plan = 'yearly';
-  try { await req.json(); } catch { /* ignore */ }
+  let body: any = {};
+  try { body = await req.json(); } catch { /* ignore — body is optional */ }
 
-  const { amount, label } = PLANS[plan];
-  const receipt = `sub_${plan}_${Date.now()}`;
+  // Support both donations (custom amount) and subscriptions (fixed plans)
+  // amount is in paise (₹1 = 100 paise)
+  let amount: number;
+  let label: string;
+  let receipt: string;
+
+  if (body.amount && typeof body.amount === 'number' && body.amount >= 100) {
+    // Donation with custom amount (in paise, minimum ₹1)
+    amount  = Math.round(body.amount);
+    label   = body.label ?? `Donation ₹${Math.round(amount / 100)}`;
+    receipt = `donation_${Date.now()}`;
+  } else {
+    // Default: ₹99/year subscription
+    amount  = 9900;
+    label   = '1-year Pro';
+    receipt = `sub_yearly_${Date.now()}`;
+  }
 
   try {
     const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
     const res  = await fetch('https://api.razorpay.com/v1/orders', {
       method:  'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ amount, currency: 'INR', receipt, notes: { plan, label } }),
+      body:    JSON.stringify({
+        amount,
+        currency: 'INR',
+        receipt,
+        notes: { label, type: body.amount ? 'donation' : 'subscription' },
+      }),
     });
 
     const data: any = await res.json();
@@ -52,7 +68,6 @@ export default async (req: Request) => {
       amount:   data.amount,
       currency: data.currency,
       keyId:    RAZORPAY_KEY_ID,
-      plan,
       label,
     });
   } catch (err: any) {

@@ -18,12 +18,21 @@ interface TokenMonth {
   updatedAt: string;
 }
 
+interface Donation {
+  email:     string | null;
+  paymentId: string;
+  amount:    number | null;
+  createdAt: string;
+}
+
 interface AdminData {
-  totalSubscribers: number;
+  totalSubscribers:  number;
   activeSubscribers: number;
-  subscribers: Subscriber[];
-  tokenUsage: Record<string, TokenMonth>;
-  creditAlert: { alert: boolean; message?: string; alertedAt?: string };
+  subscribers:       Subscriber[];
+  donations:         Donation[];
+  totalDonated:      number;
+  tokenUsage:        Record<string, TokenMonth>;
+  creditAlert:       { alert: boolean; message?: string; alertedAt?: string };
 }
 
 export default function Admin() {
@@ -124,10 +133,12 @@ export default function Admin() {
             )}
 
             {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
                 { label: 'Total Subscribers', value: data.totalSubscribers },
                 { label: 'Active Now',         value: data.activeSubscribers },
+                { label: 'Donations',          value: data.donations?.length ?? 0 },
+                { label: 'Total Donated',      value: `₹${data.totalDonated ?? 0}` },
                 {
                   label: 'This Month Calls',
                   value: (() => {
@@ -201,6 +212,37 @@ export default function Admin() {
                 </table>
               </div>
             </div>
+
+            {/* Donations table */}
+            {(data.donations?.length ?? 0) > 0 && (
+              <div className="bg-slate-800 rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-700">
+                  <h2 className="font-semibold">Donations <span className="text-amber-400 ml-2">₹{data.totalDonated} total</span></h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-slate-400 border-b border-slate-700">
+                        <th className="text-left px-6 py-3">Email</th>
+                        <th className="text-left px-6 py-3">Amount</th>
+                        <th className="text-left px-6 py-3">Payment ID</th>
+                        <th className="text-left px-6 py-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.donations.map(d => (
+                        <tr key={d.paymentId} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-3 text-slate-200">{d.email || '—'}</td>
+                          <td className="px-6 py-3 text-amber-400 font-medium">{d.amount != null ? `₹${d.amount}` : '—'}</td>
+                          <td className="px-6 py-3 text-slate-500 font-mono text-xs">{d.paymentId}</td>
+                          <td className="px-6 py-3 text-slate-400">{fmt(d.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Token usage by month */}
             <div className="bg-slate-800 rounded-2xl overflow-hidden">
