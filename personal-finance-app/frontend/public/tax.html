@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Income Tax — PanamKasu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -261,6 +262,45 @@ footer {
   font-size: 12px;
 }
 
+/* ── Progress bar ── */
+.progress-bar-wrap {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 8px 18px 0;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── AIS upload card ── */
+.ais-upload-card {
+  background: linear-gradient(135deg, #e8f4fd 0%, #dbeeff 100%);
+  border: 1.5px dashed #5c9fdb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+.ais-upload-card:hover { background: linear-gradient(135deg, #d6ecfa 0%, #c7e2ff 100%); }
+.ais-upload-card h4 { font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 4px; }
+.ais-upload-card p { font-size: 12px; color: var(--muted); }
+.ais-extracted { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-top: 8px; }
+.ais-extracted table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.ais-extracted td { padding: 3px 6px; color: var(--text); }
+.ais-extracted td:last-child { text-align: right; font-weight: 600; color: var(--success); }
+
+/* Typing dots */
+@keyframes blink { 0%,80%,100% { opacity:0 } 40% { opacity:1 } }
+.typing-dot { display: inline-block; width: 6px; height: 6px; background: var(--muted); border-radius: 50%; margin: 0 2px; animation: blink 1.2s infinite both; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
 /* ===== Support / Donation ===== */
 .support-card {
   background: linear-gradient(135deg, #fff4e0 0%, #ffe0c2 100%);
@@ -336,6 +376,12 @@ footer { display: none !important; }  /* hide original footer */
   .send-btn { background: #3b82f6; }
   .sidebar-section { border-color: #334155; }
   .summary-card { background: #0f172a; border-color: #334155; }
+  .ais-upload-card { background: linear-gradient(135deg, #1e3a5f 0%, #162032 100%); border-color: #3b82f6; }
+  .ais-upload-card:hover { background: linear-gradient(135deg, #1e3a5f 0%, #1a2d4a 100%); }
+  .ais-upload-card h4 { color: #60a5fa; }
+  .ais-extracted { background: #14532d; border-color: #166534; }
+  .ais-extracted td { color: #e2e8f0; }
+  .ais-extracted td:last-child { color: #4ade80; }
 }
 
 </style>
@@ -358,6 +404,7 @@ footer { display: none !important; }  /* hide original footer */
       <h2>Tax Assistant</h2>
       <p>I'll guide you through filing your Income Tax Return step by step.</p>
     </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
     <div class="messages" id="messages"></div>
     <div class="input-row" id="inputRow" style="display:none;">
       <input type="text" id="userInput" placeholder="Type your answer..." />
@@ -462,6 +509,151 @@ const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
 
 // ============================================================
+// ============================================================
+// AIS PARSER — reads Annual Information Statement PDF
+// ============================================================
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function extractTextFromPDF(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return fullText;
+}
+
+function parseAISText(text) {
+  const extracted = {};
+
+  // Helper: find number after a keyword (₹, INR, or plain digits)
+  function findAmt(pattern) {
+    const m = text.match(pattern);
+    if (!m) return 0;
+    return parseFloat((m[1] || m[0]).replace(/[,₹\s]/g, '')) || 0;
+  }
+
+  // --- PAN & Name ---
+  const panM = text.match(/PAN\s*[:\-]?\s*([A-Z]{5}[0-9]{4}[A-Z])/i);
+  if (panM) extracted.pan = panM[1];
+  const nameM = text.match(/Name\s*[:\-]\s*([A-Z][A-Za-z\s]{3,40})/);
+  if (nameM) extracted.name = nameM[1].trim();
+
+  // --- Section 192 — Salary TDS ---
+  const salaryAmts = [];
+  const salRe = /192[^0-9]*?([\d,]{4,})/g;
+  let sm; while ((sm = salRe.exec(text)) !== null) salaryAmts.push(parseFloat(sm[1].replace(/,/g,'')));
+  if (salaryAmts.length) extracted.salary = Math.max(...salaryAmts);
+
+  // --- Section 194A — Bank Interest TDS ---
+  const intAmts = [];
+  const intRe = /194A[^0-9]*?([\d,]{3,})/g;
+  let im; while ((im = intRe.exec(text)) !== null) intAmts.push(parseFloat(im[1].replace(/,/g,'')));
+  if (intAmts.length) extracted.fdInterest = intAmts.reduce((a,b)=>a+b,0);
+
+  // --- Savings interest (often in "Other sources" section) ---
+  const savM = text.match(/[Ss]avings[^₹\d]*?₹?\s*([\d,]+)/);
+  if (savM) extracted.savingsInterest = parseFloat(savM[1].replace(/,/g,''));
+
+  // --- SFT-015/016 — Securities/MF transactions ---
+  const sftM = text.match(/SFT[- ]?01[56][^₹\d]*([\d,]{4,})/);
+  if (sftM) extracted.securities = parseFloat(sftM[1].replace(/,/g,''));
+
+  // --- Dividend (194/194K) ---
+  const divRe = /194K?[^0-9]*?([\d,]{3,})/g;
+  let dm; const divAmts = [];
+  while ((dm = divRe.exec(text)) !== null) divAmts.push(parseFloat(dm[1].replace(/,/g,'')));
+  if (divAmts.length) extracted.dividend = divAmts.reduce((a,b)=>a+b,0);
+
+  // --- Property (SFT-012/013) ---
+  const propM = text.match(/SFT[- ]?01[23][^₹\d]*([\d,]{5,})/);
+  if (propM) extracted.property = parseFloat(propM[1].replace(/,/g,''));
+
+  // Rough GTI estimate from text
+  const gtiM = text.match(/[Gg]ross\s+[Tt]otal\s+[Ii]ncome[^₹\d]*([\d,]{4,})/);
+  if (gtiM) extracted.gti = parseFloat(gtiM[1].replace(/,/g,''));
+
+  return extracted;
+}
+
+function applyAISData(data) {
+  if (data.name && !state.profile.name) state.profile.name = data.name;
+  if (data.salary > 0) {
+    state.profile.sources = [...new Set([...state.profile.sources, 'salary'])];
+    state.profile.salary.gross = data.salary;
+  }
+  if ((data.fdInterest || 0) + (data.savingsInterest || 0) > 0) {
+    state.profile.sources = [...new Set([...state.profile.sources, 'other'])];
+    if (data.fdInterest)      state.profile.otherSources.fdInterest      = data.fdInterest;
+    if (data.savingsInterest) state.profile.otherSources.savingsInterest = data.savingsInterest;
+  }
+  if (data.dividend > 0) {
+    state.profile.sources = [...new Set([...state.profile.sources, 'other'])];
+    state.profile.otherSources.dividend = data.dividend;
+  }
+  if (data.securities > 0) {
+    state.profile.sources = [...new Set([...state.profile.sources, 'capital'])];
+  }
+  if (data.property > 0) {
+    state.profile.sources = [...new Set([...state.profile.sources, 'capital'])];
+  }
+  state.aisData = data;
+}
+
+function renderAISSummary(data) {
+  const rows = [];
+  if (data.name)   rows.push(`<tr><td>👤 Name detected</td><td>${data.name}</td></tr>`);
+  if (data.salary) rows.push(`<tr><td>💼 Salary (Sec 192)</td><td>${fmt(data.salary)}</td></tr>`);
+  if (data.fdInterest) rows.push(`<tr><td>🏦 FD/RD Interest (194A)</td><td>${fmt(data.fdInterest)}</td></tr>`);
+  if (data.savingsInterest) rows.push(`<tr><td>🏦 Savings Interest</td><td>${fmt(data.savingsInterest)}</td></tr>`);
+  if (data.dividend) rows.push(`<tr><td>📊 Dividend (194/194K)</td><td>${fmt(data.dividend)}</td></tr>`);
+  if (data.securities) rows.push(`<tr><td>📈 Securities/MF (SFT)</td><td>${fmt(data.securities)}</td></tr>`);
+  if (data.property)   rows.push(`<tr><td>🏠 Property transaction</td><td>${fmt(data.property)}</td></tr>`);
+  if (rows.length === 0) return null;
+  return `<div class="ais-extracted"><b>✅ Extracted from your AIS:</b>
+    <table>${rows.join('')}</table>
+    <div style="margin-top:8px;font-size:11.5px;color:var(--muted);">These values have been pre-filled. You can still edit them as we go.</div>
+  </div>`;
+}
+
+// Triggered by the "Upload AIS" button in the chat
+async function handleAISUpload(file) {
+  if (!file || file.type !== 'application/pdf') {
+    botSay(`⚠️ Please upload a PDF file (download your AIS from incometax.gov.in → AIS/TIS).`);
+    return;
+  }
+  botSay(`<span><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> Reading your AIS PDF…`);
+  try {
+    const text = await extractTextFromPDF(file);
+    const data = parseAISText(text);
+    applyAISData(data);
+    const summary = renderAISSummary(data);
+    if (summary) {
+      setTimeout(() => {
+        messagesDiv.querySelectorAll('.msg.bot:last-child').forEach(el => el.remove());
+        botSay(`📄 <b>AIS uploaded successfully!</b><br>${summary}<br>Great — I've pre-filled your income details from the AIS. You can still review and adjust each item as we go through the guided flow.`);
+        setTimeout(() => continueAfterWelcome(), 800);
+      }, 400);
+    } else {
+      setTimeout(() => {
+        messagesDiv.querySelectorAll('.msg.bot:last-child').forEach(el => el.remove());
+        botSay(`📄 AIS uploaded but I couldn't extract structured data automatically (PDF may be scanned or password-protected). We'll continue with the guided questions — I'll reference your AIS where helpful.`);
+        setTimeout(() => continueAfterWelcome(), 800);
+      }, 400);
+    }
+  } catch (err) {
+    botSay(`⚠️ Could not read the AIS PDF: ${err.message || 'Unknown error'}. <br>This can happen if the PDF is password-protected (open it in your browser first, then save without password). We'll continue manually.`);
+    setTimeout(() => continueAfterWelcome(), 1200);
+  }
+}
+
+// ============================================================
 // UTILITIES
 // ============================================================
 function fmt(n) {
@@ -470,15 +662,40 @@ function fmt(n) {
 }
 function inLakh(n) { return (n/100000).toFixed(2) + 'L'; }
 
+// Progress steps for the bar (approximate)
+const PROGRESS_STEPS = {
+  welcome:0, name:5, age:8, residential:12, foreignAsset:15, director:18,
+  sources:22, salaryGross:28, salaryHRA:32, rentPaid:35, metroCity:38, employerNps:42,
+  hpType:30, hpRent:33, hpMunicipal:36, hpInterest:39, multipleHouses:44,
+  businessTurnover:30, businessProfitMode:34, businessProfit:38,
+  cgSTCG111A:40, cgSTCGOther:44, cgLTCG112A:48, cgLTCGOther:52,
+  osSavings:55, osFD:58, osDividend:61, osGifts:64,
+  ded80C:70, ded80CCD1B:73, ded80D:76, ded80E:79, ded80G:82, ded80TTA:88,
+  review:100, guide:100
+};
+function updateProgress() {
+  const pct = PROGRESS_STEPS[state.step] ?? 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
 function botSay(html, options) {
+  // Show typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'msg bot bot-typing-anim';
+  typing.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+  messagesDiv.appendChild(typing);
+  scrollDown();
+
   setTimeout(() => {
+    typing.remove();
     const div = document.createElement('div');
     div.className = 'msg bot';
     div.innerHTML = html;
     messagesDiv.appendChild(div);
     if (options) renderOptions(options);
+    updateProgress();
     scrollDown();
-  }, 250);
+  }, 320);
 }
 
 function userSay(text) {
@@ -517,8 +734,8 @@ function renderOptions(options) {
 }
 
 function clearOptions() {
-  const old = document.getElementById('currentOptions');
-  if (old) old.remove();
+  // Remove ALL option blocks, not just the last one (prevents orphaned buttons on loop)
+  messagesDiv.querySelectorAll('.options').forEach(el => el.remove());
 }
 
 function showInput(placeholder, type='text') {
@@ -572,10 +789,11 @@ userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendBtn.cli
 // CONVERSATION FLOW
 // ============================================================
 function start() {
-  botSay(`<b>Namaste!</b> I'm your ITR filing assistant. I'll guide you step-by-step through your Income Tax Return for <b>FY 2025-26 (AY 2026-27)</b>.<br><br>I'll ask a few questions to understand your income, recommend the right ITR form, compute your tax under both regimes, and walk you through filing on the e-filing portal.<br><br>Ready to start?`,
+  botSay(`<b>Namaste!</b> I'm your ITR filing assistant for <b>FY 2025-26 (AY 2026-27)</b>.<br><br>I'll ask a few questions to understand your income, compute your tax under both regimes, recommend the right ITR form, and give you a step-by-step filing guide.<br><br>💡 <b>Tip:</b> You can upload your <b>AIS (Annual Information Statement)</b> from incometax.gov.in to auto-fill most details — or just answer the guided questions manually.`,
     [
-      { label: '🚀 Yes, let\'s begin', value: 'begin' },
-      { label: '📚 I just want to learn', value: 'learn' }
+      { label: '📄 Upload AIS & auto-fill', value: 'uploadAIS' },
+      { label: '🚀 Start guided questions', value: 'begin' },
+      { label: '📚 Just learning / Q&A', value: 'learn' }
     ]);
 }
 
@@ -623,17 +841,54 @@ function routeAnswer(value) {
 // --- WELCOME ---
 function handleWelcome(v) {
   if (v === 'learn') {
-    botSay(`Sure! You can ask me anything about Indian income tax. Try questions like:<br><ul><li>What is the difference between old and new regime?</li><li>How is HRA exemption calculated?</li><li>What is Section 80C?</li><li>How are capital gains taxed?</li></ul><br>Or click <b>Restart</b> any time to begin guided ITR filing.`);
-    botSay(`💡 For authoritative reference, visit <b>incometax.gov.in</b> or consult CBDT notifications. You can also restart any time to begin guided ITR filing.`);
+    botSay(`Sure! Ask me anything about Indian income tax. For example:<br><ul><li>Old regime vs new regime difference?</li><li>How is HRA exemption calculated?</li><li>What is Section 80C?</li><li>How are capital gains taxed?</li></ul>`);
     showInput('Ask any tax question...');
+    state.step = 'qa_freeform';
     state.pendingInput = (q) => {
       botSay(answerQuestion(q));
       showInput('Ask another question...');
     };
     return;
   }
+  if (v === 'uploadAIS') {
+    botSay(`Great! Please upload your AIS PDF.<br><br>How to get it:<br>1. Login at <b>incometax.gov.in</b><br>2. Go to <b>AIS</b> tab on the dashboard<br>3. Click <b>Download → PDF</b><br>4. Upload the downloaded file below.`);
+    // Render an inline upload button
+    setTimeout(() => {
+      const wrap = document.createElement('div');
+      wrap.className = 'options';
+      wrap.innerHTML = `
+        <label style="cursor:pointer;display:inline-block;">
+          <input type="file" accept=".pdf" style="display:none" id="aisFileInput">
+          <span style="background:var(--primary);color:white;padding:8px 18px;border-radius:18px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+            📂 Choose AIS PDF
+          </span>
+        </label>
+        <button class="option-btn" onclick="continueAfterWelcome()" style="font-size:12px;">Skip — answer manually</button>
+      `;
+      messagesDiv.appendChild(wrap);
+      scrollDown();
+      document.getElementById('aisFileInput').onchange = e => {
+        const f = e.target.files[0];
+        if (f) { wrap.remove(); userSay('📄 ' + f.name); handleAISUpload(f); }
+      };
+    }, 350);
+    return;
+  }
+  continueAfterWelcome();
+}
+
+function continueAfterWelcome() {
+  clearOptions();
   state.step = 'name';
-  botSay(`Great! Let's begin. <br><br>What's your <b>name</b> (or the taxpayer's name)?`);
+  // If AIS gave us the name, skip straight to age
+  if (state.profile.name) {
+    botSay(`Hello <b>${state.profile.name}</b>! Let me verify your details. What is your <b>age</b>?<br><i>Senior citizens (60+) get higher exemption in old regime.</i>`);
+    showInput('e.g., 35', 'number');
+    state.pendingInput = v => routeAnswer(parseInt(v, 10));
+    state.step = 'age';
+    return;
+  }
+  botSay(`Let's begin! What's your <b>name</b> (or the taxpayer's name)?`);
   showInput('e.g., Rajesh Kumar');
   state.pendingInput = (v) => { state.profile.name = v; routeAnswer(v); };
 }
@@ -772,6 +1027,8 @@ function handleSalaryHRA(v) {
 }
 function routeAnswerNext(nextStep) { state.step = nextStep; runStep(nextStep); }
 function runStep(s) {
+  // ⚠ ALWAYS update state.step so routeAnswer dispatches correctly after options are chosen
+  state.step = s;
   if (s === 'rentPaid') {
     if (state.profile.salary.hraReceived === 0) { state.profile.rentPaidYearly = 0; runStep('employerNps'); return; }
     botSay(`Annual <b>rent paid</b> by you (₹)?`);
