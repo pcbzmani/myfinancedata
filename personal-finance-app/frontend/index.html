@@ -19,10 +19,44 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- SEO / social -->
-    <meta name="description" content="Track your finances, investments, and insurance in one place." />
+    <meta name="description" content="PanamKasu – a free personal finance and budgeting app to track income, expenses, and savings goals." />
+    <meta name="keywords" content="personal finance, budgeting, expense tracker, income tracker, savings" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="PanamKasu – Personal Finance & Budgeting" />
+    <meta property="og:description" content="Free personal finance app to track income, expenses, and budgets. No ads, no hidden fees." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://panamkasu.netlify.app" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!--
+      Static footer — crawlable by search engines and payment gateway bots
+      even before React hydrates. Kept visually hidden; accessible to crawlers.
+    -->
+    <noscript>
+      <div style="font-family:sans-serif;text-align:center;padding:40px 20px;color:#334155;">
+        <h1>PanamKasu</h1>
+        <p>A free personal finance and budgeting application.</p>
+        <p>Track your income, expenses, and savings — all in one place.</p>
+        <br>
+        <p>
+          <a href="/privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
+          <a href="/refund-policy.html">Refund &amp; Cancellation Policy</a> &nbsp;·&nbsp;
+          <a href="mailto:pcbzmani@gmail.com">Contact Us</a>
+        </p>
+      </div>
+    </noscript>
+
+    <!-- Legal links — visible to crawlers, hidden from users once React loads -->
+    <footer id="static-footer" style="position:fixed;bottom:0;left:0;right:0;padding:6px;text-align:center;font-size:11px;font-family:sans-serif;color:#94a3b8;background:transparent;z-index:-1;pointer-events:none;">
+      <a href="/privacy-policy.html" style="color:#64748b;text-decoration:none;pointer-events:auto;">Privacy Policy</a>
+      &nbsp;·&nbsp;
+      <a href="/refund-policy.html" style="color:#64748b;text-decoration:none;pointer-events:auto;">Refund Policy</a>
+      &nbsp;·&nbsp;
+      <a href="mailto:pcbzmani@gmail.com" style="color:#64748b;text-decoration:none;pointer-events:auto;">Contact</a>
+    </footer>
   </body>
 </html>

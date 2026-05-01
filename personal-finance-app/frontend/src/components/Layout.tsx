@@ -262,13 +262,20 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
         <div className={`py-4 space-y-2 ${collapsed ? 'px-2' : 'px-4'}`}>
           <ThemeToggle showLabel={!collapsed} />
           {!collapsed && (
-            <div className="flex items-center gap-2 px-3">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
-            </div>
+            <>
+              <div className="flex items-center gap-2 px-3">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <p className="text-xs text-slate-400 dark:text-slate-500">Synced to Google Sheets</p>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 pt-1">
+                <a href="/privacy-policy.html" target="_blank" rel="noopener" className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors">Privacy</a>
+                <a href="/refund-policy.html" target="_blank" rel="noopener" className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors">Refunds</a>
+                <a href="mailto:pcbzmani@gmail.com" className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors">Contact</a>
+              </div>
+            </>
           )}
           {collapsed && (
             <div className="flex justify-center" title="Synced to Google Sheets">
