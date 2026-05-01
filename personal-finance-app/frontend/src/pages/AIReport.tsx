@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { getRows } from '../lib/api';
 import RazorpayDonation from '../components/RazorpayDonation';
+import UpiDonation from '../components/UpiDonation';
 
 /* ─── Daily usage tracking (localStorage) ────────────────────────────── */
 const FREE_LIMIT = 2;
@@ -339,7 +340,10 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
           <div className="bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-700 rounded-xl p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Love PanamKasu? Support the app ❤️</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">PanamKasu is free to use. If it's saving you time and money, consider a small donation to help keep the servers running.</p>
-            <RazorpayDonation variant="button" label="Donate to Support PanamKasu" />
+            <div className="flex flex-wrap gap-2">
+              <UpiDonation variant="button" label="Donate via UPI ☕" />
+              <RazorpayDonation variant="button" label="Pay by Card" />
+            </div>
           </div>
         </div>
       )}
@@ -371,7 +375,7 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
       )}
 
       {/* ── Donation card (always visible at bottom) ── */}
-      <RazorpayDonation variant="card" />
+      <UpiDonation variant="card" />
 
     </div>
   );
