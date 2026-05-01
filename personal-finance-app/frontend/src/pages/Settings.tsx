@@ -914,7 +914,7 @@ export default function Settings() {
           <p className="text-xs font-semibold text-violet-500 uppercase tracking-wider mb-2">Legal &amp; Support</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
             <a href="/privacy-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</a>
-            <a href="/refund-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Refund Policy</a>
+            <a href="/refund-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Donation Policy</a>
             <a href="mailto:pcbzmani@gmail.com" className="text-violet-600 dark:text-violet-400 hover:underline">Contact developer</a>
             <a href="https://github.com/pcbzmani/myfinancedata/issues" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Report a bug</a>
           </div>
