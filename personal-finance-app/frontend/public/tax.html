@@ -1,474 +1,919 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Income Tax — PanamKasu</title>
+<title>ITR Filing Assistant — PanamKasu</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ──────────────────────────────────────────
+   RESET & BASE
+────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ──────────────────────────────────────────
+   DESIGN TOKENS — Light
+────────────────────────────────────────── */
 :root {
-  --primary: #0b5394;
-  --primary-light: #cfe2f3;
-  --accent: #ff9933;
-  --bg: #f5f7fb;
-  --panel: #ffffff;
-  --border: #e1e5ec;
-  --text: #1a2332;
-  --muted: #5e6b7e;
-  --success: #2e7d32;
-  --warn: #b26a00;
+  --navy:       #1a3a5f;
+  --navy-2:     #2d5a94;
+  --navy-3:     #4a7fc1;
+  --navy-bg:    #e8f0fb;
+  --saffron:    #FF9933;
+  --saffron-dk: #cc6f00;
+  --green:      #16a34a;
+  --green-bg:   #f0fdf4;
+  --red:        #dc2626;
+  --red-bg:     #fef2f2;
+  --bg:         #f1f5f9;
+  --surface:    #ffffff;
+  --surface-2:  #f8fafc;
+  --border:     #e2e8f0;
+  --border-2:   #cbd5e1;
+  --text:       #0f172a;
+  --text-2:     #334155;
+  --muted:      #64748b;
+  --muted-2:    #94a3b8;
+  --sh-xs:      0 1px 3px rgba(0,0,0,0.06);
+  --sh-sm:      0 2px 8px rgba(0,0,0,0.09);
+  --sh:         0 4px 16px rgba(0,0,0,0.11);
+  --r-sm:       8px;
+  --r:          14px;
+  --r-lg:       18px;
+  --t:          0.18s ease;
 }
+
+/* Dark mode (attribute-driven, set by JS toggle) */
+[data-theme="dark"] {
+  --navy:       #60a5fa;
+  --navy-2:     #93c5fd;
+  --navy-3:     #bfdbfe;
+  --navy-bg:    #1e3a5f;
+  --saffron:    #fbbf24;
+  --saffron-dk: #d97706;
+  --green:      #4ade80;
+  --green-bg:   #14532d;
+  --red:        #f87171;
+  --red-bg:     #450a0a;
+  --bg:         #0f172a;
+  --surface:    #1e293b;
+  --surface-2:  #162032;
+  --border:     #334155;
+  --border-2:   #475569;
+  --text:       #f1f5f9;
+  --text-2:     #cbd5e1;
+  --muted:      #94a3b8;
+  --muted-2:    #64748b;
+  --sh-xs:      0 1px 3px rgba(0,0,0,0.3);
+  --sh-sm:      0 2px 8px rgba(0,0,0,0.35);
+  --sh:         0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* OS dark mode (when user hasn't toggled manually) */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --navy:       #60a5fa;
+    --navy-2:     #93c5fd;
+    --navy-3:     #bfdbfe;
+    --navy-bg:    #1e3a5f;
+    --saffron:    #fbbf24;
+    --saffron-dk: #d97706;
+    --green:      #4ade80;
+    --green-bg:   #14532d;
+    --red:        #f87171;
+    --red-bg:     #450a0a;
+    --bg:         #0f172a;
+    --surface:    #1e293b;
+    --surface-2:  #162032;
+    --border:     #334155;
+    --border-2:   #475569;
+    --text:       #f1f5f9;
+    --text-2:     #cbd5e1;
+    --muted:      #94a3b8;
+    --muted-2:    #64748b;
+    --sh-xs:      0 1px 3px rgba(0,0,0,0.3);
+    --sh-sm:      0 2px 8px rgba(0,0,0,0.35);
+    --sh:         0 4px 16px rgba(0,0,0,0.4);
+  }
+}
+
+/* ──────────────────────────────────────────
+   GLOBAL
+────────────────────────────────────────── */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.55;
   min-height: 100vh;
+  transition: background var(--t), color var(--t);
 }
-header {
-  background: linear-gradient(135deg, var(--primary) 0%, #1a73a8 100%);
+
+/* ──────────────────────────────────────────
+   APP SHELL
+────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ──────────────────────────────────────────
+   TOP BAR
+────────────────────────────────────────── */
+.top-bar {
+  background: var(--navy);
   color: white;
-  padding: 14px 20px;
+  padding: 0 20px;
+  height: 52px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  box-shadow: var(--sh-sm);
+  z-index: 10;
 }
-header .logo { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-header .logo-mark {
-  width: 36px; height: 36px; border-radius: 8px;
-  background: var(--accent); display: flex; align-items: center; justify-content: center;
-  font-weight: 700; color: white;
-}
-header .meta { font-size: 13px; opacity: 0.9; }
-.container {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 20px;
+.top-bar-inner {
+  width: 100%;
   max-width: 1400px;
-  margin: 20px auto;
-  padding: 0 20px;
-  height: calc(100vh - 120px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-@media (max-width: 980px) {
-  .container { grid-template-columns: 1fr; height: auto; }
+.tool-title {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+}
+.ay-badge {
+  background: var(--saffron);
+  color: #1a0a00;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+.progress-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.step-label {
+  font-size: 11px;
+  opacity: 0.8;
+  white-space: nowrap;
+  min-width: 100px;
+  text-align: right;
+}
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--saffron);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.step-pct {
+  font-size: 11px;
+  opacity: 0.7;
+  min-width: 28px;
+}
+.theme-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--t);
+  flex-shrink: 0;
+}
+.theme-btn:hover { background: rgba(255,255,255,0.22); }
+
+/* ──────────────────────────────────────────
+   LAYOUT
+────────────────────────────────────────── */
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 0;
+  overflow: hidden;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    padding: 10px;
+    gap: 10px;
+  }
   .sidebar { order: 2; }
 }
+
+/* ──────────────────────────────────────────
+   CHAT PANEL
+────────────────────────────────────────── */
 .chat-panel {
-  background: var(--panel);
-  border-radius: 12px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
   border: 1px solid var(--border);
+  box-shadow: var(--sh-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%;
-  min-height: 600px;
+  min-height: 0;
 }
-.chat-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  background: #fafbfc;
-}
-.chat-header h2 { font-size: 16px; color: var(--primary); }
-.chat-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 18px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
+  scroll-behavior: smooth;
 }
-.msg {
-  max-width: 85%;
+.messages::-webkit-scrollbar { width: 5px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+/* ── Message bubbles ── */
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: msgIn 0.28s ease both;
+}
+.msg-row.bot { align-self: flex-start; max-width: 88%; }
+.msg-row.user { align-self: flex-end; flex-direction: row-reverse; max-width: 80%; }
+@keyframes msgIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+.bot-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--sh-xs);
+}
+.bubble {
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 14px;
-  line-height: 1.5;
-  word-wrap: break-word;
-  animation: fadeIn 0.3s ease;
+  line-height: 1.55;
+  word-break: break-word;
 }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.msg.bot {
-  background: #eef3fa;
-  align-self: flex-start;
+.bubble.bot {
+  background: var(--navy-bg);
+  color: var(--text);
   border-bottom-left-radius: 4px;
 }
-.msg.user {
-  background: var(--primary);
+.bubble.user {
+  background: var(--navy);
   color: white;
-  align-self: flex-end;
   border-bottom-right-radius: 4px;
 }
-.msg b { color: var(--primary); }
-.msg.user b { color: #ffd28a; }
-.msg ul { margin: 6px 0 0 20px; }
-.msg li { margin: 3px 0; }
-.msg pre {
-  background: rgba(0,0,0,0.06);
-  padding: 8px;
-  border-radius: 6px;
-  font-family: ui-monospace, "SF Mono", Consolas, monospace;
-  font-size: 12.5px;
-  overflow-x: auto;
-  margin-top: 6px;
+.bubble b { color: var(--navy-2); }
+.bubble.user b { color: #ffd28a; }
+[data-theme="dark"] .bubble.bot { background: var(--surface-2); }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .bubble.bot { background: var(--surface-2); }
 }
-.msg.user pre { background: rgba(255,255,255,0.2); }
+.bubble ul { margin: 6px 0 0 18px; }
+.bubble li { margin: 4px 0; }
+.bubble a { color: var(--navy-2); }
+.bubble.user a { color: #ffd28a; }
+
+/* ── Typing animation ── */
+.typing-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  align-self: flex-start;
+  animation: msgIn 0.2s ease both;
+}
+.typing-bubble {
+  background: var(--navy-bg);
+  padding: 12px 16px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+[data-theme="dark"] .typing-bubble,
+html:not([data-theme="light"]) .typing-bubble { background: var(--surface-2); }
+.typing-dot {
+  width: 7px; height: 7px;
+  background: var(--muted);
+  border-radius: 50%;
+  animation: bounce 1.2s infinite both;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+}
+
+/* ── Options ── */
 .options {
+  align-self: flex-start;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-self: flex-start;
-  max-width: 85%;
+  max-width: 88%;
+  padding-left: 38px;
+  animation: msgIn 0.3s ease 0.1s both;
 }
 .option-btn {
-  background: white;
-  border: 1.5px solid var(--primary);
-  color: var(--primary);
-  padding: 8px 14px;
-  border-radius: 18px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.18s;
+  background: var(--surface);
+  border: 1.5px solid var(--navy);
+  color: var(--navy);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13.5px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all var(--t);
+  white-space: nowrap;
 }
-.option-btn:hover { background: var(--primary); color: white; }
-.option-btn.multi.selected { background: var(--primary); color: white; }
+.option-btn:hover {
+  background: var(--navy);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--sh-xs);
+}
+.option-btn.multi { border-color: var(--navy-3); color: var(--navy-2); }
+.option-btn.multi.selected { background: var(--navy); color: white; }
+.option-btn.done-btn {
+  background: var(--saffron);
+  border-color: var(--saffron);
+  color: white;
+  font-weight: 600;
+}
+.option-btn.done-btn:hover { background: var(--saffron-dk); border-color: var(--saffron-dk); }
+
+/* ── AIS extraction result ── */
+.ais-extracted {
+  background: var(--green-bg);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  margin-top: 8px;
+}
+.ais-extracted table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.ais-extracted td { padding: 3px 5px; }
+.ais-extracted td:last-child { text-align: right; font-weight: 600; color: var(--green); }
+
+/* ── Input row ── */
 .input-row {
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
-  background: #fafbfc;
+  background: var(--surface-2);
   display: flex;
   gap: 8px;
+  align-items: center;
 }
-.input-row input, .input-row select {
+.input-row input {
   flex: 1;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 22px;
   font-size: 14px;
   outline: none;
-  background: white;
+  background: var(--surface);
+  color: var(--text);
   font-family: inherit;
+  transition: border-color var(--t);
 }
-.input-row input:focus, .input-row select:focus { border-color: var(--primary); }
-.input-row button {
-  background: var(--primary);
+.input-row input::placeholder { color: var(--muted-2); }
+.input-row input:focus { border-color: var(--navy); }
+#sendBtn {
+  width: 38px; height: 38px;
+  background: var(--navy);
   color: white;
   border: none;
-  padding: 9px 18px;
-  border-radius: 18px;
+  border-radius: 50%;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--t), transform var(--t);
 }
-.input-row button:hover { background: #084273; }
-.input-row button.secondary { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+#sendBtn:hover { background: var(--navy-2); transform: scale(1.06); }
 
+/* ──────────────────────────────────────────
+   SIDEBAR
+────────────────────────────────────────── */
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  height: 100%;
+  gap: 12px;
   overflow-y: auto;
+  min-height: 0;
 }
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
 .card {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r);
   padding: 14px 16px;
+  box-shadow: var(--sh-xs);
+  transition: box-shadow var(--t);
 }
-.card h3 {
-  font-size: 13px;
+.card:hover { box-shadow: var(--sh-sm); }
+
+.card-title {
+  font-size: 11.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.summary-row {
+.card-title span { font-size: 14px; }
+
+/* ── Tax summary grid ── */
+.sum-grid {
+  display: grid;
+  gap: 1px;
+  margin-bottom: 14px;
+}
+.sum-row {
   display: flex;
   justify-content: space-between;
-  font-size: 13.5px;
+  font-size: 12.5px;
   padding: 5px 0;
   border-bottom: 1px dashed var(--border);
+  color: var(--text-2);
 }
-.summary-row:last-child { border-bottom: none; }
-.summary-row span:last-child { font-weight: 600; }
-.summary-row.highlight {
-  margin-top: 6px;
-  padding: 7px 0;
-  font-size: 14px;
-  color: var(--primary);
-  border-top: 2px solid var(--primary);
-  border-bottom: none;
-}
-.checklist-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  padding: 4px 0;
-}
-.checklist-item input[type=checkbox] { margin-top: 3px; }
-.checklist-item.done span { text-decoration: line-through; color: var(--muted); }
-.tag {
-  display: inline-block;
-  font-size: 11px;
-  padding: 2px 8px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-radius: 10px;
-  font-weight: 600;
-  margin-left: 6px;
-}
-.tag.success { background: #e8f5e9; color: var(--success); }
-.tag.warn { background: #fff4e0; color: var(--warn); }
-footer {
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
+.sum-row:last-child { border-bottom: none; }
+.sum-row span:last-child { font-weight: 600; color: var(--text); }
+
+/* ── Regime comparison bars ── */
+.regime-compare {
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
   padding: 12px;
-  margin-top: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.controls-bar {
+.regime-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.regime-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.regime-name { font-weight: 600; color: var(--text-2); }
+.regime-amt { font-weight: 700; font-size: 13px; color: var(--text); }
+.regime-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.regime-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+  min-width: 2px;
+}
+.regime-bar-fill.new { background: var(--navy); }
+.regime-bar-fill.old { background: var(--muted); }
+.regime-bar-fill.winner { background: var(--green); }
+
+.recommendation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green-bg);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--green);
+}
+.recommendation.hidden { display: none; }
+
+/* ── Sidebar actions ── */
+.sidebar-actions {
   display: flex;
   gap: 6px;
   margin-top: 8px;
 }
-.controls-bar button {
+.sidebar-actions button {
   flex: 1;
-  background: white;
+  padding: 7px 4px;
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-weight: 500;
+  transition: all var(--t);
+  white-space: nowrap;
 }
-.controls-bar button:hover { background: var(--primary-light); border-color: var(--primary); }
-@media print {
-  header, .input-row, .controls-bar { display: none; }
-  .container { grid-template-columns: 1fr; height: auto; }
-  .messages { overflow: visible; }
-}
-.bot-typing { font-style: italic; color: var(--muted); font-size: 13px; padding: 4px 14px; }
-.section-link {
-  color: var(--primary);
-  cursor: pointer;
-  text-decoration: underline;
-  font-size: 12px;
+.sidebar-actions button:hover {
+  background: var(--navy-bg);
+  border-color: var(--navy);
+  color: var(--navy);
 }
 
-/* ── Progress bar ── */
-.progress-bar-wrap {
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 8px 18px 0;
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 2px;
-  transition: width 0.4s ease;
-}
-
-/* ── AIS upload card ── */
-.ais-upload-card {
-  background: linear-gradient(135deg, #e8f4fd 0%, #dbeeff 100%);
-  border: 1.5px dashed #5c9fdb;
+/* ── ITR form badge ── */
+.form-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
   border-radius: 12px;
-  padding: 14px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--navy-bg);
+  color: var(--navy);
+  margin-left: 6px;
+}
+.form-badge.recommended { background: var(--green-bg); color: var(--green); }
+#formInfo {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── Checklist ── */
+#checklist { font-size: 12.5px; color: var(--muted); }
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--text-2);
   cursor: pointer;
-  text-align: center;
-  transition: background 0.15s;
+  transition: color var(--t);
 }
-.ais-upload-card:hover { background: linear-gradient(135deg, #d6ecfa 0%, #c7e2ff 100%); }
-.ais-upload-card h4 { font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 4px; }
-.ais-upload-card p { font-size: 12px; color: var(--muted); }
-.ais-extracted { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-top: 8px; }
-.ais-extracted table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-.ais-extracted td { padding: 3px 6px; color: var(--text); }
-.ais-extracted td:last-child { text-align: right; font-weight: 600; color: var(--success); }
+.checklist-item input[type=checkbox] { margin-top: 2px; accent-color: var(--navy); flex-shrink: 0; }
+.checklist-item.done span { text-decoration: line-through; color: var(--muted); }
 
-/* Typing dots */
-@keyframes blink { 0%,80%,100% { opacity:0 } 40% { opacity:1 } }
-.typing-dot { display: inline-block; width: 6px; height: 6px; background: var(--muted); border-radius: 50%; margin: 0 2px; animation: blink 1.2s infinite both; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-/* ===== Support / Donation ===== */
-.support-card {
-  background: linear-gradient(135deg, #fff4e0 0%, #ffe0c2 100%);
-  border: 1px solid #f0c98c;
+/* ── Help / key dates card ── */
+.help-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+  color: var(--text-2);
 }
-.support-card h3 { color: #b26a00; }
-.support-card p { font-size: 13px; color: #6b4a17; margin-bottom: 10px; line-height: 1.5; }
-.support-btn {
+.help-row:last-child { border-bottom: none; }
+.help-row span:last-child { font-weight: 600; color: var(--text); }
+
+/* ── Support / Donate card ── */
+.donate-card { background: linear-gradient(135deg, #fff8ec 0%, #fff0d6 100%); border-color: #f5d67a; }
+[data-theme="dark"] .donate-card,
+html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg, #291700 0%, #1e0e00 100%); border-color: #713f12; }
+.donate-card .card-title { color: var(--saffron-dk); }
+.donate-card p { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.donate-btn {
   width: 100%;
-  background: var(--accent);
+  background: var(--saffron);
   color: white;
   border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background 0.15s;
+  transition: background var(--t), transform var(--t);
 }
-.support-btn:hover { background: #e68a2e; }
+.donate-btn:hover { background: var(--saffron-dk); transform: translateY(-1px); }
 
-/* ── PanamKasu embed overrides ── */
-body { margin: 0; }
-header { display: none !important; }  /* hide original header — PanamKasu provides nav */
-footer { display: none !important; }  /* hide original footer */
-/* Fill the iframe viewport; header is hidden so subtract only top+bottom padding (24px) */
-.container { margin: 0 auto; padding: 12px 16px; height: calc(100vh - 24px); }
-@media (max-width: 980px) { .container { padding: 8px; height: auto; } }
+/* ──────────────────────────────────────────
+   DONATION MODAL (inline Razorpay for tax.html)
+────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeOverlay 0.2s ease;
+}
+@keyframes fadeOverlay { from { opacity:0; } to { opacity:1; } }
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--sh);
+  overflow: hidden;
+  animation: slideUp 0.22s ease;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform:none; opacity:1; } }
+.modal-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-head-title { font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.modal-close {
+  width: 28px; height: 28px;
+  border: none; background: var(--surface-2);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t);
+}
+.modal-close:hover { background: var(--border); }
+.modal-body { padding: 16px 20px; }
+.donate-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.preset-btn {
+  padding: 8px 4px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: all var(--t);
+  text-align: center;
+}
+.preset-btn:hover { border-color: var(--saffron); color: var(--saffron-dk); }
+.preset-btn.active { background: var(--saffron); border-color: var(--saffron); color: white; }
+.donate-custom {
+  position: relative;
+  margin-bottom: 10px;
+}
+.donate-custom span {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 14px; font-weight: 600;
+}
+.donate-custom input {
+  width: 100%;
+  padding: 9px 12px 9px 26px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  transition: border-color var(--t);
+}
+.donate-custom input:focus { border-color: var(--saffron); }
+.donate-email input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 12px;
+  transition: border-color var(--t);
+}
+.donate-email input:focus { border-color: var(--saffron); }
+.donate-pay-btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--saffron);
+  color: white;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background var(--t);
+}
+.donate-pay-btn:hover:not(:disabled) { background: var(--saffron-dk); }
+.donate-pay-btn:disabled { opacity: 0.6; cursor: default; }
+.donate-note { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 8px; }
+.donate-success { text-align: center; padding: 20px 0; }
+.donate-success .emoji { font-size: 48px; }
+.donate-success h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; color: var(--text); }
+.donate-success p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.donate-err { font-size: 12.5px; color: var(--red); background: var(--red-bg); border-radius: var(--r-sm); padding: 8px 10px; margin-bottom: 10px; }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #60a5fa;
-    --primary-light: #1e3a5f;
-    --accent: #fbbf24;
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --border: #334155;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --success: #4ade80;
-    --warn: #fbbf24;
-  }
-  body { background: var(--bg); color: var(--text); }
-  input, select { background: #1e293b; color: #e2e8f0; border-color: #334155; }
-  input::placeholder { color: #64748b; }
-  .option-btn { background: #1e293b; color: #60a5fa; border-color: #3b82f6; }
-  .option-btn:hover { background: #3b82f6; color: white; }
-  .option-btn.multi.selected { background: #3b82f6; color: white; }
-  .msg.bot { background: #1e293b; color: #e2e8f0; }
-  .msg.bot b { color: #60a5fa; }
-  .msg.user { background: #2563eb; }
-  .sidebar { border-color: #334155; }
-  .card { background: var(--panel); border-color: #334155; }
-  .tag.neutral { background: #1e293b; color: #94a3b8; }
-  .tag.success { background: #14532d; color: #4ade80; }
-  .tag.warn { background: #451a03; color: #fbbf24; }
-  .chat-header { background: #1e293b; }
-  .modal { background: #1e293b; color: #e2e8f0; }
-  .modal input { background: #0f172a; color: #e2e8f0; border-color: #334155; }
-  .amount-presets button { background: #0f172a; color: #60a5fa; border-color: #3b82f6; }
-  .amount-presets button:hover { background: #3b82f6; color: white; }
-  table { color: #e2e8f0; }
-  th { background: #1e3a5f; color: #93c5fd; border-color: #334155; }
-  td { border-color: #334155; }
-  tr:nth-child(even) { background: #162032; }
-  .input-row { background: #1e293b; border-color: #334155; }
-  .input-row input { background: #0f172a; border-color: #334155; }
-  .send-btn { background: #3b82f6; }
-  .sidebar-section { border-color: #334155; }
-  .summary-card { background: #0f172a; border-color: #334155; }
-  .ais-upload-card { background: linear-gradient(135deg, #1e3a5f 0%, #162032 100%); border-color: #3b82f6; }
-  .ais-upload-card:hover { background: linear-gradient(135deg, #1e3a5f 0%, #1a2d4a 100%); }
-  .ais-upload-card h4 { color: #60a5fa; }
-  .ais-extracted { background: #14532d; border-color: #166534; }
-  .ais-extracted td { color: #e2e8f0; }
-  .ais-extracted td:last-child { color: #4ade80; }
+/* ──────────────────────────────────────────
+   IFRAME EMBED OVERRIDES
+   (PanamKasu embeds this via iframe — hide top-bar,
+   fill viewport precisely)
+────────────────────────────────────────── */
+.top-bar  { display: none !important; }
+.app-shell { height: calc(100vh); }
+.layout { padding: 10px; height: 100%; }
+
+/* ── Print ── */
+@media print {
+  .top-bar, .input-row, .sidebar-actions, .donate-card { display: none; }
+  .layout { grid-template-columns: 1fr; }
+  .messages { overflow: visible; height: auto; }
+  .chat-panel { box-shadow: none; border: 1px solid #ccc; }
 }
 
+/* ── Scrollbar polish (Firefox) ── */
+* { scrollbar-width: thin; scrollbar-color: var(--border-2) transparent; }
 </style>
 </head>
 <body>
-<header>
-  <div class="logo">
-    <div class="logo-mark">IT</div>
-    <div>
-      <div>ITR Filing Assistant</div>
-      <div style="font-size: 11px; opacity: 0.85; font-weight: 400;">Indian Income Tax — FY 2025-26 / AY 2026-27</div>
+
+<!-- Top bar (hidden via CSS when embedded in iframe) -->
+<div class="top-bar" id="topBar">
+  <div class="top-bar-inner">
+    <span class="tool-title">🇮🇳 ITR Filing Assistant <span class="ay-badge">AY 2026-27</span></span>
+    <div class="progress-section">
+      <span class="step-label" id="stepLabel">Getting started</span>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressBar" style="width:0%"></div>
+      </div>
+      <span class="step-pct" id="stepPct">0%</span>
     </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle dark mode">🌙</button>
   </div>
-  <div class="meta">Powered by your knowledge base</div>
-</header>
-
-<div class="container">
-  <div class="chat-panel">
-    <div class="chat-header">
-      <h2>Tax Assistant</h2>
-      <p>I'll guide you through filing your Income Tax Return step by step.</p>
-    </div>
-    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
-    <div class="messages" id="messages"></div>
-    <div class="input-row" id="inputRow" style="display:none;">
-      <input type="text" id="userInput" placeholder="Type your answer..." />
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
-
-  <aside class="sidebar">
-    <div class="card">
-      <h3>Tax Computation</h3>
-      <div id="summary">
-        <div class="summary-row"><span>Status</span><span id="sumStatus">—</span></div>
-        <div class="summary-row"><span>Gross Total Income</span><span id="sumGTI">—</span></div>
-        <div class="summary-row"><span>Total Deductions</span><span id="sumDed">—</span></div>
-        <div class="summary-row"><span>Taxable Income</span><span id="sumTI">—</span></div>
-        <div class="summary-row"><span>Tax (New regime)</span><span id="sumNew">—</span></div>
-        <div class="summary-row"><span>Tax (Old regime)</span><span id="sumOld">—</span></div>
-        <div class="summary-row highlight"><span>Recommended</span><span id="sumRec">—</span></div>
-      </div>
-      <div class="controls-bar">
-        <button onclick="restart()">Restart</button>
-        <button onclick="window.print()">Print</button>
-        <button onclick="exportSummary()">Save</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>ITR Form <span id="formTag" class="tag">awaiting</span></h3>
-      <div id="formInfo" style="font-size:13px;color:var(--muted);">
-        Fill in your profile and I'll recommend the right ITR form.
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Document Checklist</h3>
-      <div id="checklist" style="font-size:13px;color:var(--muted);">
-        Will appear once we identify your income sources.
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Quick Help</h3>
-      <div style="font-size:13px;line-height:1.6;">
-        <strong>Portal:</strong> incometax.gov.in<br>
-        <strong>Helpline:</strong> 1800 103 0025<br>
-        <strong>Due date:</strong> 31 July 2026 (non-audit)<br>
-        <strong>Audit cases:</strong> 31 October 2026<br>
-        <strong>Belated:</strong> 31 December 2026
-      </div>
-    </div>
-
-    <div class="card support-card">
-      <h3>Support this work</h3>
-      <p>If this assistant helped you file your ITR, consider <a href="https://razorpay.me/@pcbzmani" target="_blank" style="color:var(--accent);">donating to support PanamKasu ☕</a></p>
-      <button class="support-btn" title="Donate to support PanamKasu" onclick="openSupportModal()">
-        <span style="font-size:16px;">&#10084;</span> Make a donation
-      </button>
-    </div>
-  </aside>
 </div>
 
-<footer>
-  This assistant uses your local knowledge base on Indian Income Tax. Verify against latest CBDT notifications before filing.
-</footer>
+<div class="app-shell">
+  <div class="layout">
+
+    <!-- ── Chat panel ── -->
+    <div class="chat-panel">
+      <div class="messages" id="messages"></div>
+      <div class="input-row" id="inputRow" style="display:none;">
+        <input type="text" id="userInput" placeholder="Type your answer…" autocomplete="off" spellcheck="false" />
+        <button id="sendBtn" title="Send">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+
+      <!-- Live Tax Estimate -->
+      <div class="card">
+        <div class="card-title"><span>📊</span> Live Tax Estimate</div>
+        <div class="sum-grid">
+          <div class="sum-row"><span>Res. Status</span><span id="sumStatus">—</span></div>
+          <div class="sum-row"><span>Gross Income</span><span id="sumGTI">—</span></div>
+          <div class="sum-row"><span>Deductions</span><span id="sumDed">—</span></div>
+          <div class="sum-row"><span>Taxable Income</span><span id="sumTI">—</span></div>
+        </div>
+        <div class="regime-compare">
+          <div class="regime-row">
+            <div class="regime-header">
+              <span class="regime-name">🆕 New Regime</span>
+              <span class="regime-amt" id="sumNew">—</span>
+            </div>
+            <div class="regime-bar-track"><div class="regime-bar-fill new" id="barNew" style="width:0%"></div></div>
+          </div>
+          <div class="regime-row">
+            <div class="regime-header">
+              <span class="regime-name">📜 Old Regime</span>
+              <span class="regime-amt" id="sumOld">—</span>
+            </div>
+            <div class="regime-bar-track"><div class="regime-bar-fill old" id="barOld" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="recommendation hidden" id="sumRec">—</div>
+        <div class="sidebar-actions">
+          <button onclick="restart()">↺ Restart</button>
+          <button onclick="window.print()">🖨 Print</button>
+          <button onclick="exportSummary()">💾 Save</button>
+        </div>
+      </div>
+
+      <!-- ITR Form -->
+      <div class="card">
+        <div class="card-title"><span>📋</span> ITR Form <span id="formTag" class="form-badge">?</span></div>
+        <div id="formInfo" style="font-size:13px; color:var(--muted);">Complete the guide to get your form recommendation.</div>
+      </div>
+
+      <!-- Document Checklist -->
+      <div class="card">
+        <div class="card-title"><span>✅</span> Document Checklist</div>
+        <div id="checklist" style="font-size:12.5px; color:var(--muted);">Will appear after income sources are identified.</div>
+      </div>
+
+      <!-- Key Dates -->
+      <div class="card">
+        <div class="card-title"><span>🗓</span> Key Dates</div>
+        <div class="help-row"><span>Non-audit (individual)</span><span>31 Jul 2026</span></div>
+        <div class="help-row"><span>Tax audit cases</span><span>31 Oct 2026</span></div>
+        <div class="help-row"><span>Belated / revised</span><span>31 Dec 2026</span></div>
+        <div class="help-row"><span>Updated (ITR-U)</span><span>31 Mar 2030</span></div>
+        <div class="help-row"><span>📞 Helpline</span><span>1800 103 0025</span></div>
+      </div>
+
+      <!-- Support -->
+      <div class="card donate-card">
+        <div class="card-title"><span>☕</span> Support PanamKasu</div>
+        <p>This tool is free forever. If it helped you, consider buying me a chai!</p>
+        <button class="donate-btn" onclick="openDonateModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Donate via Razorpay
+        </button>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- Donation modal (vanilla JS Razorpay SDK checkout) -->
+<div class="modal-overlay" id="donateModal" style="display:none;" onclick="if(event.target===this)closeDonateModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-head-title">☕ Support PanamKasu</span>
+      <button class="modal-close" onclick="closeDonateModal()">✕</button>
+    </div>
+    <div class="modal-body" id="donateBody">
+      <div class="donate-presets" id="donatePresets">
+        <button class="preset-btn" onclick="selectPreset(49,this)">₹49</button>
+        <button class="preset-btn active" onclick="selectPreset(99,this)">₹99</button>
+        <button class="preset-btn" onclick="selectPreset(199,this)">₹199</button>
+        <button class="preset-btn" onclick="selectPreset(499,this)">₹499</button>
+      </div>
+      <div class="donate-custom">
+        <span>₹</span>
+        <input type="number" id="donateCustom" placeholder="Custom amount" min="1" oninput="clearPresetSelection()" />
+      </div>
+      <div class="donate-email">
+        <input type="email" id="donateEmail" placeholder="Email (optional, for receipt)" />
+      </div>
+      <div class="donate-err" id="donateErr" style="display:none;"></div>
+      <button class="donate-pay-btn" id="donatePayBtn" onclick="handleDonatePay()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Donate ₹99 via Razorpay
+      </button>
+      <div class="donate-note">Secure · UPI, Cards, Net Banking accepted</div>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ============================================================
@@ -1953,6 +2398,286 @@ function openSupportModal() {
   window.open('https://razorpay.me/@pcbzmani', '_blank');
 }
 
-</script>
+// ════════════════════════════════════════════════════════
+// UI OVERRIDES — applied after base JS loads
+// ════════════════════════════════════════════════════════
 
+// ── Dark mode toggle ──
+(function() {
+  const btn = document.getElementById('themeBtn');
+  if (!btn) return;
+  const saved = localStorage.getItem('pk-theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  btn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+  btn.addEventListener('click', () => {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    document.documentElement.dataset.theme = isDark ? 'light' : 'dark';
+    localStorage.setItem('pk-theme', isDark ? 'light' : 'dark');
+    btn.textContent = isDark ? '🌙' : '☀️';
+  });
+})();
+
+// ── Step name map ──
+const STEP_LABELS = {
+  welcome:'Getting started', name:'Your name', age:'Your age',
+  residential:'Residential status', foreignAsset:'Foreign assets',
+  director:'Director / shares', sources:'Income sources',
+  salaryGross:'Gross salary', salaryHRA:'HRA received',
+  rentPaid:'Rent paid', metroCity:'Metro city?', employerNps:'Employer NPS',
+  hpType:'House property', hpRent:'Rental income',
+  hpMunicipal:'Municipal taxes', hpInterest:'Home loan interest',
+  multipleHouses:'Multiple houses',
+  businessTurnover:'Business turnover', businessProfitMode:'Tax scheme',
+  businessProfit:'Net profit',
+  cgSTCG111A:'Equity STCG', cgSTCGOther:'Other STCG',
+  cgLTCG112A:'Equity LTCG', cgLTCGOther:'Other LTCG',
+  osSavings:'Savings interest', osFD:'FD interest',
+  osDividend:'Dividends', osGifts:'Gifts received',
+  ded80C:'Section 80C', ded80CCD1B:'NPS (own)',
+  ded80D:'Health insurance', ded80E:'Education loan',
+  ded80G:'Donations 80G', ded80TTA:'Interest deduction',
+  review:'Summary ✓', guide:'Filing guide'
+};
+
+// ── Override updateProgress ──
+updateProgress = function() {
+  const pct = PROGRESS_STEPS[state.step] ?? 0;
+  const bar = document.getElementById('progressBar');
+  const lbl = document.getElementById('stepLabel');
+  const pctEl = document.getElementById('stepPct');
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = STEP_LABELS[state.step] ?? 'In progress';
+  if (pctEl) pctEl.textContent = pct + '%';
+};
+
+// ── Override botSay — avatar + bubble structure ──
+botSay = function(html, options) {
+  const typingRow = document.createElement('div');
+  typingRow.className = 'typing-row';
+  const av = document.createElement('div'); av.className = 'bot-avatar'; av.textContent = '₹';
+  const tb = document.createElement('div'); tb.className = 'typing-bubble';
+  tb.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+  typingRow.appendChild(av); typingRow.appendChild(tb);
+  messagesDiv.appendChild(typingRow);
+  scrollDown();
+
+  setTimeout(() => {
+    typingRow.remove();
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    const av2 = document.createElement('div'); av2.className = 'bot-avatar'; av2.textContent = '₹';
+    const bbl = document.createElement('div'); bbl.className = 'bubble bot'; bbl.innerHTML = html;
+    row.appendChild(av2); row.appendChild(bbl);
+    messagesDiv.appendChild(row);
+    if (options) renderOptions(options);
+    updateProgress();
+    scrollDown();
+  }, 320);
+};
+
+// ── Override userSay ──
+userSay = function(text) {
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  const bbl = document.createElement('div');
+  bbl.className = 'bubble user';
+  bbl.textContent = text;
+  row.appendChild(bbl);
+  messagesDiv.appendChild(row);
+  scrollDown();
+};
+
+// ── Override renderOptions — new classes ──
+renderOptions = function(options) {
+  const wrap = document.createElement('div');
+  wrap.className = 'options';
+  wrap.id = 'currentOptions';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn' + (opt.multi ? ' multi' : '');
+    btn.textContent = opt.label;
+    btn.dataset.value = opt.value;
+    btn.onclick = () => handleOption(opt, btn);
+    wrap.appendChild(btn);
+  });
+  if (state.awaitingMulti) {
+    const done = document.createElement('button');
+    done.className = 'option-btn done-btn';
+    done.textContent = 'Done ✓';
+    done.onclick = () => completeMulti();
+    wrap.appendChild(done);
+  }
+  messagesDiv.appendChild(wrap);
+  scrollDown();
+};
+
+// ── Override updateSidebar — regime comparison bars ──
+updateSidebar = function() {
+  const c = state.computation;
+  const p = state.profile;
+  document.getElementById('sumStatus').textContent = p.residentialStatus || '—';
+  document.getElementById('sumGTI').textContent = fmt(c.gti);
+  if (c.totalDedOld > 0 || c.totalDedNew > 0) {
+    document.getElementById('sumDed').textContent = `Old: ${fmt(c.totalDedOld)} / New: ${fmt(c.totalDedNew)}`;
+    document.getElementById('sumTI').textContent = `Old: ${fmt(c.taxableOld)} / New: ${fmt(c.taxableNew)}`;
+  }
+  document.getElementById('sumNew').textContent = fmt(c.taxNew);
+  document.getElementById('sumOld').textContent = fmt(c.taxOld);
+
+  // Recommendation badge
+  const recEl = document.getElementById('sumRec');
+  if (c.regime && c.regime !== '—' && (c.taxNew > 0 || c.taxOld > 0)) {
+    recEl.classList.remove('hidden');
+    recEl.textContent = `✓ ${c.regime} saves ${fmt(c.savings)}`;
+  }
+
+  // Visual regime bars
+  const maxTax = Math.max(c.taxNew || 0, c.taxOld || 0, 1);
+  const barNew = document.getElementById('barNew');
+  const barOld = document.getElementById('barOld');
+  if (barNew && barOld && maxTax > 1) {
+    barNew.style.width = Math.round((c.taxNew / maxTax) * 100) + '%';
+    barOld.style.width = Math.round((c.taxOld / maxTax) * 100) + '%';
+    barNew.className = 'regime-bar-fill new' + (c.regime === 'New Regime' ? ' winner' : '');
+    barOld.className = 'regime-bar-fill old' + (c.regime === 'Old Regime' ? ' winner' : '');
+  }
+};
+
+// ── Patch recommendForm to update form badge class ──
+const __origRecommendForm = recommendForm;
+recommendForm = function() {
+  __origRecommendForm();
+  const tag = document.getElementById('formTag');
+  if (tag) tag.className = 'form-badge recommended';
+};
+
+// ── Redirect old support modal to new donate modal ──
+openSupportModal = function() { openDonateModal(); };
+
+// ════════════════════════════════════════════════════════
+// DONATION MODAL — vanilla Razorpay SDK checkout
+// ════════════════════════════════════════════════════════
+let _donateAmt = 99;
+
+function openDonateModal() {
+  _donateAmt = 99;
+  const modal = document.getElementById('donateModal');
+  const body  = document.getElementById('donateBody');
+  // Reset body to initial state
+  body.innerHTML = `
+    <div class="donate-presets" id="donatePresets">
+      <button class="preset-btn" onclick="selectPreset(49,this)">₹49</button>
+      <button class="preset-btn active" onclick="selectPreset(99,this)">₹99</button>
+      <button class="preset-btn" onclick="selectPreset(199,this)">₹199</button>
+      <button class="preset-btn" onclick="selectPreset(499,this)">₹499</button>
+    </div>
+    <div class="donate-custom">
+      <span>₹</span>
+      <input type="number" id="donateCustom" placeholder="Custom amount" min="1" oninput="clearPresetSelection()">
+    </div>
+    <div class="donate-email">
+      <input type="email" id="donateEmail" placeholder="Email (optional, for receipt)">
+    </div>
+    <div class="donate-err" id="donateErr" style="display:none;"></div>
+    <button class="donate-pay-btn" id="donatePayBtn" onclick="handleDonatePay()">
+      ❤️ Donate ₹99 via Razorpay
+    </button>
+    <div class="donate-note">Secure · UPI, Cards, Net Banking accepted</div>`;
+  modal.style.display = 'flex';
+}
+
+function closeDonateModal() {
+  document.getElementById('donateModal').style.display = 'none';
+}
+
+function selectPreset(amount, btn) {
+  _donateAmt = amount;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const pb = document.getElementById('donatePayBtn');
+  if (pb) { pb.textContent = `❤️ Donate ₹${amount} via Razorpay`; pb.disabled = false; }
+  const cu = document.getElementById('donateCustom');
+  if (cu) cu.value = '';
+}
+
+function clearPresetSelection() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  const v = parseInt(document.getElementById('donateCustom').value, 10);
+  _donateAmt = v > 0 ? v : 0;
+  const pb = document.getElementById('donatePayBtn');
+  if (pb) { pb.textContent = _donateAmt > 0 ? `❤️ Donate ₹${_donateAmt} via Razorpay` : 'Enter an amount'; pb.disabled = _donateAmt < 1; }
+}
+
+function loadRzpSdk() {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.async = true; s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+    document.head.appendChild(s);
+  });
+}
+
+async function handleDonatePay() {
+  const customVal = parseInt((document.getElementById('donateCustom') || {}).value, 10);
+  const amount = customVal > 0 ? customVal : _donateAmt;
+  const email  = ((document.getElementById('donateEmail') || {}).value || '').trim();
+  const errEl  = document.getElementById('donateErr');
+  const payBtn = document.getElementById('donatePayBtn');
+  errEl.style.display = 'none';
+  if (amount < 1) { errEl.textContent = 'Minimum donation is ₹1'; errEl.style.display = 'block'; return; }
+  payBtn.disabled = true; payBtn.textContent = 'Opening Razorpay…';
+  try {
+    await loadRzpSdk();
+    const orderRes = await fetch('/api/razorpay-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: amount * 100, label: `Donation ₹${amount}` })
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || 'Order creation failed');
+
+    await new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: order.keyId, amount: order.amount,
+        currency: order.currency, order_id: order.orderId,
+        name: 'PanamKasu', description: `Donation — ₹${amount}`,
+        image: '/pwa-192x192.png',
+        prefill: { email: email || undefined },
+        theme: { color: '#FF9933' },
+        modal: { ondismiss: () => reject(new Error('cancelled')) },
+        handler: async (response) => {
+          try {
+            const vRes = await fetch('/api/razorpay-verify', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...response, email, type: 'donation', amount: order.amount })
+            });
+            const vData = await vRes.json();
+            if (!vRes.ok) throw new Error(vData.error || 'Verification failed');
+            resolve();
+          } catch(e) { reject(e); }
+        }
+      });
+      rzp.open();
+    });
+
+    // Success screen
+    document.getElementById('donateBody').innerHTML = `
+      <div class="donate-success">
+        <div class="emoji">🎉</div>
+        <h3>Thank you so much!</h3>
+        <p>Your ₹${amount} donation helps keep PanamKasu free for everyone. You're awesome! 🙏</p>
+        <button class="donate-pay-btn" style="margin-top:16px;" onclick="closeDonateModal()">Close</button>
+      </div>`;
+  } catch(e) {
+    if (e.message === 'cancelled') { payBtn.disabled = false; payBtn.textContent = `❤️ Donate ₹${amount} via Razorpay`; return; }
+    payBtn.disabled = false; payBtn.textContent = `❤️ Donate ₹${amount} via Razorpay`;
+    errEl.textContent = e.message || 'Payment failed. Please try again.';
+    errEl.style.display = 'block';
+  }
+}
+
+</script>
 </body>
+</html>
