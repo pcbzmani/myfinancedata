@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ITR Filing Assistant — PanamKasu</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
 /* ──────────────────────────────────────────
    RESET & BASE
@@ -2451,8 +2450,7 @@ async function loadUpiInfo() {
     const res  = await fetch(`/api/upi-info?amount=${_upiAmt}&note=Donation+to+PanamKasu`);
     const data = await res.json();
     _upiInfo = data;
-    const qrDataUrl = await QRCode.toDataURL(data.upiString, { width: 220, margin: 2, color: { dark: '#1a3a5f', light: '#ffffff' } });
-    document.getElementById('upiQr').src = qrDataUrl;
+    document.getElementById('upiQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.upiString)}&margin=2&color=1a3a5f`;
     document.getElementById('upiIdDisplay').textContent = data.upiId;
     document.getElementById('upiGpay').href    = data.deepLinks.gpay;
     document.getElementById('upiPhonepe').href = data.deepLinks.phonepe;
