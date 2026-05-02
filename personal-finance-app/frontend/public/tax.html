@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ITR Filing Assistant — PanamKasu</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
 /* ──────────────────────────────────────────
    RESET & BASE
@@ -632,11 +633,10 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
   gap: 6px;
   transition: background var(--t), transform var(--t);
 }
-.donate-btn { text-decoration: none; }
 .donate-btn:hover { background: var(--saffron-dk); transform: translateY(-1px); }
 
 /* ──────────────────────────────────────────
-   DONATION MODAL (inline Razorpay for tax.html)
+   DONATION MODAL (UPI)
 ────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -759,6 +759,8 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
 .donate-success h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; color: var(--text); }
 .donate-success p { font-size: 13px; color: var(--muted); line-height: 1.6; }
 .donate-err { font-size: 12.5px; color: var(--red); background: var(--red-bg); border-radius: var(--r-sm); padding: 8px 10px; margin-bottom: 10px; }
+@keyframes upi-spin { to { transform: rotate(360deg); } }
+.upi-spinner { animation: upi-spin 0.8s linear infinite; display: inline-block; }
 
 /* ──────────────────────────────────────────
    IFRAME EMBED OVERRIDES
@@ -874,17 +876,59 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
       <div class="card donate-card">
         <div class="card-title"><span>☕</span> Support PanamKasu</div>
         <p>This tool is free forever. If it helped you, consider buying me a chai!</p>
-        <a class="donate-btn" href="https://razorpay.me/@pcbzmani" target="_blank" rel="noopener noreferrer">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Donate via Razorpay
-        </a>
+        <button class="donate-btn" onclick="openUpiModal()">☕ Donate via UPI</button>
       </div>
 
     </aside>
   </div>
 </div>
 
-
+<!-- UPI Donation modal -->
+<div class="modal-overlay" id="upiModal" style="display:none;" onclick="if(event.target===this)closeUpiModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-head-title">☕ Donate via UPI</span>
+      <button class="modal-close" onclick="closeUpiModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="donate-presets">
+        <button class="preset-btn" onclick="selectUpiPreset(49,this)">₹49</button>
+        <button class="preset-btn active" onclick="selectUpiPreset(99,this)">₹99</button>
+        <button class="preset-btn" onclick="selectUpiPreset(199,this)">₹199</button>
+        <button class="preset-btn" onclick="selectUpiPreset(499,this)">₹499</button>
+      </div>
+      <div class="donate-custom">
+        <span>₹</span>
+        <input type="number" id="upiCustom" placeholder="Custom amount" min="1" oninput="onUpiCustomInput()" />
+      </div>
+      <div id="upiErr" class="donate-err" style="display:none;"></div>
+      <div id="upiLoading" style="text-align:center;padding:20px 0;display:none;">
+        <svg class="upi-spinner" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--saffron)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+      <div id="upiDetails" style="display:none;">
+        <div style="text-align:center;margin-bottom:10px;">
+          <img id="upiQr" src="" alt="UPI QR Code" style="width:180px;height:180px;border-radius:8px;border:1px solid var(--border);" />
+          <p style="font-size:11.5px;color:var(--muted);margin-top:4px;">Scan with any UPI app</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:8px;">
+          <span style="font-size:11.5px;color:var(--muted);flex-shrink:0;">UPI ID</span>
+          <span id="upiIdDisplay" style="flex:1;font-size:13px;font-family:monospace;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+          <button id="upiCopyBtn" onclick="copyUpiId()" style="font-size:12px;color:var(--saffron-dk);font-weight:700;background:none;border:none;cursor:pointer;flex-shrink:0;">Copy</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;">✅ Verify UPI ID in your payment app before confirming</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+          <a id="upiGpay"    href="#" style="display:flex;align-items:center;justify-content:center;padding:8px;border-radius:var(--r-sm);border:1.5px solid #dbeafe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;text-decoration:none;">GPay</a>
+          <a id="upiPhonepe" href="#" style="display:flex;align-items:center;justify-content:center;padding:8px;border-radius:var(--r-sm);border:1.5px solid #e9d5ff;background:#f5f3ff;color:#7c3aed;font-size:12px;font-weight:600;text-decoration:none;">PhonePe</a>
+          <a id="upiPaytm"   href="#" style="display:flex;align-items:center;justify-content:center;padding:8px;border-radius:var(--r-sm);border:1.5px solid #bae6fd;background:#f0f9ff;color:#0369a1;font-size:12px;font-weight:600;text-decoration:none;">Paytm</a>
+        </div>
+        <a id="upiGeneric" href="#" class="donate-pay-btn" style="text-decoration:none;">
+          🇮🇳 Open UPI App — ₹<span id="upiAmtLabel">99</span>
+        </a>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;">Zero fees · Works with all UPI apps</p>
+    </div>
+  </div>
+</div>
 
 <script>
 // ============================================================
@@ -2364,9 +2408,73 @@ function restart() {
 // Init
 start();
 
-// Support link (donation replaced with direct link)
-function openSupportModal() {
-  window.open('https://razorpay.me/@pcbzmani', '_blank');
+// UPI Donation modal
+let _upiAmt = 99;
+let _upiInfo = null;
+
+function openUpiModal() {
+  _upiAmt = 99;
+  document.getElementById('upiModal').style.display = 'flex';
+  document.querySelectorAll('#upiModal .preset-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
+  const cu = document.getElementById('upiCustom');
+  if (cu) cu.value = '';
+  loadUpiInfo();
+}
+function closeUpiModal() { document.getElementById('upiModal').style.display = 'none'; }
+function openSupportModal() { openUpiModal(); }
+
+function selectUpiPreset(amount, btn) {
+  _upiAmt = amount;
+  document.querySelectorAll('#upiModal .preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cu = document.getElementById('upiCustom');
+  if (cu) cu.value = '';
+  loadUpiInfo();
+}
+
+function onUpiCustomInput() {
+  document.querySelectorAll('#upiModal .preset-btn').forEach(b => b.classList.remove('active'));
+  const v = parseInt(document.getElementById('upiCustom').value, 10);
+  _upiAmt = v > 0 ? v : 0;
+  if (_upiAmt > 0) loadUpiInfo();
+}
+
+async function loadUpiInfo() {
+  if (_upiAmt < 1) return;
+  const errEl    = document.getElementById('upiErr');
+  const loadEl   = document.getElementById('upiLoading');
+  const detailEl = document.getElementById('upiDetails');
+  errEl.style.display = 'none';
+  detailEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  try {
+    const res  = await fetch(`/api/upi-info?amount=${_upiAmt}&note=Donation+to+PanamKasu`);
+    const data = await res.json();
+    _upiInfo = data;
+    const qrDataUrl = await QRCode.toDataURL(data.upiString, { width: 220, margin: 2, color: { dark: '#1a3a5f', light: '#ffffff' } });
+    document.getElementById('upiQr').src = qrDataUrl;
+    document.getElementById('upiIdDisplay').textContent = data.upiId;
+    document.getElementById('upiGpay').href    = data.deepLinks.gpay;
+    document.getElementById('upiPhonepe').href = data.deepLinks.phonepe;
+    document.getElementById('upiPaytm').href   = data.deepLinks.paytm;
+    document.getElementById('upiGeneric').href = data.deepLinks.generic;
+    document.getElementById('upiAmtLabel').textContent = _upiAmt;
+    document.getElementById('upiCopyBtn').textContent = 'Copy';
+    loadEl.style.display = 'none';
+    detailEl.style.display = 'block';
+  } catch (e) {
+    loadEl.style.display = 'none';
+    errEl.textContent = 'Could not load payment details. Please try again.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function copyUpiId() {
+  if (!_upiInfo) return;
+  await navigator.clipboard.writeText(_upiInfo.upiId);
+  const btn = document.getElementById('upiCopyBtn');
+  btn.textContent = '✓ Copied';
+  setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
 }
 
 // ════════════════════════════════════════════════════════
@@ -2522,8 +2630,7 @@ recommendForm = function() {
   if (tag) tag.className = 'form-badge recommended';
 };
 
-// ── Redirect old support modal to razorpay.me direct link ──
-openSupportModal = function() { window.open('https://razorpay.me/@pcbzmani', '_blank'); };
+openSupportModal = function() { openUpiModal(); };
 
 </script>
 </body>
