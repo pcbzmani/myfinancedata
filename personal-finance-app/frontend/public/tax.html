@@ -632,6 +632,7 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
   gap: 6px;
   transition: background var(--t), transform var(--t);
 }
+.donate-btn { text-decoration: none; }
 .donate-btn:hover { background: var(--saffron-dk); transform: translateY(-1px); }
 
 /* ──────────────────────────────────────────
@@ -873,46 +874,16 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
       <div class="card donate-card">
         <div class="card-title"><span>☕</span> Support PanamKasu</div>
         <p>This tool is free forever. If it helped you, consider buying me a chai!</p>
-        <button class="donate-btn" onclick="openDonateModal()">
+        <a class="donate-btn" href="https://razorpay.me/@pcbzmani" target="_blank" rel="noopener noreferrer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Donate via Razorpay
-        </button>
+        </a>
       </div>
 
     </aside>
   </div>
 </div>
 
-<!-- Donation modal (vanilla JS Razorpay SDK checkout) -->
-<div class="modal-overlay" id="donateModal" style="display:none;" onclick="if(event.target===this)closeDonateModal()">
-  <div class="modal-box">
-    <div class="modal-head">
-      <span class="modal-head-title">☕ Support PanamKasu</span>
-      <button class="modal-close" onclick="closeDonateModal()">✕</button>
-    </div>
-    <div class="modal-body" id="donateBody">
-      <div class="donate-presets" id="donatePresets">
-        <button class="preset-btn" onclick="selectPreset(49,this)">₹49</button>
-        <button class="preset-btn active" onclick="selectPreset(99,this)">₹99</button>
-        <button class="preset-btn" onclick="selectPreset(199,this)">₹199</button>
-        <button class="preset-btn" onclick="selectPreset(499,this)">₹499</button>
-      </div>
-      <div class="donate-custom">
-        <span>₹</span>
-        <input type="number" id="donateCustom" placeholder="Custom amount" min="1" oninput="clearPresetSelection()" />
-      </div>
-      <div class="donate-email">
-        <input type="email" id="donateEmail" placeholder="Email (optional, for receipt)" />
-      </div>
-      <div class="donate-err" id="donateErr" style="display:none;"></div>
-      <button class="donate-pay-btn" id="donatePayBtn" onclick="handleDonatePay()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        Donate ₹99 via Razorpay
-      </button>
-      <div class="donate-note">Secure · UPI, Cards, Net Banking accepted</div>
-    </div>
-  </div>
-</div>
 
 
 <script>
@@ -2551,132 +2522,8 @@ recommendForm = function() {
   if (tag) tag.className = 'form-badge recommended';
 };
 
-// ── Redirect old support modal to new donate modal ──
-openSupportModal = function() { openDonateModal(); };
-
-// ════════════════════════════════════════════════════════
-// DONATION MODAL — vanilla Razorpay SDK checkout
-// ════════════════════════════════════════════════════════
-let _donateAmt = 99;
-
-function openDonateModal() {
-  _donateAmt = 99;
-  const modal = document.getElementById('donateModal');
-  const body  = document.getElementById('donateBody');
-  // Reset body to initial state
-  body.innerHTML = `
-    <div class="donate-presets" id="donatePresets">
-      <button class="preset-btn" onclick="selectPreset(49,this)">₹49</button>
-      <button class="preset-btn active" onclick="selectPreset(99,this)">₹99</button>
-      <button class="preset-btn" onclick="selectPreset(199,this)">₹199</button>
-      <button class="preset-btn" onclick="selectPreset(499,this)">₹499</button>
-    </div>
-    <div class="donate-custom">
-      <span>₹</span>
-      <input type="number" id="donateCustom" placeholder="Custom amount" min="1" oninput="clearPresetSelection()">
-    </div>
-    <div class="donate-email">
-      <input type="email" id="donateEmail" placeholder="Email (optional, for receipt)">
-    </div>
-    <div class="donate-err" id="donateErr" style="display:none;"></div>
-    <button class="donate-pay-btn" id="donatePayBtn" onclick="handleDonatePay()">
-      ❤️ Donate ₹99 via Razorpay
-    </button>
-    <div class="donate-note">Secure · UPI, Cards, Net Banking accepted</div>`;
-  modal.style.display = 'flex';
-}
-
-function closeDonateModal() {
-  document.getElementById('donateModal').style.display = 'none';
-}
-
-function selectPreset(amount, btn) {
-  _donateAmt = amount;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const pb = document.getElementById('donatePayBtn');
-  if (pb) { pb.textContent = `❤️ Donate ₹${amount} via Razorpay`; pb.disabled = false; }
-  const cu = document.getElementById('donateCustom');
-  if (cu) cu.value = '';
-}
-
-function clearPresetSelection() {
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  const v = parseInt(document.getElementById('donateCustom').value, 10);
-  _donateAmt = v > 0 ? v : 0;
-  const pb = document.getElementById('donatePayBtn');
-  if (pb) { pb.textContent = _donateAmt > 0 ? `❤️ Donate ₹${_donateAmt} via Razorpay` : 'Enter an amount'; pb.disabled = _donateAmt < 1; }
-}
-
-function loadRzpSdk() {
-  return new Promise((resolve, reject) => {
-    if (window.Razorpay) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.async = true; s.onload = resolve;
-    s.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
-    document.head.appendChild(s);
-  });
-}
-
-async function handleDonatePay() {
-  const customVal = parseInt((document.getElementById('donateCustom') || {}).value, 10);
-  const amount = customVal > 0 ? customVal : _donateAmt;
-  const email  = ((document.getElementById('donateEmail') || {}).value || '').trim();
-  const errEl  = document.getElementById('donateErr');
-  const payBtn = document.getElementById('donatePayBtn');
-  errEl.style.display = 'none';
-  if (amount < 1) { errEl.textContent = 'Minimum donation is ₹1'; errEl.style.display = 'block'; return; }
-  payBtn.disabled = true; payBtn.textContent = 'Opening Razorpay…';
-  try {
-    await loadRzpSdk();
-    const orderRes = await fetch('/api/razorpay-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: amount * 100, label: `Donation ₹${amount}` })
-    });
-    const order = await orderRes.json();
-    if (!orderRes.ok) throw new Error(order.error || 'Order creation failed');
-
-    await new Promise((resolve, reject) => {
-      const rzp = new window.Razorpay({
-        key: order.keyId, amount: order.amount,
-        currency: order.currency, order_id: order.orderId,
-        name: 'PanamKasu', description: `Donation — ₹${amount}`,
-        image: '/pwa-192x192.png',
-        prefill: { email: email || undefined },
-        theme: { color: '#FF9933' },
-        modal: { ondismiss: () => reject(new Error('cancelled')) },
-        handler: async (response) => {
-          try {
-            const vRes = await fetch('/api/razorpay-verify', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...response, email, type: 'donation', amount: order.amount })
-            });
-            const vData = await vRes.json();
-            if (!vRes.ok) throw new Error(vData.error || 'Verification failed');
-            resolve();
-          } catch(e) { reject(e); }
-        }
-      });
-      rzp.open();
-    });
-
-    // Success screen
-    document.getElementById('donateBody').innerHTML = `
-      <div class="donate-success">
-        <div class="emoji">🎉</div>
-        <h3>Thank you so much!</h3>
-        <p>Your ₹${amount} donation helps keep PanamKasu free for everyone. You're awesome! 🙏</p>
-        <button class="donate-pay-btn" style="margin-top:16px;" onclick="closeDonateModal()">Close</button>
-      </div>`;
-  } catch(e) {
-    if (e.message === 'cancelled') { payBtn.disabled = false; payBtn.textContent = `❤️ Donate ₹${amount} via Razorpay`; return; }
-    payBtn.disabled = false; payBtn.textContent = `❤️ Donate ₹${amount} via Razorpay`;
-    errEl.textContent = e.message || 'Payment failed. Please try again.';
-    errEl.style.display = 'block';
-  }
-}
+// ── Redirect old support modal to razorpay.me direct link ──
+openSupportModal = function() { window.open('https://razorpay.me/@pcbzmani', '_blank'); };
 
 </script>
 </body>

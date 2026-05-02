@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { getRows } from '../lib/api';
-import RazorpayDonation from '../components/RazorpayDonation';
 import UpiDonation from '../components/UpiDonation';
 
 /* ─── Daily usage tracking (localStorage) ────────────────────────────── */
@@ -342,7 +341,15 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
             <p className="text-xs text-slate-500 dark:text-slate-400">PanamKasu is free to use. If it's saving you time and money, consider a small donation to help keep the servers running.</p>
             <div className="flex flex-wrap gap-2">
               <UpiDonation variant="button" label="Donate via UPI ☕" />
-              <RazorpayDonation variant="button" label="Pay by Card" />
+              <a
+                href="https://razorpay.me/@pcbzmani"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-sm font-medium text-amber-700 dark:text-amber-300 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                Pay by Card
+              </a>
             </div>
           </div>
         </div>
