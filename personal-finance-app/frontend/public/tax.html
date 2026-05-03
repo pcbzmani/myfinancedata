@@ -988,55 +988,92 @@ async function extractTextFromPDF(file) {
   return fullText;
 }
 
-function parseAISText(text) {
+function parseAISText(rawText) {
   const extracted = {};
+  // Flatten to single line so positional matching works across PDF line breaks
+  const text = rawText.replace(/\r?\n/g, ' ').replace(/\s{2,}/g, ' ');
 
-  // Helper: find number after a keyword (₹, INR, or plain digits)
-  function findAmt(pattern) {
-    const m = text.match(pattern);
-    if (!m) return 0;
-    return parseFloat((m[1] || m[0]).replace(/[,₹\s]/g, '')) || 0;
+  function parseINR(s) {
+    if (!s) return 0;
+    return parseFloat(s.replace(/[,\s]/g, '')) || 0;
   }
 
-  // --- PAN & Name ---
-  const panM = text.match(/PAN\s*[:\-]?\s*([A-Z]{5}[0-9]{4}[A-Z])/i);
-  if (panM) extracted.pan = panM[1];
-  const nameM = text.match(/Name\s*[:\-]\s*([A-Z][A-Za-z\s]{3,40})/);
-  if (nameM) extracted.name = nameM[1].trim();
+  // Collect all amounts >= minAmt found within windowSize chars after each regex match
+  function collectAmts(pattern, windowSize, minAmt) {
+    const re = new RegExp(typeof pattern === 'string' ? pattern : pattern.source, 'gi');
+    const results = [];
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const chunk = text.slice(m.index, m.index + windowSize);
+      // Match Indian-format numbers: 5,00,000 or 500000 or 50,000.50
+      const nums = [...chunk.matchAll(/([\d]{1,3}(?:,[\d]{2,3}){1,4}(?:\.\d{1,2})?|[\d]{4,}(?:\.\d{1,2})?)/g)]
+        .map(n => parseINR(n[1]))
+        .filter(n => n >= (minAmt || 100));
+      if (nums.length) results.push(Math.max(...nums));
+    }
+    return results;
+  }
 
-  // --- Section 192 — Salary TDS ---
-  const salaryAmts = [];
-  const salRe = /192[^0-9]*?([\d,]{4,})/g;
-  let sm; while ((sm = salRe.exec(text)) !== null) salaryAmts.push(parseFloat(sm[1].replace(/,/g,'')));
-  if (salaryAmts.length) extracted.salary = Math.max(...salaryAmts);
+  // --- PAN ---
+  const panM = text.match(/[A-Z]{5}[0-9]{4}[A-Z]/);
+  if (panM) extracted.pan = panM[0];
 
-  // --- Section 194A — Bank Interest TDS ---
-  const intAmts = [];
-  const intRe = /194A[^0-9]*?([\d,]{3,})/g;
-  let im; while ((im = intRe.exec(text)) !== null) intAmts.push(parseFloat(im[1].replace(/,/g,'')));
-  if (intAmts.length) extracted.fdInterest = intAmts.reduce((a,b)=>a+b,0);
+  // --- Name (AIS prints names in ALL CAPS) ---
+  const namePatterns = [
+    /(?:Name of Taxpayer|Taxpayer(?:'s)? Name|Name)\s*[:\-]?\s*([A-Z][A-Z ]{5,40}[A-Z])(?=\s)/,
+    /Name\s*[:\-]\s*([A-Z][A-Z ]{4,39})(?=\s)/,
+  ];
+  for (const p of namePatterns) {
+    const m = text.match(p);
+    if (m && m[1].trim().length > 3) {
+      extracted.name = m[1].trim().replace(/\s+/g, ' ')
+        .split(' ').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+      break;
+    }
+  }
 
-  // --- Savings interest (often in "Other sources" section) ---
-  const savM = text.match(/[Ss]avings[^₹\d]*?₹?\s*([\d,]+)/);
-  if (savM) extracted.savingsInterest = parseFloat(savM[1].replace(/,/g,''));
+  // --- Salary (Section 192) ---
+  // AIS format: "Salary (Section 192)" or "192" near employer + amount
+  const salAmts = collectAmts(
+    /Salary(?:\s*\((?:Section|Sec\.?)\s*192\))?|Section\s*192|(?<!\d)192\s*[-–—]?\s*(?:Salary|TDS)/,
+    500, 10000
+  );
+  if (salAmts.length) extracted.salary = Math.max(...salAmts);
 
-  // --- SFT-015/016 — Securities/MF transactions ---
-  const sftM = text.match(/SFT[- ]?01[56][^₹\d]*([\d,]{4,})/);
-  if (sftM) extracted.securities = parseFloat(sftM[1].replace(/,/g,''));
+  // --- FD / Bank Deposit Interest (Section 194A) ---
+  const intAmts = collectAmts(
+    /194A|Interest from (?:savings|deposit|bank|FD|term)|Bank\s+interest|FD\s+interest|Term\s+deposit\s+interest/,
+    300, 100
+  );
+  if (intAmts.length) extracted.fdInterest = intAmts.reduce((a, b) => a + b, 0);
 
-  // --- Dividend (194/194K) ---
-  const divRe = /194K?[^0-9]*?([\d,]{3,})/g;
-  let dm; const divAmts = [];
-  while ((dm = divRe.exec(text)) !== null) divAmts.push(parseFloat(dm[1].replace(/,/g,'')));
-  if (divAmts.length) extracted.dividend = divAmts.reduce((a,b)=>a+b,0);
+  // --- Savings Account Interest (if no 194A match) ---
+  if (!extracted.fdInterest) {
+    const savAmts = collectAmts(/Savings\s+account\s+interest|Interest.*savings\s+account/, 200, 100);
+    if (savAmts.length) extracted.savingsInterest = savAmts.reduce((a, b) => a + b, 0);
+  }
 
-  // --- Property (SFT-012/013) ---
-  const propM = text.match(/SFT[- ]?01[23][^₹\d]*([\d,]{5,})/);
-  if (propM) extracted.property = parseFloat(propM[1].replace(/,/g,''));
+  // --- Securities / MF (SFT-015 / SFT-016) ---
+  const sftAmts = collectAmts(
+    /SFT[-\s]?01[56]|Mutual\s+fund|Securities?\s+transaction|LTCG|STCG|Capital\s+gain/,
+    400, 1000
+  );
+  if (sftAmts.length) extracted.securities = Math.max(...sftAmts);
 
-  // Rough GTI estimate from text
-  const gtiM = text.match(/[Gg]ross\s+[Tt]otal\s+[Ii]ncome[^₹\d]*([\d,]{4,})/);
-  if (gtiM) extracted.gti = parseFloat(gtiM[1].replace(/,/g,''));
+  // --- Dividend (Section 194 / 194K) ---
+  const divAmts = collectAmts(/194K|Dividend\s+(?:income|paid|received)/, 250, 100);
+  if (divAmts.length) extracted.dividend = divAmts.reduce((a, b) => a + b, 0);
+
+  // --- Property (SFT-012 / SFT-013) ---
+  const propAmts = collectAmts(
+    /SFT[-\s]?01[23]|Immovable\s+property|Property\s+(?:transaction|purchase|sale)|Sale\s+of\s+(?:land|property|flat|house)/,
+    400, 100000
+  );
+  if (propAmts.length) extracted.property = Math.max(...propAmts);
+
+  // --- Gross Total Income (if printed in AIS) ---
+  const gtiM = text.match(/Gross\s+Total\s+Income[^\d]*([\d,]{4,})/i);
+  if (gtiM) extracted.gti = parseINR(gtiM[1]);
 
   return extracted;
 }
@@ -1102,14 +1139,47 @@ async function handleAISUpload(file) {
     } else {
       setTimeout(() => {
         messagesDiv.querySelectorAll('.msg.bot:last-child').forEach(el => el.remove());
-        botSay(`📄 AIS uploaded but I couldn't extract structured data automatically (PDF may be scanned or password-protected). We'll continue with the guided questions — I'll reference your AIS where helpful.`);
-        setTimeout(() => continueAfterWelcome(), 800);
+        botSay(`📄 PDF read, but I couldn't identify income figures automatically.<br><br>
+          <b>Try this:</b> Open your AIS PDF, select all text (Ctrl+A), copy it, and paste below — I'll extract the numbers from the text directly.`);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'margin:8px 0 4px;display:flex;flex-direction:column;gap:8px;';
+        wrap.innerHTML = `
+          <textarea id="aisPasteArea" placeholder="Paste your AIS text here (Ctrl+A then Ctrl+C from the open PDF)…"
+            style="width:100%;min-height:90px;padding:10px;border:1.5px solid var(--border-2);border-radius:10px;
+                   font-size:12.5px;color:var(--text);background:var(--surface-2);resize:vertical;font-family:inherit;"></textarea>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="handleAISPaste()" style="background:var(--navy);color:#fff;padding:7px 18px;border:none;
+              border-radius:18px;font-size:13px;cursor:pointer;font-weight:600;">Parse pasted text</button>
+            <button onclick="this.closest('div').parentElement.remove();continueAfterWelcome();"
+              style="background:var(--surface);color:var(--text-2);padding:7px 16px;border:1.5px solid var(--border-2);
+              border-radius:18px;font-size:13px;cursor:pointer;">Skip — answer manually</button>
+          </div>`;
+        messagesDiv.appendChild(wrap);
+        scrollDown();
       }, 400);
     }
   } catch (err) {
     botSay(`⚠️ Could not read the AIS PDF: ${err.message || 'Unknown error'}. <br>This can happen if the PDF is password-protected (open it in your browser first, then save without password). We'll continue manually.`);
     setTimeout(() => continueAfterWelcome(), 1200);
   }
+}
+
+function handleAISPaste() {
+  const area = document.getElementById('aisPasteArea');
+  const text = area ? area.value : '';
+  const wrap = area ? area.closest('div[style]') : null;
+  if (wrap) wrap.remove();
+  if (!text.trim()) { continueAfterWelcome(); return; }
+  userSay('📋 Pasted AIS text for parsing');
+  const data = parseAISText(text);
+  applyAISData(data);
+  const summary = renderAISSummary(data);
+  if (summary) {
+    botSay(`📄 <b>Income details extracted!</b><br>${summary}<br>You can still review and adjust each item as we go.`);
+  } else {
+    botSay(`📄 I couldn't find income figures in the pasted text. Let's continue with guided questions.`);
+  }
+  setTimeout(() => continueAfterWelcome(), 800);
 }
 
 // ============================================================
