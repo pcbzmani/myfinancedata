@@ -780,6 +780,152 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
 
 /* ── Scrollbar polish (Firefox) ── */
 * { scrollbar-width: thin; scrollbar-color: var(--border-2) transparent; }
+
+/* ════════════════════════════════════════
+   DOCUMENT GUIDE PANEL (full-screen overlay)
+════════════════════════════════════════ */
+#docGuidePanel {
+  position: fixed; inset: 0; z-index: 900;
+  display: flex; flex-direction: column;
+  background: #0E0E14; color: #E8E8F0;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* CSS variable overrides scoped to this panel */
+  --dg-bg:     #0E0E14;
+  --dg-card:   #16161F;
+  --dg-card2:  #1E1E2A;
+  --dg-border: #2A2A3A;
+  --dg-accent: #FF6B35;
+  --dg-gold:   #F5C518;
+  --dg-green:  #2ECC71;
+  --dg-blue:   #4A9EFF;
+  --dg-purple: #9B59B6;
+  --dg-red:    #E74C3C;
+  --dg-teal:   #1ABC9C;
+  --dg-text:   #E8E8F0;
+  --dg-muted:  #7070A0;
+}
+#docGuidePanel.open { transform: translateY(0); }
+
+/* Doc guide top bar */
+#docGuidePanel .dg-topbar {
+  background: linear-gradient(135deg,#0E0E14 0%,#1a1a28 100%);
+  border-bottom: 1px solid var(--dg-border);
+  padding: 14px 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+#docGuidePanel .dg-topbar-title { font-size: 1.1rem; font-weight: 700; color: #fff; }
+#docGuidePanel .dg-topbar-sub { font-size: 0.7rem; color: var(--dg-muted); margin-top: 2px; }
+#docGuidePanel .dg-progress { display: flex; align-items: center; gap: 14px; }
+#docGuidePanel .dg-prog-count { font-size: 1.4rem; font-weight: 800; color: var(--dg-accent); }
+#docGuidePanel .dg-prog-bar-wrap { width: 140px; height: 5px; background: var(--dg-border); border-radius: 3px; }
+#docGuidePanel .dg-prog-bar-fill { height: 5px; background: linear-gradient(90deg,var(--dg-accent),var(--dg-gold)); border-radius: 3px; transition: width 0.4s; }
+#docGuidePanel .dg-close-btn {
+  background: rgba(255,255,255,0.07); border: 1px solid var(--dg-border); color: #fff;
+  border-radius: 8px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+}
+#docGuidePanel .dg-close-btn:hover { background: rgba(255,255,255,0.14); }
+
+/* Scrollable body */
+#docGuidePanel .dg-body { flex: 1; overflow-y: auto; padding: 20px 16px; max-width: 960px; width: 100%; margin: 0 auto; }
+
+/* Summary strip */
+#docGuidePanel .dg-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+@media(max-width:580px){ #docGuidePanel .dg-strip { grid-template-columns: 1fr 1fr; } }
+#docGuidePanel .dg-strip-card { background: var(--dg-card); border: 1px solid var(--dg-border); border-radius: 10px; padding: 12px; text-align: center; }
+#docGuidePanel .dg-strip-val { font-size: 1.4rem; font-weight: 800; margin-bottom: 2px; }
+#docGuidePanel .dg-strip-lbl { font-size: 0.67rem; color: var(--dg-muted); }
+
+/* Tabs */
+#docGuidePanel .dg-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+#docGuidePanel .dg-tab {
+  padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--dg-border);
+  background: transparent; color: var(--dg-muted); font-size: 0.74rem; font-weight: 600;
+  cursor: pointer; transition: all 0.18s;
+}
+#docGuidePanel .dg-tab.active { background: var(--dg-accent); color: #fff; border-color: var(--dg-accent); }
+#docGuidePanel .dg-tab .cnt { display: inline-block; background: rgba(255,255,255,0.18); border-radius: 10px; padding: 0 6px; margin-left: 4px; font-size: 0.67rem; }
+
+/* Tab content */
+#docGuidePanel .dg-tab-content { display: none; }
+#docGuidePanel .dg-tab-content.active { display: block; }
+
+/* AI panel */
+#docGuidePanel .dg-ai-panel { background: var(--dg-card2); border: 1px solid var(--dg-border); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+#docGuidePanel .dg-ai-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.82rem; font-weight: 700; color: var(--dg-accent); }
+#docGuidePanel .dg-ai-dot { width: 7px; height: 7px; background: var(--dg-accent); border-radius: 50%; animation: blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.2} }
+#docGuidePanel .dg-ai-row { display: flex; gap: 8px; }
+#docGuidePanel .dg-ai-input { flex: 1; background: var(--dg-bg); border: 1px solid var(--dg-border); border-radius: 8px; padding: 9px 12px; font-size: 0.8rem; color: var(--dg-text); font-family: inherit; }
+#docGuidePanel .dg-ai-input:focus { outline: none; border-color: var(--dg-accent); }
+#docGuidePanel .dg-ai-send { padding: 9px 16px; background: var(--dg-accent); color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+#docGuidePanel .dg-ai-resp { font-size: 0.79rem; color: #C0C8E0; line-height: 1.8; margin-top: 10px; min-height: 24px; }
+
+/* Source block */
+#docGuidePanel .dg-source-block { margin-bottom: 26px; }
+#docGuidePanel .dg-source-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+#docGuidePanel .dg-source-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+#docGuidePanel .dg-source-title { font-weight: 700; font-size: 0.95rem; color: #fff; }
+#docGuidePanel .dg-source-sub { font-size: 0.71rem; color: var(--dg-muted); margin-top: 2px; }
+#docGuidePanel .dg-source-link { margin-left: auto; padding: 7px 13px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: all 0.18s; }
+
+/* Doc card */
+#docGuidePanel .dg-doc-card { background: var(--dg-card); border: 1px solid var(--dg-border); border-radius: 12px; margin-bottom: 9px; overflow: hidden; transition: border-color 0.2s; }
+#docGuidePanel .dg-doc-card.done { border-color: var(--dg-green); }
+#docGuidePanel .dg-doc-top { display: flex; align-items: flex-start; gap: 12px; padding: 13px 15px; cursor: pointer; }
+#docGuidePanel .dg-doc-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--dg-border); background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: all 0.2s; cursor: pointer; }
+#docGuidePanel .dg-doc-card.done .dg-doc-checkbox { background: var(--dg-green); border-color: var(--dg-green); }
+#docGuidePanel .dg-doc-card.done .dg-doc-checkbox::after { content: '✓'; color: #fff; font-size: 0.8rem; font-weight: 700; }
+#docGuidePanel .dg-doc-info { flex: 1; }
+#docGuidePanel .dg-doc-name { font-weight: 600; font-size: 0.87rem; color: #fff; margin-bottom: 3px; }
+#docGuidePanel .dg-doc-desc { font-size: 0.74rem; color: var(--dg-muted); line-height: 1.5; }
+#docGuidePanel .dg-doc-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+#docGuidePanel .dg-tag { padding: 2px 8px; border-radius: 10px; font-size: 0.66rem; font-weight: 600; }
+#docGuidePanel .dg-tag-req  { background: rgba(231,76,60,0.18);  color: #E74C3C; border: 1px solid rgba(231,76,60,0.3); }
+#docGuidePanel .dg-tag-opt  { background: rgba(255,107,53,0.15); color: var(--dg-accent); border: 1px solid rgba(255,107,53,0.3); }
+#docGuidePanel .dg-tag-dtaa { background: rgba(74,158,255,0.15); color: var(--dg-blue); border: 1px solid rgba(74,158,255,0.3); }
+#docGuidePanel .dg-tag-cg   { background: rgba(245,197,24,0.15); color: var(--dg-gold); border: 1px solid rgba(245,197,24,0.3); }
+#docGuidePanel .dg-tag-free { background: rgba(46,204,113,0.15); color: var(--dg-green); border: 1px solid rgba(46,204,113,0.3); }
+#docGuidePanel .dg-expand-arrow { color: var(--dg-muted); font-size: 0.78rem; transition: transform 0.2s; flex-shrink: 0; padding-top: 4px; }
+#docGuidePanel .dg-doc-card.open .dg-expand-arrow { transform: rotate(180deg); }
+
+/* Doc steps */
+#docGuidePanel .dg-doc-steps { display: none; border-top: 1px solid var(--dg-border); background: var(--dg-card2); padding: 15px; }
+#docGuidePanel .dg-doc-card.open .dg-doc-steps { display: block; }
+#docGuidePanel .dg-step-list { list-style: none; }
+#docGuidePanel .dg-step-list li { display: flex; gap: 10px; margin-bottom: 9px; font-size: 0.79rem; color: var(--dg-text); line-height: 1.6; }
+#docGuidePanel .dg-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--dg-accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.67rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+#docGuidePanel .dg-step-num.blue  { background: var(--dg-blue); }
+#docGuidePanel .dg-step-num.green { background: var(--dg-green); }
+#docGuidePanel .dg-step-num.gold  { background: var(--dg-gold); color: #000; }
+#docGuidePanel .dg-step-link { display: inline-flex; align-items: center; gap: 5px; padding: 6px 13px; border-radius: 8px; font-size: 0.73rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; font-family: inherit; margin-top: 10px; margin-right: 6px; transition: all 0.18s; }
+#docGuidePanel .sl-portal { background: rgba(74,158,255,0.15); color: var(--dg-blue); border: 1px solid rgba(74,158,255,0.3); }
+#docGuidePanel .sl-portal:hover { background: var(--dg-blue); color: #fff; }
+#docGuidePanel .sl-green  { background: rgba(46,204,113,0.15); color: var(--dg-green); border: 1px solid rgba(46,204,113,0.3); }
+#docGuidePanel .sl-green:hover  { background: var(--dg-green); color: #fff; }
+#docGuidePanel .sl-gold   { background: rgba(245,197,24,0.15);  color: var(--dg-gold);  border: 1px solid rgba(245,197,24,0.3); }
+#docGuidePanel .sl-gold:hover   { background: var(--dg-gold); color: #000; }
+#docGuidePanel .sl-accent { background: rgba(255,107,53,0.15);  color: var(--dg-accent); border: 1px solid rgba(255,107,53,0.3); }
+#docGuidePanel .sl-accent:hover { background: var(--dg-accent); color: #fff; }
+#docGuidePanel .dg-note { background: rgba(74,158,255,0.08); border-left: 3px solid var(--dg-blue); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-top: 10px; font-size: 0.76rem; color: #A0C4FF; line-height: 1.6; }
+#docGuidePanel .dg-warn { background: rgba(245,197,24,0.08); border-left: 3px solid var(--dg-gold); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-top: 10px; font-size: 0.76rem; color: #F5D060; line-height: 1.6; }
+
+/* Submit flow cards */
+#docGuidePanel .dg-flow-card { background: var(--dg-card); border: 1px solid var(--dg-border); border-radius: 12px; padding: 16px; margin-bottom: 11px; display: flex; gap: 14px; }
+#docGuidePanel .dg-flow-num { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; flex-shrink: 0; }
+#docGuidePanel .dg-flow-title { font-weight: 600; font-size: 0.88rem; color: #fff; margin-bottom: 5px; }
+#docGuidePanel .dg-flow-body { font-size: 0.77rem; color: var(--dg-muted); line-height: 1.7; }
+#docGuidePanel .dg-flow-body b { color: var(--dg-text); }
+#docGuidePanel .dg-flow-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* "Docs" button in main top bar */
+.docs-guide-btn {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; border-radius: 7px; padding: 5px 12px; font-size: 0.77rem;
+  cursor: pointer; font-weight: 600; margin-left: 8px;
+}
+.docs-guide-btn:hover { background: rgba(255,255,255,0.22); }
 </style>
 </head>
 <body>
@@ -795,6 +941,7 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
       </div>
       <span class="step-pct" id="stepPct">0%</span>
     </div>
+    <button class="docs-guide-btn" onclick="openDocGuide()" title="NRI Document Collection Guide">📋 Docs</button>
     <button class="theme-btn" id="themeBtn" title="Toggle dark mode">🌙</button>
   </div>
 </div>
@@ -2700,6 +2847,676 @@ recommendForm = function() {
 
 openSupportModal = function() { openUpiModal(); };
 
+/* ── Document Guide panel logic ── */
+function openDocGuide() {
+  document.getElementById('docGuidePanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDocGuide() {
+  document.getElementById('docGuidePanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function dgSwitchTab(name, btn) {
+  document.querySelectorAll('#docGuidePanel .dg-tab').forEach(el => el.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const allTab  = document.getElementById('dgtab-all');
+  const subTab  = document.getElementById('dgtab-submit');
+  const isSubmit = name === 'submit';
+  const isAll    = name === 'all';
+
+  // Always restore all source blocks first
+  if (allTab) allTab.querySelectorAll('.dg-source-block').forEach(b => b.style.display = '');
+
+  document.querySelectorAll('#docGuidePanel .dg-tab-content').forEach(el => el.classList.remove('active'));
+
+  if (isSubmit) {
+    if (subTab) subTab.classList.add('active');
+  } else if (isAll) {
+    if (allTab) allTab.classList.add('active');
+  } else {
+    // Filter view — show all-tab but hide non-matching source blocks
+    if (allTab) {
+      allTab.classList.add('active');
+      allTab.querySelectorAll('.dg-source-block').forEach(block => {
+        block.style.display = block.dataset.source === name ? '' : 'none';
+      });
+    }
+  }
+}
+
+function dgToggleDoc(id) {
+  const card = document.getElementById('dgdoc-' + id);
+  if (card) card.classList.toggle('open');
+}
+function dgToggleDone(e, id) {
+  e.stopPropagation();
+  const card = document.getElementById('dgdoc-' + id);
+  if (card) { card.classList.toggle('done'); dgUpdateProgress(); }
+}
+function dgUpdateProgress() {
+  const total = document.querySelectorAll('#docGuidePanel .dg-doc-card').length / 2 + 0.5 | 0;
+  const done  = document.querySelectorAll('#dgtab-all .dg-doc-card.done').length;
+  const req   = document.querySelectorAll('#dgtab-all .dg-doc-card').length;
+  const pct   = req ? Math.round(done / req * 100) : 0;
+  const el = id => document.getElementById(id);
+  if (el('dg-prog-count')) el('dg-prog-count').textContent = done + '/' + req;
+  if (el('dg-prog-fill')) el('dg-prog-fill').style.width = pct + '%';
+  if (el('dg-cnt-done')) el('dg-cnt-done').textContent = done;
+  if (el('dg-cnt-pending')) el('dg-cnt-pending').textContent = req - done;
+  if (el('dg-cnt-pct')) el('dg-cnt-pct').textContent = pct + '%';
+}
+
+async function dgAskAI() {
+  const inp = document.getElementById('dg-ai-q');
+  const resp = document.getElementById('dg-ai-resp');
+  const q = (inp ? inp.value : '').trim();
+  if (!q) return;
+  resp.innerHTML = '<i style="color:#7070A0">Thinking…</i>';
+  inp.value = '';
+  try {
+    const res = await fetch('/.netlify/functions/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'NRI ITR document question: ' + q })
+    });
+    const data = await res.json();
+    resp.innerHTML = (data.reply || data.response || data.message || 'No response received.').replace(/\n/g, '<br>');
+  } catch (err) {
+    resp.innerHTML = '<span style="color:#E74C3C">Error reaching AI. Please try again.</span>';
+  }
+}
+
 </script>
+
+<!-- ════════════════════════════════════════════════
+     DOCUMENT GUIDE PANEL
+════════════════════════════════════════════════ -->
+<div id="docGuidePanel">
+
+  <!-- Panel top bar -->
+  <div class="dg-topbar">
+    <div>
+      <div class="dg-topbar-title">🇮🇳 NRI ITR — Document Collection Guide</div>
+      <div class="dg-topbar-sub">FY 2025–26 · AY 2026–27 · No Form 16 · Qatar-based NRI</div>
+    </div>
+    <div class="dg-progress" style="align-items:center;gap:12px;">
+      <div style="text-align:right;">
+        <div class="dg-prog-count" id="dg-prog-count">0/17</div>
+        <div style="font-size:0.68rem;color:var(--dg-muted);">documents collected</div>
+        <div class="dg-prog-bar-wrap" style="margin-top:5px;"><div class="dg-prog-bar-fill" id="dg-prog-fill" style="width:0%"></div></div>
+      </div>
+      <button class="dg-close-btn" onclick="closeDocGuide()">✕ Close</button>
+    </div>
+  </div>
+
+  <!-- Panel scrollable body -->
+  <div class="dg-body">
+
+    <!-- Summary strip -->
+    <div class="dg-strip">
+      <div class="dg-strip-card"><div class="dg-strip-val" style="color:#E74C3C" id="dg-cnt-req">17</div><div class="dg-strip-lbl">Total documents</div></div>
+      <div class="dg-strip-card"><div class="dg-strip-val" style="color:#2ECC71" id="dg-cnt-done">0</div><div class="dg-strip-lbl">Collected ✓</div></div>
+      <div class="dg-strip-card"><div class="dg-strip-val" style="color:#F5C518" id="dg-cnt-pending">17</div><div class="dg-strip-lbl">Still pending</div></div>
+      <div class="dg-strip-card"><div class="dg-strip-val" style="color:#4A9EFF" id="dg-cnt-pct">0%</div><div class="dg-strip-lbl">Ready to file</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="dg-tabs">
+      <button class="dg-tab active" onclick="dgSwitchTab('all',this)">📋 All Documents <span class="cnt">17</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('portal',this)">🏛️ IT Portal <span class="cnt">3</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('bank',this)">🏦 Bank <span class="cnt">3</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('broker',this)">📈 Broker/Demat <span class="cnt">4</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('qatar',this)">🌐 Qatar (DTAA) <span class="cnt">3</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('identity',this)">🪪 Identity <span class="cnt">2</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('property',this)">🏠 Property <span class="cnt">2</span></button>
+      <button class="dg-tab" onclick="dgSwitchTab('submit',this)">🚀 Submit Guide</button>
+    </div>
+
+    <!-- AI panel -->
+    <div class="dg-ai-panel">
+      <div class="dg-ai-title"><div class="dg-ai-dot"></div>Ask AI — NRI Tax Document Assistant</div>
+      <div class="dg-ai-row">
+        <input class="dg-ai-input" id="dg-ai-q" placeholder="e.g. How do I download Form 26AS? Where do I get my capital gains from Zerodha?" onkeydown="if(event.key==='Enter')dgAskAI()">
+        <button class="dg-ai-send" onclick="dgAskAI()">Ask →</button>
+      </div>
+      <div class="dg-ai-resp" id="dg-ai-resp" style="margin-top:10px;font-size:0.79rem;color:#7070A0;">Ask any question about getting your NRI tax documents…</div>
+    </div>
+
+    <!-- ALL DOCS TAB -->
+    <div id="dgtab-all" class="dg-tab-content active">
+
+      <!-- IT Portal -->
+      <div class="dg-source-block" data-source="portal">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(74,158,255,0.15)">🏛️</div>
+          <div><div class="dg-source-title">Income Tax Portal</div><div class="dg-source-sub">incometax.gov.in — Free downloads, login with PAN</div></div>
+          <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-source-link sl-portal">🔗 Open Portal</a>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-26as">
+          <div class="dg-doc-top" onclick="dgToggleDoc('26as')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'26as')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Form 26AS — Tax Credit Statement</div>
+              <div class="dg-doc-desc">Shows ALL TDS deducted on your PAN — NRO interest, rent, capital gains. Most important document for NRI filing.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory</span><span class="dg-tag dg-tag-free">Free Download</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Go to <b>incometax.gov.in</b> → Click <b>"Login"</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Enter your <b>PAN number</b> as User ID + password</div></li>
+              <li><div class="dg-step-num">3</div><div>Dashboard → <b>e-File → Income Tax Returns → View Form 26AS</b></div></li>
+              <li><div class="dg-step-num">4</div><div>Redirected to <b>TRACES portal</b> — click Confirm</div></li>
+              <li><div class="dg-step-num">5</div><div>Select <b>AY 2026-27</b> → Format: <b>PDF</b> → Click Export</div></li>
+              <li><div class="dg-step-num green">6</div><div>Download and note all TDS amounts — they reduce your tax liability.</div></li>
+            </ol>
+            <div class="dg-note">📌 <b>What to look for:</b> Part A (TDS on salary/rent/other), Part B (property sale), Part C (TCS). Each entry shows Deductor name, TAN, amount, TDS deducted.</div>
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-portal">🏛️ Open IT Portal Login</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-ais">
+          <div class="dg-doc-top" onclick="dgToggleDoc('ais')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'ais')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">AIS — Annual Information Statement</div>
+              <div class="dg-doc-desc">Complete picture of all financial transactions — TDS, SFT (MF, bank deposits, property), interest, dividends, foreign remittances.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory</span><span class="dg-tag dg-tag-free">Free Download</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Login → <b>Services → Annual Information Statement (AIS)</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Click the <b>"AIS"</b> tab (not TIS)</div></li>
+              <li><div class="dg-step-num">3</div><div>Click <b>Download</b> icon → Select <b>PDF</b></div></li>
+              <li><div class="dg-step-num green">4</div><div>Password is <b>PAN in lowercase + DOB</b> (e.g. abcde1234f01011990)</div></li>
+            </ol>
+            <div class="dg-note">📌 Part B has your income breakdown: NRO interest, dividends, capital gains, foreign remittances. Cross-check each entry with your actual accounts.</div>
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-portal">🏛️ Open AIS on IT Portal</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-tis">
+          <div class="dg-doc-top" onclick="dgToggleDoc('tis')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'tis')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">TIS — Taxpayer Information Summary</div>
+              <div class="dg-doc-desc">Auto-summarised AIS — categorised totals per income type. Use to pre-fill your ITR quickly.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory</span><span class="dg-tag dg-tag-free">Free Download</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Same path: Services → <b>Annual Information Statement</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Click the <b>"TIS"</b> tab → Download as PDF</div></li>
+              <li><div class="dg-step-num green">3</div><div>On ITR portal → use <b>"Pre-fill ITR"</b> — auto-populates from TIS/AIS into your return</div></li>
+            </ol>
+            <div class="dg-note">💡 <b>Pro tip:</b> "Pre-filled ITR" automatically pulls income data from AIS/TIS — eliminates manual entry errors for NRO interest, TDS, and dividends!</div>
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-portal">🏛️ Open IT Portal</a>
+          </div>
+        </div>
+      </div><!-- /IT Portal -->
+
+      <!-- Bank -->
+      <div class="dg-source-block" data-source="bank">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(46,204,113,0.15)">🏦</div>
+          <div><div class="dg-source-title">Your Indian Bank (NRO/NRE)</div><div class="dg-source-sub">Internet banking or branch — SBI / HDFC / Axis / ICICI etc.</div></div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-16a">
+          <div class="dg-doc-top" onclick="dgToggleDoc('16a')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'16a')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Form 16A — TDS Certificate from Bank</div>
+              <div class="dg-doc-desc">TDS deducted on NRO FD/savings interest. Your Form 16 equivalent as an NRI — most important income document.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory (if NRO interest)</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Login to your bank's internet banking</div></li>
+              <li><div class="dg-step-num">2</div><div><b>Tax / TDS section</b> → <b>TDS Certificate / Form 16A</b> → Choose <b>FY 2025-26</b></div></li>
+              <li><div class="dg-step-num">3</div><div>Download PDF — shows quarterly interest paid, TDS deducted (30%), TAN of bank</div></li>
+              <li><div class="dg-step-num green">4</div><div>If not online → email your bank's NRI desk requesting Form 16A for FY 2025-26</div></li>
+            </ol>
+            <div class="dg-warn">⚠️ Banks deduct TDS at <b>30%</b> on NRO account interest. Your actual tax may be much lower — file ITR to claim the refund.</div>
+            <a href="https://retail.onlinesbi.sbi/retail/login.htm" target="_blank" class="dg-step-link sl-green">SBI</a>
+            <a href="https://netbanking.hdfcbank.com" target="_blank" class="dg-step-link sl-green">HDFC</a>
+            <a href="https://www.axisbank.com/retail/online-banking" target="_blank" class="dg-step-link sl-green">Axis</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-nro-stmt">
+          <div class="dg-doc-top" onclick="dgToggleDoc('nro-stmt')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'nro-stmt')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">NRO Account Statement (Full Year)</div>
+              <div class="dg-doc-desc">Complete bank statement Apr 2025 – Mar 2026. Shows interest credits, TDS deductions, all transactions.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Internet banking → Accounts → Statement → Download</div></li>
+              <li><div class="dg-step-num">2</div><div>Date range: <b>01 April 2025 to 31 March 2026</b></div></li>
+              <li><div class="dg-step-num green">3</div><div>Note total <b>interest credited</b> and <b>TDS deducted</b> entries</div></li>
+            </ol>
+            <div class="dg-note">📌 Extract: (1) Total interest on NRO savings + FDs, (2) TDS deducted (debit with "TDS" narration), (3) Foreign remittances received</div>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-int-cert">
+          <div class="dg-doc-top" onclick="dgToggleDoc('int-cert')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'int-cert')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Interest Certificate (FD/RD)</div>
+              <div class="dg-doc-desc">Annual certificate showing exact interest earned on your NRO Fixed and Recurring Deposits for FY 2025-26.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory (if NRO FDs exist)</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Internet banking → Fixed Deposits → <b>Interest Certificate</b> or TDS Certificate</div></li>
+              <li><div class="dg-step-num">2</div><div>Select <b>FY 2025-26</b> → Download</div></li>
+              <li><div class="dg-step-num green">3</div><div>If not found → email NRI relationship manager: "Interest Certificate for all NRO FDs for FY 2025-26"</div></li>
+            </ol>
+            <div class="dg-note">💡 The interest amount should match Form 26AS (Part A) and AIS. Contact your bank before filing if there's a mismatch.</div>
+          </div>
+        </div>
+      </div><!-- /Bank -->
+
+      <!-- Broker/Demat -->
+      <div class="dg-source-block" data-source="broker">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(245,197,24,0.15)">📈</div>
+          <div><div class="dg-source-title">Stock Broker & Demat (NSE/BSE)</div><div class="dg-source-sub">Zerodha / Groww / Angel / HDFC Securities + CDSL / NSDL</div></div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-cg-stmt">
+          <div class="dg-doc-top" onclick="dgToggleDoc('cg-stmt')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'cg-stmt')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Capital Gains Statement from Broker</div>
+              <div class="dg-doc-desc">Stock trades — buy price, sell price, holding period, STCG and LTCG. Required for Schedule CG in ITR-2.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory (if stocks sold)</span><span class="dg-tag dg-tag-cg">Capital Gains</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num gold">Z</div><div><b>Zerodha:</b> kite.zerodha.com → Console → Portfolio → <b>Tax P&amp;L</b> → FY 2025-26 → Download</div></li>
+              <li><div class="dg-step-num gold">G</div><div><b>Groww:</b> Profile → <b>Reports</b> → Capital Gains → FY 2025-26 → Download</div></li>
+              <li><div class="dg-step-num gold">A</div><div><b>Angel One:</b> Reports → <b>Capital Gain Report</b> → Select year → Download Excel</div></li>
+              <li><div class="dg-step-num green">✓</div><div>Report splits: <b>STCG (held &lt;12 months)</b> and <b>LTCG (held &gt;12 months)</b> — note both separately</div></li>
+            </ol>
+            <div class="dg-note">📌 <b>LTCG exemption:</b> First ₹1,25,000 of equity LTCG per year is tax-free. Broker shows gross gains — subtract ₹1,25,000 for actual taxable LTCG.</div>
+            <a href="https://console.zerodha.com/portfolio/holdings" target="_blank" class="dg-step-link sl-gold">Zerodha Console</a>
+            <a href="https://groww.in/reports" target="_blank" class="dg-step-link sl-gold">Groww Reports</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-cas">
+          <div class="dg-doc-top" onclick="dgToggleDoc('cas')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'cas')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">CAS — Consolidated Account Statement (CDSL/NSDL)</div>
+              <div class="dg-doc-desc">All equity and mutual fund holdings across all brokers. Useful for verifying your complete portfolio and gains.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-opt">Recommended</span><span class="dg-tag dg-tag-free">Free</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div><b>cdslindia.com</b> → Investor → <b>myEasi</b> → Register/Login</div></li>
+              <li><div class="dg-step-num">2</div><div>Select: <b>Detailed</b> → Period: <b>01-Apr-2025 to 31-Mar-2026</b> → Submit</div></li>
+              <li><div class="dg-step-num green">3</div><div>Statement emailed to registered email. Shows all equity holdings across all brokers.</div></li>
+            </ol>
+            <a href="https://www.cdslindia.com/footer/myeasi.html" target="_blank" class="dg-step-link sl-gold">CDSL myEasi</a>
+            <a href="https://eservices.nsdl.com/CAS/CASRequired.html" target="_blank" class="dg-step-link sl-gold">NSDL CAS</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-mf-cg">
+          <div class="dg-doc-top" onclick="dgToggleDoc('mf-cg')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'mf-cg')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Mutual Fund Capital Gains Statement (CAMS/KFintech)</div>
+              <div class="dg-doc-desc">If you redeemed MFs in FY 2025-26, this shows fund-wise STCG and LTCG — for Schedule CG.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory (if MF redeemed)</span><span class="dg-tag dg-tag-cg">Capital Gains</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div><b>camsonline.com</b> → Investor Services → <b>Statement of Account → Capital Gains Report</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Enter PAN + email → Period: <b>01-Apr-2025 to 31-Mar-2026</b> → Submit → sent to email</div></li>
+              <li><div class="dg-step-num blue">3</div><div>Also do same at <b>kfintech.com</b> for UTI, Sundaram etc.</div></li>
+              <li><div class="dg-step-num green">4</div><div>Shows fund-wise: purchase NAV, redemption NAV, units, STCG, LTCG</div></li>
+            </ol>
+            <a href="https://www.camsonline.com/Investors/Statements/Detailed-Statement" target="_blank" class="dg-step-link sl-gold">CAMS Capital Gains</a>
+            <a href="https://mfs.kfintech.com/investor/General/ConsolidatedSOA" target="_blank" class="dg-step-link sl-gold">KFintech</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-div">
+          <div class="dg-doc-top" onclick="dgToggleDoc('div')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'div')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Dividend Income Statement</div>
+              <div class="dg-doc-desc">Dividends from Indian stocks and MFs are taxable under Schedule OS. TDS at 20% deducted by companies for NRIs.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Required if dividends received</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Your broker's Capital Gains / Tax P&amp;L report usually includes dividend details</div></li>
+              <li><div class="dg-step-num">2</div><div>Check your AIS — lists all dividend income against your PAN</div></li>
+              <li><div class="dg-step-num green">3</div><div>TDS at 20% may have been deducted on dividends &gt;₹5,000 — appears in Form 26AS</div></li>
+            </ol>
+            <div class="dg-note">📌 Dividends are fully taxable at slab rates. Enter under <b>Schedule OS</b> in ITR-2.</div>
+          </div>
+        </div>
+      </div><!-- /Broker -->
+
+      <!-- Qatar / DTAA -->
+      <div class="dg-source-block" data-source="qatar">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(154,59,182,0.15)">🌐</div>
+          <div><div class="dg-source-title">Qatar — DTAA Documents</div><div class="dg-source-sub">Required to claim India–Qatar Double Taxation relief</div></div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-trc">
+          <div class="dg-doc-top" onclick="dgToggleDoc('trc')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'trc')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">TRC — Tax Residency Certificate from Qatar</div>
+              <div class="dg-doc-desc">Issued by Qatar's General Tax Authority (GTA). Proves you are a tax resident of Qatar — required to claim DTAA benefit.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-dtaa">DTAA Required</span><span class="dg-tag dg-tag-req">Mandatory for DTAA</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Go to <b>Qatar General Tax Authority</b> portal: <b>gta.gov.qa</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Login with QID credentials or via <b>Hukoomi</b></div></li>
+              <li><div class="dg-step-num">3</div><div>Apply for <b>"Tax Residency Certificate"</b> — purpose: <b>Relief from Foreign Tax / DTAA</b>, country: <b>India</b></div></li>
+              <li><div class="dg-step-num green">4</div><div>Download TRC — keep original + notarised translation if Arabic only</div></li>
+            </ol>
+            <div class="dg-note">📌 TRC must contain: Your name, Qatar tax ID, period covered (FY 2025-26), confirmation of tax residency in Qatar per India-Qatar DTAA.</div>
+            <div class="dg-warn">⚠️ If Qatar GTA doesn't issue TRC (Qatar has no personal income tax), submit an employer letter + Qatar ID as proof of residency. Check with a CA.</div>
+            <a href="https://www.gta.gov.qa" target="_blank" class="dg-step-link sl-accent">Qatar GTA Portal</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-10f">
+          <div class="dg-doc-top" onclick="dgToggleDoc('10f')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'10f')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Form 10F — Self-Declaration for DTAA</div>
+              <div class="dg-doc-desc">Filled on the India IT portal. Declares your tax residency in Qatar — paired with TRC to claim DTAA benefit.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-dtaa">DTAA Required</span><span class="dg-tag dg-tag-free">Free — Fill Online</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>IT portal → <b>e-File → Income Tax Forms → File Income Tax Forms</b> → Search <b>Form 10F</b></div></li>
+              <li><div class="dg-step-num">2</div><div>Select <b>AY 2026-27</b> → Fill: Country: <b>Qatar</b>, Tax ID: your Qatar ID, Period: <b>01-Apr-2025 to 31-Mar-2026</b></div></li>
+              <li><div class="dg-step-num">3</div><div>Upload <b>TRC</b> as supporting document</div></li>
+              <li><div class="dg-step-num green">4</div><div>Submit + <b>e-verify</b> via Aadhaar OTP. Download acknowledgment.</div></li>
+            </ol>
+            <div class="dg-note">💡 Fill Form 10F <i>before</i> filing your ITR. The acknowledgment number is referenced in Schedule TR of ITR-2.</div>
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-portal">Fill Form 10F on IT Portal</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-qatarid">
+          <div class="dg-doc-top" onclick="dgToggleDoc('qatarid')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'qatarid')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Qatar Residency Proof (QID / Work Permit / Employer Letter)</div>
+              <div class="dg-doc-desc">Backup proof of Qatar residency for NRI status and DTAA purposes.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-opt">Recommended</span><span class="dg-tag dg-tag-dtaa">DTAA Support</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Keep a copy of your <b>Qatar ID (QID / Iqama)</b> — shows valid residency period</div></li>
+              <li><div class="dg-step-num green">2</div><div>Get an <b>employment certificate</b> from your Qatar employer on letterhead confirming you are resident and employed in Qatar</div></li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /Qatar -->
+
+      <!-- Identity -->
+      <div class="dg-source-block" data-source="identity">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(255,107,53,0.15)">🪪</div>
+          <div><div class="dg-source-title">Identity Documents</div><div class="dg-source-sub">Pre-requisites — PAN must be linked to Aadhaar</div></div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-pan">
+          <div class="dg-doc-top" onclick="dgToggleDoc('pan')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'pan')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">PAN Card + Aadhaar Linking Status</div>
+              <div class="dg-doc-desc">PAN must be linked to Aadhaar. Without this, PAN becomes inoperative — cannot file ITR or claim refunds.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Critical — Must verify</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>incometax.gov.in → Quick Links → <b>"Link Aadhaar Status"</b> → enter PAN + Aadhaar</div></li>
+              <li><div class="dg-step-num">2</div><div>If NOT linked: Quick Links → <b>"Link Aadhaar"</b> → pay ₹1,000 fee + link</div></li>
+              <li><div class="dg-step-num green">3</div><div>If linked: all good. Keep your PAN handy for all forms.</div></li>
+            </ol>
+            <div class="dg-warn">⚠️ If PAN is inoperative, TDS is deducted at higher rates and you can't file ITR or receive refunds. Link immediately if not done.</div>
+            <a href="https://www.incometax.gov.in/iec/foportal/help/link-aadhaar" target="_blank" class="dg-step-link sl-accent">Check PAN-Aadhaar Link</a>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-passport">
+          <div class="dg-doc-top" onclick="dgToggleDoc('passport')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'passport')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Passport + Travel History (India Days Count)</div>
+              <div class="dg-doc-desc">Documents your days in India — confirms NRI status. Need count for FY 2025-26 and last 4 years.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Mandatory</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Keep passport with all entry/exit stamps visible</div></li>
+              <li><div class="dg-step-num">2</div><div>Count <b>exact days in India</b> during Apr 2025 – Mar 2026. Must be &lt;182 for NRI status.</div></li>
+              <li><div class="dg-step-num green">3</div><div>Also count for last 4 years (FY 2021-22 to 2024-25) — relevant for secondary NRI test</div></li>
+            </ol>
+            <div class="dg-note">📌 Qatar-based full-time employees with 0 or very few India days (&lt;60) are clearly NRI. Document this for any future IT notice.</div>
+          </div>
+        </div>
+      </div><!-- /Identity -->
+
+      <!-- Property -->
+      <div class="dg-source-block" data-source="property">
+        <div class="dg-source-hdr">
+          <div class="dg-source-icon" style="background:rgba(27,188,156,0.15)">🏠</div>
+          <div><div class="dg-source-title">Property Documents (if applicable)</div><div class="dg-source-sub">Only if you earn rental income or sold property in FY 2025-26</div></div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-rental">
+          <div class="dg-doc-top" onclick="dgToggleDoc('rental')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'rental')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Rental Agreement + Rent Receipts</div>
+              <div class="dg-doc-desc">If you have Indian tenants. Tenant should deduct 30% TDS on rent paid to NRI — verify in Form 26AS.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-req">Required if renting property</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Collect signed <b>rental agreement</b> from your tenant</div></li>
+              <li><div class="dg-step-num">2</div><div>Get monthly <b>rent receipts</b> or bank transfer proof</div></li>
+              <li><div class="dg-step-num">3</div><div>Tenant must give <b>Form 16A</b> for TDS deducted (30% if rent &gt;₹50,000/month)</div></li>
+              <li><div class="dg-step-num green">4</div><div>Verify TDS appears in your <b>Form 26AS</b> under Part A</div></li>
+            </ol>
+            <div class="dg-warn">⚠️ If tenant hasn't deducted TDS — you are still liable to pay the tax. Check with a CA.</div>
+          </div>
+        </div>
+
+        <div class="dg-doc-card" id="dgdoc-homeloan">
+          <div class="dg-doc-top" onclick="dgToggleDoc('homeloan')">
+            <div class="dg-doc-checkbox" onclick="dgToggleDone(event,'homeloan')"></div>
+            <div class="dg-doc-info">
+              <div class="dg-doc-name">Home Loan Interest Certificate (Annual)</div>
+              <div class="dg-doc-desc">From your bank — principal repaid and interest paid for FY 2025-26. Used for Section 24(b) and 80C.</div>
+              <div class="dg-doc-tags"><span class="dg-tag dg-tag-opt">If home loan exists</span></div>
+            </div>
+            <div class="dg-expand-arrow">▼</div>
+          </div>
+          <div class="dg-doc-steps">
+            <ol class="dg-step-list">
+              <li><div class="dg-step-num">1</div><div>Internet banking → Loans → Home Loan → <b>Provisional/Final Interest Certificate</b> for FY 2025-26</div></li>
+              <li><div class="dg-step-num green">2</div><div>(a) Interest paid — deductible under Sec 24(b); (b) Principal repaid — deductible under 80C</div></li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /Property -->
+
+    </div><!-- /dgtab-all -->
+
+    <!-- Filtered tabs (populated dynamically via dgSwitchTab) -->
+    <div id="dgtab-portal" class="dg-tab-content"></div>
+    <div id="dgtab-bank" class="dg-tab-content"></div>
+    <div id="dgtab-broker" class="dg-tab-content"></div>
+    <div id="dgtab-qatar" class="dg-tab-content"></div>
+    <div id="dgtab-identity" class="dg-tab-content"></div>
+    <div id="dgtab-property" class="dg-tab-content"></div>
+
+    <!-- Submit Guide tab -->
+    <div id="dgtab-submit" class="dg-tab-content">
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(74,158,255,0.2);color:#4A9EFF">1</div>
+        <div>
+          <div class="dg-flow-title">Pre-File Checklist (Before You Start)</div>
+          <div class="dg-flow-body">
+            ✅ All 17 documents collected (check the checklist)<br>
+            ✅ Form 26AS downloaded — match TDS with your documents<br>
+            ✅ AIS downloaded — verify all income entries are correct<br>
+            ✅ PAN–Aadhaar linked and active<br>
+            ✅ NRO bank account pre-validated on IT portal<br>
+            ✅ Form 10F filed on IT portal (for DTAA)<br>
+            ✅ TRC obtained from Qatar GTA
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(46,204,113,0.2);color:#2ECC71">2</div>
+        <div>
+          <div class="dg-flow-title">Login & Start ITR</div>
+          <div class="dg-flow-body">
+            Go to <b>incometax.gov.in</b> → Login with PAN + password<br>
+            Dashboard → <b>e-File → Income Tax Returns → File Income Tax Return</b><br>
+            Select: <b>AY 2026–27</b> → Mode: <b>Online</b> → <b>Start New Filing</b><br>
+            Status: <b>Individual</b> → Form: <b>ITR-2</b> → Click <b>Get Started</b>
+          </div>
+          <div class="dg-flow-links">
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-green">🚀 Open IT Portal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(245,197,24,0.2);color:#F5C518">3</div>
+        <div>
+          <div class="dg-flow-title">Use Pre-Filled Data (Key NRI Tip!)</div>
+          <div class="dg-flow-body">
+            On the filing page → Click <b>"Pre-fill ITR"</b> button<br>
+            Auto-pulls from AIS/TIS: <b>NRO interest, TDS, dividends, capital gains</b><br>
+            <b>Review each pre-filled item</b> and confirm or correct with your documents<br>
+            Cross-check with Form 26AS figures — this eliminates most manual entry!
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(255,107,53,0.2);color:#FF6B35">4</div>
+        <div>
+          <div class="dg-flow-title">Fill Each Schedule</div>
+          <div class="dg-flow-body">
+            <b>Schedule HP</b> → Gross rent, municipal tax, home loan interest<br>
+            <b>Schedule CG</b> → STCG/LTCG from broker/MF capital gains statement<br>
+            <b>Schedule OS</b> → NRO interest, dividends (cross-check with AIS)<br>
+            <b>Schedule FSI</b> → Any income from foreign sources<br>
+            <b>Schedule TR</b> → DTAA relief — Form 10F details + Qatar TRC<br>
+            <b>Schedule TDS</b> → Auto-filled from 26AS — verify all TDS entries
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(154,59,182,0.2);color:#9B59B6">5</div>
+        <div>
+          <div class="dg-flow-title">Tax Payment or Refund</div>
+          <div class="dg-flow-body">
+            Review <b>Part B-TTI</b> — total tax computed automatically<br>
+            If <b>tax is due</b>: Pay via <b>Challan 280</b> → Self Assessment Tax (300) → pay online via bank<br>
+            If <b>refund is due</b>: Ensure NRO account pre-validated — refund in 6-8 weeks after processing<br>
+            Enter Challan details in ITR before submitting
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(46,204,113,0.2);color:#2ECC71">6</div>
+        <div>
+          <div class="dg-flow-title">Submit & e-Verify (Critical!)</div>
+          <div class="dg-flow-body">
+            Click <b>Preview and Submit</b> → Review → <b>Submit</b><br>
+            <b>e-Verify WITHIN 30 DAYS:</b><br>
+            Option A: <b>Aadhaar OTP</b> — easiest, OTP on Aadhaar-linked mobile<br>
+            Option B: <b>Net Banking EVC</b> — login to bank, generate EVC<br>
+            Option C: <b>Sign ITR-V</b> physically and post to CPC Bengaluru<br><br>
+            <b>Download and save your ITR-V acknowledgment</b> — this is proof of filing
+          </div>
+          <div class="dg-flow-links">
+            <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank" class="dg-step-link sl-green">🚀 File Now on IT Portal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dg-flow-card">
+        <div class="dg-flow-num" style="background:rgba(26,188,156,0.2);color:#1ABC9C">7</div>
+        <div>
+          <div class="dg-flow-title">After Filing</div>
+          <div class="dg-flow-body">
+            Track status: IT portal → <b>e-File → ITR Status</b> using acknowledgment number<br>
+            Refund status: <b>tin.tin.nsdl.com</b> → Refund Status<br>
+            Keep all documents for <b>7 years</b> in case of scrutiny notice<br>
+            Filing deadline: <b>31 July 2026</b> (non-audit individual)
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dgtab-submit -->
+
+  </div><!-- /dg-body -->
+</div><!-- /docGuidePanel -->
+
 </body>
 </html>
