@@ -1004,17 +1004,20 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
 
       <!-- Document Checklist -->
       <div class="card">
-        <div class="card-title"><span>✅</span> Document Checklist</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <span><span>✅</span> Document Checklist</span>
+          <button onclick="openDocGuide()" title="NRI Document Collection Guide" style="flex-shrink:0;font-size:11px;padding:3px 8px;border-radius:6px;background:#FF6B35;color:#fff;border:none;cursor:pointer;font-weight:600;white-space:nowrap;">📋 NRI Docs</button>
+        </div>
         <div id="checklist" style="font-size:12.5px; color:var(--muted);">Will appear after income sources are identified.</div>
       </div>
 
       <!-- Key Dates -->
       <div class="card">
         <div class="card-title"><span>🗓</span> Key Dates</div>
-        <div class="help-row"><span>Non-audit (individual)</span><span>31 Jul 2026</span></div>
-        <div class="help-row"><span>Tax audit cases</span><span>31 Oct 2026</span></div>
-        <div class="help-row"><span>Belated / revised</span><span>31 Dec 2026</span></div>
-        <div class="help-row"><span>Updated (ITR-U)</span><span>31 Mar 2030</span></div>
+        <div class="help-row"><span>Non-audit (individual)</span><span id="dateNonAudit">31 Jul 2026</span></div>
+        <div class="help-row"><span>Tax audit cases</span><span id="dateAudit">31 Oct 2026</span></div>
+        <div class="help-row"><span>Belated / revised</span><span id="dateBelated">31 Dec 2026</span></div>
+        <div class="help-row"><span>Updated (ITR-U)</span><span id="dateUpdated">31 Mar 2030</span></div>
         <div class="help-row"><span>📞 Helpline</span><span>1800 103 0025</span></div>
       </div>
 
@@ -1077,6 +1080,49 @@ html:not([data-theme="light"]) .donate-card { background: linear-gradient(135deg
 </div>
 
 <script>
+// ============================================================
+// TAX YEAR — auto-computed from current date
+// ============================================================
+(function () {
+  const now = new Date();
+  const m = now.getMonth() + 1; // 1=Jan … 12=Dec
+  const y = now.getFullYear();
+  // Apr–Dec of year Y → filing for FY(Y-1)–Y, AY Y–(Y+1)
+  // Jan–Mar of year Y → filing for FY(Y-2)–(Y-1), AY (Y-1)–Y
+  const ayY = m >= 4 ? y : y - 1;
+  const fyY = ayY - 1;
+  const pad2 = n => String(n).slice(-2);
+  window.TAX = {
+    fy:       `${fyY}-${pad2(ayY)}`,
+    ay:       `${ayY}-${pad2(ayY + 1)}`,
+    fyFull:   `FY ${fyY}-${pad2(ayY)}`,
+    ayFull:   `AY ${ayY}-${pad2(ayY + 1)}`,
+    ayYear:   ayY,
+    fyYear:   fyY,
+    nonAuditDeadline: `31 Jul ${ayY}`,
+    auditDeadline:    `31 Oct ${ayY}`,
+    belatedDeadline:  `31 Dec ${ayY}`,
+    updatedDeadline:  `31 Mar ${ayY + 4}`,
+    fyPeriod: `01-Apr-${fyY} to 31-Mar-${ayY}`,
+    fyPeriodShort: `Apr ${fyY} – Mar ${ayY}`,
+  };
+
+  // Populate Key Dates sidebar
+  document.addEventListener('DOMContentLoaded', function () {
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('dateNonAudit', TAX.nonAuditDeadline);
+    set('dateAudit',    TAX.auditDeadline);
+    set('dateBelated',  TAX.belatedDeadline);
+    set('dateUpdated',  TAX.updatedDeadline);
+    // Update AY badge in top bar
+    const badge = document.querySelector('.ay-badge');
+    if (badge) badge.textContent = TAX.ayFull;
+    // Update doc guide panel subtitle
+    const dgSub = document.querySelector('#docGuidePanel .dg-topbar-sub');
+    if (dgSub) dgSub.textContent = `${TAX.fyFull} · ${TAX.ayFull} · No Form 16 · Qatar-based NRI`;
+  });
+})();
+
 // ============================================================
 // STATE
 // ============================================================
@@ -1465,7 +1511,7 @@ userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendBtn.cli
 // CONVERSATION FLOW
 // ============================================================
 function start() {
-  botSay(`<b>Namaste!</b> I'm your ITR filing assistant for <b>FY 2025-26 (AY 2026-27)</b>.<br><br>I'll ask a few questions to understand your income, compute your tax under both regimes, recommend the right ITR form, and give you a step-by-step filing guide.<br><br>💡 <b>Tip:</b> You can upload your <b>AIS (Annual Information Statement)</b> from incometax.gov.in to auto-fill most details — or just answer the guided questions manually.`,
+  botSay(`<b>Namaste!</b> I'm your ITR filing assistant for <b>${TAX.fyFull} (${TAX.ayFull})</b>.<br><br>I'll ask a few questions to understand your income, compute your tax under both regimes, recommend the right ITR form, and give you a step-by-step filing guide.<br><br>💡 <b>Tip:</b> You can upload your <b>AIS (Annual Information Statement)</b> from incometax.gov.in to auto-fill most details — or just answer the guided questions manually.`,
     [
       { label: '📄 Upload AIS & auto-fill', value: 'uploadAIS' },
       { label: '🚀 Start guided questions', value: 'begin' },
@@ -1586,7 +1632,7 @@ function handleAge(v) {
   if (v >= 80) ageNote = ' You are a <b>Super Senior Citizen</b> (80+) — old regime gives basic exemption up to Rs 5 lakh.';
   else if (v >= 60) ageNote = ' You are a <b>Senior Citizen</b> (60+) — old regime gives basic exemption up to Rs 3 lakh.';
   hideInput();
-  botSay(`Noted — age ${v}.${ageNote}<br><br>What is your <b>residential status</b> for FY 2025-26?<br><br><i>If you stayed in India for 182+ days, you're typically Resident.</i>`,
+  botSay(`Noted — age ${v}.${ageNote}<br><br>What is your <b>residential status</b> for ${TAX.fyFull}?<br><br><i>If you stayed in India for 182+ days, you're typically Resident.</i>`,
     [
       { label: 'Resident & Ordinarily Resident (ROR)', value: 'ROR' },
       { label: 'Resident but Not Ordinarily Resident (RNOR)', value: 'RNOR' },
@@ -1598,7 +1644,7 @@ function handleAge(v) {
 // --- RESIDENTIAL ---
 function handleResidential(v) {
   if (v === 'help') {
-    botSay(`<b>Quick test:</b><ul><li>Were you in India for <b>182+ days</b> in FY 2025-26 (Apr 2025 – Mar 2026)? → Resident.</li><li>OR in India for 60+ days this year AND 365+ days in the prior 4 years? → Resident.</li><li>If Resident — were you Resident in 2 of last 10 years AND 730+ days in last 7? → ROR. Else RNOR.</li><li>Otherwise → Non-Resident.</li></ul>`,
+    botSay(`<b>Quick test:</b><ul><li>Were you in India for <b>182+ days</b> in ${TAX.fyFull} (${TAX.fyPeriodShort})? → Resident.</li><li>OR in India for 60+ days this year AND 365+ days in the prior 4 years? → Resident.</li><li>If Resident — were you Resident in 2 of last 10 years AND 730+ days in last 7? → ROR. Else RNOR.</li><li>Otherwise → Non-Resident.</li></ul>`,
       [
         { label: 'ROR', value: 'ROR' },
         { label: 'RNOR', value: 'RNOR' },
@@ -1636,7 +1682,7 @@ function handleDirector(v) {
   state.profile.unlistedShares = v;
   state.step = 'sources';
   state.awaitingMulti = true;
-  botSay(`What are your <b>income sources</b> for FY 2025-26?<br><br>Select all that apply, then click <b>Done ✓</b>.`,
+  botSay(`What are your <b>income sources</b> for ${TAX.fyFull}?<br><br>Select all that apply, then click <b>Done ✓</b>.`,
     [
       { label: '💼 Salary / Pension', value: 'salary', multi: true },
       { label: '🏠 House Property (rent / own home)', value: 'house', multi: true },
@@ -2367,7 +2413,7 @@ function showFilingGuide() {
   html += `• Compare with Form 16 / broker statements<br><br>`;
 
   html += `<b>Step 4 — Start return</b><br>`;
-  html += `e-File → Income Tax Returns → File Income Tax Return → AY 2026-27 → Online → ${form}<br>`;
+  html += `e-File → Income Tax Returns → File Income Tax Return → ${TAX.ayFull} → Online → ${form}<br>`;
   html += `Reason: ${c.taxNew + c.taxOld === 0 ? 'Refund / nil return' : 'Tax liability above exemption'}<br><br>`;
 
   html += `<b>Step 5 — Choose tax regime</b><br>`;
@@ -2526,7 +2572,7 @@ function answerQuestion(q) {
     return `Verify return within <b>30 days</b> of filing via: (a) Aadhaar OTP — instant, (b) net banking EVC, (c) bank/demat EVC, (d) DSC (companies), or (e) post signed ITR-V to CPC Bengaluru 560500. If not verified within 30 days, return becomes invalid (treated as not filed).`;
   }
   if (lower.includes('due date')) {
-    return `<b>FY 2025-26 due dates:</b><br>• 31 July 2026 — non-audit individuals<br>• 31 October 2026 — tax audit cases (44AB)<br>• 30 November 2026 — transfer pricing<br>• 31 December 2026 — belated/revised<br>• 31 March 2030 — updated return (ITR-U, 48 months)`;
+    return `<b>${TAX.fyFull} due dates:</b><br>• ${TAX.nonAuditDeadline} — non-audit individuals<br>• ${TAX.auditDeadline} — tax audit cases (44AB)<br>• 30 Nov ${TAX.ayYear} — transfer pricing<br>• ${TAX.belatedDeadline} — belated/revised<br>• ${TAX.updatedDeadline} — updated return (ITR-U, 48 months)`;
   }
   if (lower.includes('aadhaar')) {
     return `Aadhaar-PAN linkage is mandatory under Section 139AA. Unlinked PAN becomes <b>inoperative</b> — higher TDS rates (typically 20%), cannot file return, refunds blocked. Link via portal with Rs 1,000 fee (delayed linking).`;
@@ -2565,7 +2611,7 @@ function exportSummary() {
     alert('Please complete the guided session first before saving the summary.');
     return;
   }
-  const text = `ITR FILING SUMMARY — FY 2025-26 / AY 2026-27
+  const text = `ITR FILING SUMMARY — ${TAX.fyFull} / ${TAX.ayFull}
 ==============================================
 
 Taxpayer: ${p.name}
