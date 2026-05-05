@@ -457,6 +457,85 @@ function readMarketRates(ss) {
   return { data: data };
 }`;
 
+type ChangelogEntry = {
+  version: string;
+  date: string;
+  badge: string | null;
+  badgeColor: 'violet' | 'emerald';
+  title: string;
+  items: string[];
+};
+
+const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: 'v2.4.0', date: 'May 2025', badge: 'latest', badgeColor: 'violet',
+    title: 'NRI Document Guide + Auto Tax Dates',
+    items: [
+      '📋 NRI ITR Document Collection Guide — 17-document checklist with progress tracker, tabbed by source (IT Portal, Bank, Broker, Qatar DTAA, Identity, Property)',
+      '🗓 Key Dates now auto-compute from system date — FY/AY labels update every year automatically, no code change needed',
+      '🤖 Improved AIS PDF parser — window-based extraction handles real AIS format; paste fallback for scanned PDFs',
+      '📋 NRI Docs button added to Document Checklist sidebar (visible even when embedded in iframe)',
+    ],
+  },
+  {
+    version: 'v2.3.0', date: 'Apr 2025', badge: null, badgeColor: 'violet',
+    title: 'Income Tax Assistant',
+    items: [
+      '🇮🇳 Full ITR filing assistant — guided chat, Old vs New regime comparison, ITR form recommender',
+      '📄 AIS upload to auto-fill income details from incometax.gov.in PDF',
+      '📊 Live Tax Estimate sidebar — updates as you answer each question',
+      '📋 Personalised document checklist + PDF download',
+      '💡 Built-in tax Q&A (capital gains, HRA, 80C, DTAA, NRI rules)',
+    ],
+  },
+  {
+    version: 'v2.2.0', date: 'Mar 2025', badge: null, badgeColor: 'violet',
+    title: 'UPI Donation + Free AI Tier',
+    items: [
+      '☕ UPI donation via GPay / PhonePe / Paytm — zero fees, QR code',
+      '🔒 UPI ID served from backend only — never exposed in frontend code',
+      '🤖 AI Finance Analyst now free (2 reports/day, IP-based) — no API key needed',
+      '📈 Cumulative cashflow chart, pie chart segment highlight',
+      '🪙 PanamKasu rebrand with coin logo',
+    ],
+  },
+  {
+    version: 'v2.1.0', date: 'Feb 2025', badge: null, badgeColor: 'violet',
+    title: 'AI Finance Analyst',
+    items: [
+      '🤖 AI Finance Analyst — full portfolio health report powered by Claude Haiku',
+      '📊 Spending analysis, savings rate, investment allocation, insurance gaps, top 5 recommendations',
+      '💬 Free-form Q&A tab for personalised finance questions',
+      '📥 Download report as PDF',
+      '🔔 Push notifications — entry reminder every 4 hours on days with no transactions',
+    ],
+  },
+  {
+    version: 'v2.0.0', date: 'Jan 2025', badge: null, badgeColor: 'violet',
+    title: 'Vault + Subscriptions + Local Mode',
+    items: [
+      '🔐 Password Vault — SHA-256 PIN-encrypted, never leaves your device; 7 categories, strong password generator, 2FA type tracking',
+      '🔁 Subscription Tracker — monthly burn rate, next renewal dates, pause/resume, renewal alerts',
+      '💾 Local mode — full app works offline with IndexedDB; backup/restore as JSON',
+      '📤 CSV export for transactions, investments, insurance',
+      '🌙 Dark mode across the full app',
+    ],
+  },
+  {
+    version: 'v1.0.0', date: 'Dec 2024', badge: null, badgeColor: 'violet',
+    title: 'Initial Release',
+    items: [
+      '💸 Multi-currency transaction tracking (QAR, INR, USD, EUR, AED + custom)',
+      '📈 Investment portfolio — stocks, MF, FD, RD, PPF, EPF, crypto, gold, land, bonds with live GOOGLEFINANCE prices',
+      '🛡 Insurance manager — .ics calendar export, annual premium view, 7-day renewal alerts',
+      '👥 SplitIt group expense splitter — equal / percentage / custom splits, auto-push to transactions',
+      '📊 Live market dashboard — 8 global indices, USD/INR, QAR/INR, gold in ₹ and QAR',
+      '📚 Learn section — candlestick patterns, SIP, mutual funds, tax, insurance',
+      '🧮 Financial calculators — SIP, compound interest, loan EMI, retirement corpus',
+    ],
+  },
+];
+
 export default function Settings() {
   const [url, setUrl] = useState('');
   const [saved, setSaved] = useState(false);
@@ -924,6 +1003,41 @@ export default function Settings() {
           </p>
         </div>
       </div>
+
+      {/* App Version & Changelog */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 bg-slate-700 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-white">📦 PanamKasu — Version History</h2>
+            <span className="text-xs bg-violet-500 text-white px-2.5 py-1 rounded-full font-semibold">v2.4.0 latest</span>
+          </div>
+          <p className="text-slate-400 text-xs mt-0.5">Free · Privacy-first · Open source</p>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
+          {CHANGELOG.map(({ version, date, badge, badgeColor, title, items }) => (
+            <div key={version} className="p-5">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">{version}</span>
+                {badge && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                    badgeColor === 'violet'
+                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                      : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                  }`}>{badge}</span>
+                )}
+                <span className="text-xs text-slate-400 dark:text-slate-500">{date}</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">{title}</span>
+              </div>
+              <ul className="space-y-1">
+                {items.map((item, i) => (
+                  <li key={i} className="text-xs text-slate-500 dark:text-slate-400">{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
