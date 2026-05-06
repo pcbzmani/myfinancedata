@@ -1,5 +1,6 @@
 import type { Config } from '@netlify/functions';
 import { getStore } from '@netlify/blobs';
+import { neon } from '@netlify/neon';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
 const ALERT_TOPIC       = process.env.NTFY_ALERT_TOPIC ?? '';
@@ -89,23 +90,38 @@ async function flagCreditAlert(errorMessage: string) {
 
 const FREE_DAILY_LIMIT = 2;
 
-/** IP-based rate limiting — 2 free AI calls per day per IP */
+async function hashIP(ip: string): Promise<string> {
+  const data = new TextEncoder().encode(ip + (process.env.IP_SALT ?? 'panamkasu-salt'));
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** IP-based rate limiting — 2 free AI calls per day per IP, stored in Netlify DB */
 async function checkRateLimit(req: Request): Promise<{ allowed: boolean; used: number; remaining: number }> {
   try {
-    const ip = req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || 'unknown';
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const key = `free-ratelimit-${ip}-${today}`;
-    const store = getStore('api-usage');
-    const existing: any = await store.get(key, { type: 'json' }).catch(() => null);
-    const used = existing?.count ?? 0;
-    if (used >= FREE_DAILY_LIMIT) {
+    const rawIp = req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || 'unknown';
+    const ipHash = await hashIP(rawIp);
+    const sql = neon();
+
+    // Atomic upsert: insert or increment. Returns the new count.
+    const rows = await sql`
+      INSERT INTO ai_rate_limits (ip_hash, request_date, count)
+      VALUES (${ipHash}, CURRENT_DATE, 1)
+      ON CONFLICT (ip_hash, request_date)
+      DO UPDATE SET count = ai_rate_limits.count + 1
+      RETURNING count
+    `;
+    const used = rows[0]?.count ?? 1;
+
+    // Clean up rows older than 7 days — fire and forget
+    sql`DELETE FROM ai_rate_limits WHERE request_date < CURRENT_DATE - INTERVAL '7 days'`.catch(() => {});
+
+    if (used > FREE_DAILY_LIMIT) {
       return { allowed: false, used, remaining: 0 };
     }
-    // Increment counter (TTL not supported by Blobs, so key accumulates; we scope by date)
-    await store.setJSON(key, { count: used + 1, date: today, ip });
-    return { allowed: true, used: used + 1, remaining: FREE_DAILY_LIMIT - used - 1 };
+    return { allowed: true, used, remaining: FREE_DAILY_LIMIT - used };
   } catch {
-    // If Blobs fails, allow the call rather than blocking users
+    // If DB is unavailable, allow the call rather than blocking users
     return { allowed: true, used: 1, remaining: FREE_DAILY_LIMIT - 1 };
   }
 }

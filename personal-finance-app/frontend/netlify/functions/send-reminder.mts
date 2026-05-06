@@ -1,4 +1,4 @@
-import { getStore } from '@netlify/blobs';
+import { neon } from '@netlify/neon';
 import webpush from 'web-push';
 import type { Config } from '@netlify/functions';
 
@@ -14,11 +14,15 @@ export default async () => {
 
   webpush.setVapidDetails(`mailto:${email}`, publicKey, privateKey);
 
-  const store = getStore({ name: 'push-subscriptions', consistency: 'strong' });
-  const subscription = await store.get('subscription', { type: 'json' }) as webpush.PushSubscription | null;
+  const sql = neon();
+  const subscriptions = await sql`
+    SELECT id, endpoint, p256dh, auth
+    FROM push_subscriptions
+    WHERE is_active = true
+  `;
 
-  if (!subscription) {
-    console.log('No push subscription saved yet — skipping');
+  if (subscriptions.length === 0) {
+    console.log('No active push subscriptions — skipping');
     return;
   }
 
@@ -28,18 +32,28 @@ export default async () => {
     url: '/transactions',
   });
 
-  try {
-    await webpush.sendNotification(subscription, payload);
-    console.log('Push notification sent');
-  } catch (err: any) {
-    if (err.statusCode === 410 || err.statusCode === 404) {
-      // Subscription expired or invalid — remove it so we stop sending
-      await store.delete('subscription');
-      console.log('Subscription expired — removed');
-    } else {
-      console.error('Push send error:', err);
+  let sent = 0;
+  for (const row of subscriptions) {
+    const pushSub: webpush.PushSubscription = {
+      endpoint: row.endpoint,
+      keys: { p256dh: row.p256dh, auth: row.auth },
+    };
+    try {
+      await webpush.sendNotification(pushSub, payload);
+      await sql`UPDATE push_subscriptions SET last_sent_at = NOW() WHERE id = ${row.id}`;
+      sent++;
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        // Subscription expired — mark inactive
+        await sql`UPDATE push_subscriptions SET is_active = false WHERE id = ${row.id}`;
+        console.log(`Subscription ${row.id} expired — marked inactive`);
+      } else {
+        console.error(`Push send error for subscription ${row.id}:`, err);
+      }
     }
   }
+
+  console.log(`Push reminder sent to ${sent}/${subscriptions.length} subscribers`);
 };
 
 export const config: Config = {

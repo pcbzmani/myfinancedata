@@ -1,7 +1,7 @@
-import { getStore } from '@netlify/blobs';
-import type { Config, Context } from '@netlify/functions';
+import { neon } from '@netlify/neon';
+import type { Config } from '@netlify/functions';
 
-export default async (req: Request, context: Context) => {
+export default async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors() });
   }
@@ -11,12 +11,21 @@ export default async (req: Request, context: Context) => {
 
   try {
     const subscription = await req.json();
-    if (!subscription?.endpoint) {
+    const endpoint = subscription?.endpoint;
+    const p256dh   = subscription?.keys?.p256dh;
+    const auth     = subscription?.keys?.auth;
+
+    if (!endpoint || !p256dh || !auth) {
       return new Response('Invalid subscription', { status: 400, headers: cors() });
     }
 
-    const store = getStore({ name: 'push-subscriptions', consistency: 'strong' });
-    await store.setJSON('subscription', subscription);
+    const sql = neon();
+    await sql`
+      INSERT INTO push_subscriptions (endpoint, p256dh, auth)
+      VALUES (${endpoint}, ${p256dh}, ${auth})
+      ON CONFLICT (endpoint)
+      DO UPDATE SET p256dh = ${p256dh}, auth = ${auth}, is_active = true
+    `;
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
@@ -30,7 +39,7 @@ export default async (req: Request, context: Context) => {
 
 function cors() {
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin':  '*',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 }
