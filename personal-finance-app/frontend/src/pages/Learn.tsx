@@ -588,6 +588,633 @@ Absolutely essential — don't skip it.
       },
     ],
   },
+  {
+    id: 'user-guide',
+    label: 'User Guide',
+    emoji: '📖',
+    color: 'text-indigo-700 dark:text-indigo-400',
+    bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+    border: 'border-indigo-200 dark:border-indigo-700',
+    topics: [
+      {
+        id: 'guide-intro',
+        title: 'What is PanamKasu?',
+        emoji: '🪙',
+        summary: 'Free, privacy-first personal finance app for Indians at home and abroad.',
+        tags: ['Overview', 'User Guide'],
+        content: `## Overview
+**PanamKasu** (Tamil: பணம் கஸு — "money coin") is a free, privacy-first personal finance app. Everything is free — no subscriptions, no paid plans, no ads.
+
+Your data stays in your own Google Sheets spreadsheet (or your device's local storage). The developer never sees it.
+
+---
+
+## What You Can Do
+- Track income and expenses across multiple currencies (QAR, INR, USD, EUR, AED + custom)
+- Monitor investments — stocks, mutual funds, FDs, crypto, gold, and more
+- Manage insurance policies with renewal reminders and calendar exports
+- Track subscriptions and see your monthly burn rate
+- Store passwords securely in a PIN-encrypted vault
+- Split group expenses with friends via SplitIt
+- Get AI-powered financial health reports (2 free per day)
+- File your ITR with the built-in tax assistant
+
+---
+
+## App URL
+**https://panamkasu.netlify.app** — works on any browser. Install as a PWA:
+- **Android (Chrome):** tap ⋮ → Add to Home Screen
+- **iOS (Safari):** tap Share → Add to Home Screen`,
+      },
+      {
+        id: 'guide-setup',
+        title: 'First-Time Setup',
+        emoji: '🚀',
+        summary: 'Connect your Google Sheet in 3 steps — or skip it and use local mode.',
+        tags: ['Setup', 'Google Sheets', 'User Guide'],
+        content: `## Step 1: Open the App
+Go to **https://panamkasu.netlify.app** on any browser — mobile or desktop.
+
+---
+
+## Step 2: Create Your Google Sheet (Optional)
+1. Open sheets.google.com → create a new blank spreadsheet
+2. Go to **Extensions → Apps Script**
+3. Delete any existing code and paste the script from **Settings → Copy Code**
+4. Click **Deploy → New Deployment → Web App**
+5. Set **Execute as:** Me · **Who has access:** Anyone
+6. Click Deploy and copy the Web App URL
+
+**Mobile tip:** Open sheets.google.com in Chrome → tap ⋮ → Desktop site. The Extensions menu only appears in desktop mode.
+
+---
+
+## Step 3: Connect
+1. In PanamKasu go to **Settings**
+2. Paste the Web App URL in the Apps Script URL field
+3. Click **Test Connection** — a green message means you're ready!
+
+---
+
+## No Google Sheet?
+PanamKasu works fully offline using your browser's local storage — just skip the Google Sheets setup. Your data stays on your device. You can download a backup anytime from Settings.`,
+      },
+      {
+        id: 'guide-dashboard',
+        title: 'Dashboard',
+        emoji: '📊',
+        summary: 'Live market ticker, monthly cash flow, savings rate, and quick links.',
+        tags: ['Dashboard', 'User Guide'],
+        content: `## Live Market Ticker
+Two scrolling rows at the top show live data updated every few minutes:
+- **Row 1:** Nifty 50, Bank Nifty, Nasdaq 100, S&P 500, SSE, Hang Seng, Nikkei 225, KOSPI
+- **Row 2:** USD/INR, QAR/INR, Gold (₹/g), Gold (QAR/g)
+
+---
+
+## Month Picker
+Use the **← →** arrows to navigate between months. Tap **Today** to jump back. You can go back up to 24 months.
+
+---
+
+## Summary Cards
+For each currency you've used, you see Income, Expenses, and Net Savings. A **Savings Rate badge** shows your percentage:
+- 🟢 **≥ 20%** — great!
+- 🟡 **0–19%** — room to improve
+- 🔴 **Negative** — spending more than earning
+
+---
+
+## Cash Flow Chart
+Choose your view:
+- **Period:** 1M, 3M, 6M, or 12M
+- **Type:** Area (cumulative), Line (monthly trend), or Bar (month-by-month)
+- **Currency:** single currency or view all
+
+---
+
+## Other Dashboard Features
+- **Expense Pie Chart** — spending breakdown by category for the selected month
+- **Recent Transactions** — last 6 entries with a View All link
+- **Quick Links** — shortcuts to Investments, Insurance, Subscriptions, Vault
+- **Carry-Forward Banner** — if you had a surplus last month, tap Add Carry-Forward to log it as opening income this month`,
+      },
+      {
+        id: 'guide-transactions',
+        title: 'Transactions',
+        emoji: '💸',
+        summary: 'Log income and expenses in any currency, filter, edit, and convert.',
+        tags: ['Transactions', 'User Guide'],
+        content: `## Adding a Transaction
+Tap **+ Add** and fill in:
+
+| Field | Details |
+|-------|---------|
+| Type | Income ↑ or Expense ↓ |
+| Category | Choose from the list or type a new one |
+| Amount | The transaction amount |
+| Currency | QAR, INR, USD, EUR, GBP, AED, SAR, or custom |
+| Date | Defaults to today |
+| Description | Optional note |
+
+---
+
+## Filtering
+- **Date range:** This Month, Last Month, This Year, Custom
+- **Type:** All / Income / Expense
+- **Currency tabs:** click to see only that currency's transactions
+- **Search bar:** filter by category or description
+
+---
+
+## Editing & Deleting
+- **✎ Pencil icon** — edit all fields inline
+- **Currency badge** on a row — click it to quickly change just the currency
+- **🗑 Trash icon** — delete the transaction
+
+---
+
+## Custom Categories
+Type a new category name while adding a transaction — it saves automatically and appears in the dropdown next time.
+
+---
+
+## Currency Conversion View
+If you have transactions in multiple currencies, a **Convert** toggle appears. Switch between original currencies or convert all to QAR, INR, or USD using live FX rates.`,
+      },
+      {
+        id: 'guide-investments',
+        title: 'Investments',
+        emoji: '📈',
+        summary: 'Track your full portfolio — stocks, MF, FD, crypto, gold, land, and more.',
+        tags: ['Investments', 'Portfolio', 'User Guide'],
+        content: `## Investment Types Supported
+
+| Type | Notes |
+|------|-------|
+| Stocks | NSE/BSE listed; autocomplete for 50+ popular symbols |
+| Mutual Funds | SIP or lump sum; autocomplete available |
+| Crypto | Manual entry |
+| Fixed Deposit (FD) | Maturity date + interest rate tracking |
+| Recurring Deposit (RD) | Monthly contribution tracking |
+| Bonds | Coupon rate + maturity |
+| PPF / EPF | Long-term provident funds |
+| Gold | By weight (grams) |
+| Land | Custom property fields |
+| Other | Anything else |
+
+---
+
+## Portfolio View
+Each investment card shows:
+- **Current value** vs **Amount invested**
+- **P&L** in absolute amount and percentage
+- **Green / Red** coloring for gain / loss
+- **Maturity badge** for time-bound instruments (FD, RD, bonds)
+
+---
+
+## Portfolio Summary
+At the top: total invested, total current value, overall P&L, and a breakdown by investment type.
+
+---
+
+## Live Prices
+For stocks and mutual funds with a symbol, current value is pulled via GOOGLEFINANCE formulas in your spreadsheet — updated automatically by Google.`,
+      },
+      {
+        id: 'guide-insurance',
+        title: 'Insurance',
+        emoji: '🛡️',
+        summary: 'Manage policies, auto-calculate due dates, and export .ics reminders.',
+        tags: ['Insurance', 'User Guide'],
+        content: `## Adding a Policy
+Tap **+ Add Policy** and fill in:
+
+| Field | Options |
+|-------|---------|
+| Type | 🏥 Health, 💙 Life, 🚗 Vehicle, 🏠 Home, 📋 Term |
+| Provider | e.g. LIC, HDFC ERGO, Star Health |
+| Premium | Amount paid per period |
+| Frequency | Monthly, Quarterly, Half-Yearly, Yearly, or Custom |
+| Sum Assured | Coverage amount |
+| Start Date | When coverage began |
+| End Date | When policy expires |
+| Status | Active, Expired, or Lapsed |
+
+---
+
+## Policy Cards
+Each card shows:
+- Next payment due date (auto-calculated from start date + frequency)
+- Annual premium equivalent so you can compare across frequencies
+- Days until next payment
+
+---
+
+## Calendar Reminders
+Tap **📅 Download Calendar** on any policy to get a **.ics** file with:
+- A reminder on the payment due date
+- A 7-day advance alert
+- A 3-day advance alert
+
+Import into Google Calendar, Apple Calendar, or Outlook — never miss a renewal again.
+
+---
+
+## Upcoming Payments Banner
+A banner at the top shows any policies due within the next 7 days.
+
+---
+
+## Frequency Filter
+Use the tabs (All / Monthly / Quarterly / Yearly) to view policies grouped by payment frequency.`,
+      },
+      {
+        id: 'guide-subscriptions',
+        title: 'Subscriptions',
+        emoji: '🔁',
+        summary: 'Track recurring services, see your monthly burn rate, and pause instead of delete.',
+        tags: ['Subscriptions', 'User Guide'],
+        content: `## Adding a Subscription
+
+| Field | Notes |
+|-------|-------|
+| Name | e.g. Netflix, GitHub Copilot, Notion |
+| Category | ⚡ Productivity, 🎬 Entertainment, 🔧 Tools, ☁️ Cloud, 🤖 AI, 📦 Other |
+| Cost | Per-period amount |
+| Frequency | Monthly, Quarterly, Half-Yearly, Yearly, Custom, One-Time |
+| Currency | QAR, INR, USD, EUR, GBP |
+| Start Date | When subscription began |
+| Status | Active, Paused, or Cancelled |
+
+---
+
+## Subscription Cards
+Each card shows:
+- Monthly cost equivalent (a ₹2,000/year plan shows as ₹167/month)
+- Next renewal date
+- Status pill — green = Active, amber = Paused, red = Cancelled
+
+---
+
+## Summary
+- Total active subscriptions count
+- Combined monthly cost across all active subscriptions
+- Annual forecast
+
+---
+
+## Tip: Pause, Don't Delete
+Pause a subscription instead of deleting it. When you resume a seasonal service, your full history stays intact.`,
+      },
+      {
+        id: 'guide-vault',
+        title: 'Vault (Password Manager)',
+        emoji: '🔐',
+        summary: 'PIN-protected, client-side encrypted vault — passwords never leave your device.',
+        tags: ['Vault', 'Security', 'User Guide'],
+        content: `## First-Time Setup
+1. Click **Vault** in the sidebar
+2. Create a PIN (minimum 4 characters — longer is safer)
+3. Confirm the PIN
+
+Your PIN is hashed with SHA-256 locally. The hash — not the PIN itself — is what gets stored. The developer never sees your PIN or passwords.
+
+---
+
+## Unlocking
+Enter your PIN on the lock screen. The vault stays unlocked for **12 hours**, then auto-locks.
+
+---
+
+## Adding a Credential
+
+| Field | Notes |
+|-------|-------|
+| Category | 🏦 Banking, 💬 Social, 💼 Work, 🛒 Shopping, 🎬 Entertainment, ✉️ Email, 🔑 Other |
+| Account Name | e.g. "HDFC Bank Savings", "Gmail - Work" |
+| Username | Login ID or email |
+| Password | Hidden by default; click 👁 to reveal |
+| 2FA Type | Authenticator, SMS, or Email |
+| Notes | Security questions, extra info, etc. |
+
+---
+
+## Password Generator
+Click **Generate Password** to open the generator:
+- Slide to set **length** (8–32 characters)
+- Toggle **Uppercase**, **Numbers**, **Symbols**
+- Click **Copy** to use it immediately
+
+---
+
+## Finding Credentials
+- Use the **search bar** to find by name
+- Use **category tabs** to filter
+- Click the **👁 eye** to reveal a password
+- Click **📋 copy** icons to copy username, password, or URL to clipboard`,
+      },
+      {
+        id: 'guide-splitit',
+        title: 'SplitIt — Group Expenses',
+        emoji: '👥',
+        summary: 'Split bills with friends, settle up, and auto-push expenses to Transactions.',
+        tags: ['SplitIt', 'Group Expenses', 'User Guide'],
+        content: `## Setting Up SplitIt
+SplitIt uses its own separate Google Sheet. Set it up once in **Settings → SplitIt Apps Script**:
+1. Create a new Google Sheet (separate from your main finance sheet)
+2. Open Apps Script, paste the SplitIt script, deploy as Web App
+3. Paste the Web App URL inside the SplitIt settings
+
+---
+
+## Creating a Group
+1. Go to **Split** in the sidebar
+2. Click **+ New Group**
+3. Add members — include yourself using the exact same name you set in Settings → Your Name in SplitIt
+4. Save
+
+---
+
+## Adding an Expense
+1. Select a group → click **+ Add Expense**
+2. Fill in: description, amount, currency, category, who paid, how to split
+3. Split modes: **Equal**, **By percentage**, or **Custom amounts**
+4. Save
+
+---
+
+## Settling Up
+The **Balances** tab shows who owes whom. Mark debts as settled when someone pays you back.
+
+---
+
+## Auto-Import to Transactions
+When you're marked as the payer in a split expense, it's automatically added to your main Transactions as an expense. Your personal cash flow stays accurate with no double-entry needed.`,
+      },
+      {
+        id: 'guide-ai',
+        title: 'AI Finance Analyst',
+        emoji: '🤖',
+        summary: 'Get a personalized financial health report — 2 free analyses per day.',
+        tags: ['AI', 'Report', 'User Guide'],
+        content: `## Free Tier
+You get **2 free AI analyses per day** — no account or API key needed. Resets at midnight.
+
+---
+
+## Running a Report
+1. Go to **AI** in the sidebar
+2. Click **Analyze My Finances**
+3. Wait 10–20 seconds — the AI reads your actual data and generates a personalized report
+
+---
+
+## What the Report Covers
+- **Spending Analysis** — top expense categories, where your money actually goes
+- **Savings Rate** — how you're doing vs the 20% benchmark
+- **Investment Portfolio** — allocation, concentration risks, diversification check
+- **Insurance Coverage** — gaps and adequacy
+- **Top 5 Recommendations** — personalized, actionable next steps
+
+---
+
+## Custom Questions
+Switch to the **Ask a Question** tab and type any finance-related question:
+- "Am I saving enough for retirement?"
+- "Which subscriptions should I cancel?"
+- "How much emergency fund should I have?"
+
+The AI only answers finance-related questions.
+
+---
+
+## When the Daily Limit is Reached
+The count resets at midnight. You can support the app via UPI donation to help keep AI credits funded.`,
+      },
+      {
+        id: 'guide-tax',
+        title: 'Income Tax Assistant',
+        emoji: '🧾',
+        summary: 'Old vs New regime comparison, ITR form recommender, and document checklist.',
+        tags: ['Tax', 'ITR', 'User Guide'],
+        content: `## What It Does
+- **Old vs New regime comparison** — calculates tax under both, recommends the better one
+- **ITR form recommender** — tells you whether you need ITR-1, 2, 3, or 4
+- **Document checklist** — personalized list of documents to gather before filing
+- **Deduction calculator** — computes 80C, 80D, HRA, LTA, and other deductions
+
+---
+
+## Getting Started
+1. Click **Tax** in the sidebar
+2. Choose how to start:
+   - **Upload AIS** — upload your Annual Information Statement from incometax.gov.in to auto-fill income details
+   - **Guided Questions** — step-by-step questions about your income
+   - **Q&A** — ask general tax questions
+
+---
+
+## What You'll Be Asked
+- Employment type (salaried, business, freelance)
+- Gross salary or business income
+- Other income (rent, interest, capital gains, dividends)
+- HRA details (rent paid, city)
+- Deductions (80C investments, health insurance premium, home loan interest)
+- Capital gains from stocks or mutual funds
+
+---
+
+## Key Filing Dates (FY 2025-26)
+
+| Return Type | Due Date |
+|-------------|----------|
+| Non-audit individuals | 31 July 2026 |
+| Tax audit cases | 31 October 2026 |
+| Belated or revised | 31 December 2026 |
+| Updated (ITR-U) | 31 March 2030 |
+
+**IT Helpline:** 1800 103 0025`,
+      },
+      {
+        id: 'guide-calculators',
+        title: 'Financial Calculators',
+        emoji: '🧮',
+        summary: 'SIP, compound interest, loan EMI, and retirement corpus — all real-time.',
+        tags: ['Calculators', 'User Guide'],
+        content: `## SIP Calculator
+Plan your mutual fund SIP:
+- Enter **Monthly Investment**, **Expected Annual Return (%)**, and **Time Period (years)**
+- See: Total invested, Estimated maturity value, Total gains
+
+---
+
+## Compound Interest Calculator
+- Enter **Principal**, **Rate of Interest (%)**, **Time Period**, and **Compounding Frequency**
+- See: Maturity amount and total interest earned
+
+---
+
+## Loan EMI Calculator
+- Enter **Loan Amount**, **Interest Rate (%)**, and **Tenure (months)**
+- See: Monthly EMI and total interest payable
+
+---
+
+## Retirement Calculator
+- Enter **Current Age**, **Retirement Age**, **Current Savings**, **Monthly Contribution**, and **Expected Return**
+- See: Projected retirement corpus and whether you're on track
+
+All calculations update in real-time as you type.`,
+      },
+      {
+        id: 'guide-settings',
+        title: 'Settings',
+        emoji: '⚙️',
+        summary: 'Configure Google Sheets, SplitIt, notifications, backups, and CSV exports.',
+        tags: ['Settings', 'Configuration', 'User Guide'],
+        content: `## Google Sheets Connection
+- **Apps Script URL** — paste your deployment URL here
+- **Test Connection** — verify the link works before relying on it
+- **Local mode** — if no URL is set, data is stored in IndexedDB in your browser
+
+---
+
+## SplitIt Configuration
+- **SplitIt Apps Script Code** — copy it to set up your group expense sheet (separate Google Sheet)
+- **Your Name in SplitIt** — must match exactly how you appear as a member in groups; used to auto-push expenses to Transactions
+
+---
+
+## Data Storage & Backup
+- **Download Backup** — save a JSON backup of your local data to your device
+- **Restore from Backup** — re-import a previously downloaded JSON backup
+
+---
+
+## CSV Export
+Download your data as CSV files for tax filing, spreadsheets, or record-keeping:
+- Transactions → CSV
+- Investments → CSV
+- Insurance → CSV (includes computed annual premium column)
+
+---
+
+## Notifications
+Enable browser push notifications to get a reminder every 4 hours on days you haven't logged any entries.
+
+---
+
+## Privacy & Legal
+Privacy Policy, Donation Policy, and support links are at the bottom of the Settings page — all written in plain English.`,
+      },
+      {
+        id: 'guide-tips',
+        title: 'Tips & Tricks',
+        emoji: '💡',
+        summary: 'Get more out of PanamKasu — carry-forward, calendar hack, PWA install, and more.',
+        tags: ['Tips', 'Tricks', 'User Guide'],
+        content: `## Multi-Currency Tip
+Select the right currency when logging a transaction — the dashboard groups and converts automatically. Great for expats tracking QAR spending vs INR savings separately.
+
+---
+
+## Use Carry-Forward
+At the start of each month, if you had a surplus last month, tap the **Add Carry-Forward** banner on the Dashboard. It logs the surplus as opening income so your monthly net stays accurate.
+
+---
+
+## Insurance Calendar Hack
+Download **.ics** files for all your policies and import them into Google Calendar in one go. Set reminders to vibrate on your phone — you'll never miss a renewal.
+
+---
+
+## Create Custom Categories
+Type a new category name while adding a transaction (e.g. "EMI", "School Fees", "Medical"). It persists automatically and appears in the dropdown every time.
+
+---
+
+## AI Report Before Investing
+Run the AI Finance Analyst before making a major investment decision. It flags concentration risks and suggests diversification based on your actual current portfolio.
+
+---
+
+## Vault for OTP Seeds
+Use the Vault's **Notes** field to store your authenticator OTP secret keys. If you ever lose your phone, you can recover 2FA from here.
+
+---
+
+## Install as PWA
+- **Android (Chrome):** tap ⋮ → Add to Home Screen
+- **iOS (Safari):** tap Share → Add to Home Screen
+
+Gives you an app icon, offline access, and push notification support.`,
+      },
+      {
+        id: 'guide-privacy',
+        title: 'Privacy & Security',
+        emoji: '🔒',
+        summary: 'No analytics, no ads, no servers — your data stays yours.',
+        tags: ['Privacy', 'Security', 'User Guide'],
+        content: `## Your Financial Data
+- Stored in your own Google Sheets spreadsheet — the developer has zero access
+- The Apps Script runs under your Google account and executes as you
+- Revoke access anytime via Google Apps Script → Deployments → Delete
+- Never share your Apps Script URL — anyone with it can read your sheet
+
+---
+
+## Vault Passwords
+- Encrypted using a SHA-256 PIN hash client-side
+- Never transmitted from your device in plain text
+- The developer cannot see or recover your vault contents
+
+---
+
+## AI Analysis
+- Sends a financial summary (category totals, not individual transactions) to Claude AI
+- No names, no account numbers, no raw transaction data is sent
+- Your AI API key is held in browser memory only for the session — never stored anywhere
+
+---
+
+## Tracking & Ads
+- **No analytics** — no Google Analytics, Facebook Pixel, or tracking scripts
+- **No ads** — ever
+- **No accounts required** — no email, no sign-up needed
+
+---
+
+## Deleting Everything
+Clear your browser's localStorage and delete your Google Sheet — zero trace left anywhere.`,
+      },
+      {
+        id: 'guide-support',
+        title: 'Support & Feedback',
+        emoji: '🆘',
+        summary: 'Found a bug? Have a suggestion? Here\'s how to reach us.',
+        tags: ['Support', 'Feedback', 'User Guide'],
+        content: `## Found a Bug or Have a Suggestion?
+- **GitHub Issues:** github.com/pcbzmani/myfinancedata/issues
+- **Email:** pcbzmani@gmail.com
+
+---
+
+## Want to Support the App?
+PanamKasu is free forever. If it saves you time and money, consider a small UPI donation (zero fees) from the **Support** section in Settings or the AI Report page. Works with GPay, PhonePe, and Paytm.
+
+---
+
+## About PanamKasu
+- **Current version:** v2.4.0
+- **Free forever, private by design**
+- **Open source** — all code on GitHub at github.com/pcbzmani/myfinancedata
+
+Built by an expat, for expats and Indians managing finances across borders.`,
+      },
+    ],
+  },
 ];
 
 function renderContent(text: string) {
@@ -711,7 +1338,7 @@ export default function Learn() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Finance Learning</h1>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Understand markets, investing & money — at your own pace</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Understand markets, investing & money — or browse the 📖 User Guide tab for app help</p>
         </div>
       </div>
 
