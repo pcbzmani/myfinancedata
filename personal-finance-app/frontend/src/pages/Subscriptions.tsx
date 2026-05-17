@@ -105,12 +105,15 @@ const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', mon
 const diffDays = (d: Date) => Math.ceil((d.getTime() - Date.now()) / 86400000);
 
 
-/** Calculate the new endDate after one renewal cycle, using the previous endDate as the base */
+/** Calculate the new endDate after renewal — advances until the date is after today */
 function nextEndDate(prevEndDate: string, frequency: Frequency, customMonths = 1, customUnit: CustomUnit = 'months'): string {
   if (!prevEndDate || frequency === 'one-time') return prevEndDate;
   const d = new Date(prevEndDate + 'T00:00:00');
   if (isNaN(d.getTime())) return prevEndDate;
-  advanceByFreq(d, frequency, customMonths, customUnit);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  do {
+    advanceByFreq(d, frequency, customMonths, customUnit);
+  } while (d <= now);
   return d.toISOString().split('T')[0];
 }
 
