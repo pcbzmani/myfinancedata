@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
+import SlidingNavPill from './SlidingNavPill';
+import PageTransition from './PageTransition';
 
 function DashboardIcon() {
   return (
@@ -237,24 +239,7 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
         <div className="mx-3 h-px bg-slate-100 dark:bg-slate-700" />
 
         {/* Nav */}
-        <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-          {nav.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              title={collapsed ? label : undefined}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${collapsed ? 'justify-center' : ''} ${
-                  isActive ? activeClass : inactiveClass
-                }`
-              }
-            >
-              <Icon />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </NavLink>
-          ))}
-        </nav>
+        <SlidingNavPill items={nav} variant="sidebar" collapsed={collapsed} />
 
         <div className="mx-3 h-px bg-slate-100 dark:bg-slate-700" />
 
@@ -376,35 +361,13 @@ export default function Layout({ dark, onToggleDark }: LayoutProps) {
         {/* Page content */}
         <main className="flex-1 overflow-auto pb-20 md:pb-0">
           <div className="max-w-6xl mx-auto px-4 py-4 md:px-8 md:py-8">
-            <Outlet />
+            <PageTransition><Outlet /></PageTransition>
           </div>
         </main>
       </div>
 
       {/* ── Mobile Bottom Tab Bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex md:hidden">
-        {nav.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className={`p-1 rounded-lg transition-colors ${isActive ? 'bg-violet-50 dark:bg-violet-900/30' : ''}`}>
-                  <Icon />
-                </span>
-                <span className="hidden xs:block">{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+      <SlidingNavPill items={nav} variant="bottom-tabs" />
     </div>
   );
 }

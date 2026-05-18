@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getRows, getScriptUrl } from '../lib/api';
+import MarqueeTicker from '../components/MarqueeTicker';
 
 // ── Market data helpers ───────────────────────────────────────────────────────
 
@@ -44,41 +45,6 @@ async function fetchRates(): Promise<Rates> {
   } catch { return EMPTY_RATES; }
 }
 
-const INDICES = [
-  { key: 'nifty50'  as const, label: 'Nifty 50'   },
-  { key: 'bankNifty'as const, label: 'Bank Nifty' },
-  { key: 'nasdaq'   as const, label: 'Nasdaq 100' },
-  { key: 'sp500'    as const, label: 'S&P 500'    },
-  { key: 'shanghai' as const, label: 'SSE'         },
-  { key: 'hangSeng' as const, label: 'Hang Seng'  },
-  { key: 'nikkei'   as const, label: 'Nikkei 225' },
-  { key: 'kospi'    as const, label: 'KOSPI'       },
-];
-const FX_GOLD = [
-  { key: 'usdInr'  as const, label: 'USD/INR',     prefix: '₹'   },
-  { key: 'qarInr'  as const, label: 'QAR/INR',     prefix: '₹'   },
-  { key: 'goldInr' as const, label: 'Gold ₹/1g',  prefix: '₹'   },
-  { key: 'goldQar' as const, label: 'Gold QAR/1g', prefix: 'QAR ' },
-];
-
-function TickerCell({ label, quote, prefix = '' }: { label: string; quote: MarketQuote | null; prefix?: string }) {
-  const fmtN = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  return (
-    <div className="flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors min-w-[110px]">
-      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">{label}</p>
-      {quote ? (
-        <div className="flex items-baseline gap-1 mt-0.5">
-          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{prefix}{fmtN(quote.price)}</span>
-          <span className={`text-[10px] font-semibold whitespace-nowrap ${quote.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-            {quote.change >= 0 ? '+' : ''}{quote.changePct.toFixed(2)}%
-          </span>
-        </div>
-      ) : (
-        <span className="text-xs text-slate-300 dark:text-slate-600 mt-0.5 block">—</span>
-      )}
-    </div>
-  );
-}
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
@@ -375,37 +341,7 @@ export default function Dashboard() {
     <div className="space-y-6">
 
       {/* ── Market ticker ────────────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-        {marketLoading ? (
-          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 px-4 py-3">
-            <span className="w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
-            Fetching live market data…
-          </div>
-        ) : (
-          <>
-            {/* Row 1 — Indices */}
-            <div className="flex items-center overflow-x-auto scrollbar-none border-b border-slate-50 px-2 py-1">
-              <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-widest px-2 flex-shrink-0">Indices</span>
-              <div className="w-px h-6 bg-slate-100 dark:bg-slate-700 mx-1 flex-shrink-0" />
-              {INDICES.map(item => (
-                <TickerCell key={item.key} label={item.label} quote={rates[item.key]} />
-              ))}
-            </div>
-            {/* Row 2 — FX & Gold */}
-            <div className="flex items-center overflow-x-auto scrollbar-none px-2 py-1">
-              <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-widest px-2 flex-shrink-0">FX & Gold</span>
-              <div className="w-px h-6 bg-slate-100 dark:bg-slate-700 mx-1 flex-shrink-0" />
-              {FX_GOLD.map(item => (
-                <TickerCell key={item.key} label={item.label} quote={rates[item.key]} prefix={item.prefix} />
-              ))}
-              <div className="ml-auto pl-4 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 flex-shrink-0 pr-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live · {marketTime}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      <MarqueeTicker rates={rates} marketLoading={marketLoading} marketTime={marketTime} />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -679,7 +615,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Invested</span><span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(totalInvested)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Current Value</span><span className="font-semibold text-blue-600">{fmt(currentPortfolio)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-400 dark:text-slate-500">Current Value</span><span className="font-semibold pk-portfolio-num">{fmt(currentPortfolio)}</span></div>
               <div className={`flex justify-between text-sm font-semibold ${portfolioGain >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                 <span>P&L</span><span>{portfolioGain >= 0 ? '+' : ''}{fmt(portfolioGain)}</span>
               </div>

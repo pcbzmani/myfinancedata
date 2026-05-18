@@ -1,0 +1,124 @@
+/* PanamKasu — Motion system (drop into src/motion.css and import after index.css)
+   Lively but disciplined: every animation opts out via [data-motion="off"]
+   on body. Three intensity levels: off / subtle / lively (default) / playful.
+
+   This file assumes Tailwind's slate / violet / emerald / rose / amber palette
+   is loaded by your existing index.css. */
+
+/* ── Off switch ────────────────────────────────────────────────────────── */
+body[data-motion="off"] *,
+body[data-motion="off"] *::before,
+body[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes pk-fade-up         { from { transform: translateY(8px); } to { transform: translateY(0); } }
+@keyframes pk-fade-up-lg      { from { transform: translateY(14px); } to { transform: translateY(0); } }
+@keyframes pk-pop             { 0% { transform: scale(0.85); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes pk-pulse           { 50% { opacity: 0.55; } }
+@keyframes pk-ping            { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes pk-ping-amber      { 0% { transform: scale(1); opacity: 0.7; } 75%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes pk-rise            { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes pk-marquee         { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes pk-coin-glint      { 0%, 60% { transform: translateX(-110%) rotate(20deg); } 70%, 100% { transform: translateX(280%) rotate(20deg); } }
+@keyframes pk-route-enter     { from { transform: translateY(10px); } to { transform: translateY(0); } }
+
+/* ── Card hover lift (auto-applies if you tag your cards .pk-card or use
+       the same recipe — bg-white rounded-2xl border-slate-100 shadow-sm). */
+body[data-motion="lively"] .pk-card:hover,
+body[data-motion="playful"] .pk-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px -10px rgb(15 23 42 / 0.18), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+}
+.pk-card { transition: transform 220ms cubic-bezier(0.16,1,0.3,1), box-shadow 220ms cubic-bezier(0.16,1,0.3,1); }
+
+/* ── Page transition (use the <PageTransition> wrapper) ────────────────── */
+.pk-route { animation: pk-route-enter 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ── Sliding active-nav pill ───────────────────────────────────────────── */
+.pk-pill-track { position: relative; }
+.pk-active-pill {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 12px;
+  background: linear-gradient(to right, #7c3aed, #8b5cf6);
+  box-shadow: 0 4px 12px -2px rgb(124 58 237 / 0.4), 0 2px 4px -2px rgb(124 58 237 / 0.25);
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    width     220ms cubic-bezier(0.32, 0.72, 0, 1),
+    height    220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.pk-active-pill.bottom {
+  background: #f5f3ff;             /* violet-50 */
+  box-shadow: none;
+  border-radius: 10px;
+}
+.pk-active-pill.first-paint { transition: none; }
+.pk-pill-track > [data-pill-item] { position: relative; z-index: 1; }
+
+/* ── Marquee ticker ────────────────────────────────────────────────────── */
+.pk-marquee {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  flex: 1 1 0%;
+}
+.pk-marquee::before, .pk-marquee::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; width: 32px;
+  z-index: 2; pointer-events: none;
+}
+.pk-marquee::before { left: 0;  background: linear-gradient(to right, white, transparent); }
+.pk-marquee::after  { right: 0; background: linear-gradient(to left,  white, transparent); }
+.dark .pk-marquee::before { background: linear-gradient(to right, #1e293b, transparent); }
+.dark .pk-marquee::after  { background: linear-gradient(to left,  #1e293b, transparent); }
+.pk-marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: pk-marquee 60s linear infinite;
+}
+.pk-marquee:hover .pk-marquee-track { animation-play-state: paused; }
+body[data-motion="off"] .pk-marquee-track,
+body[data-motion="subtle"] .pk-marquee-track { animation: none; }
+
+/* ── Logo idle micro-animation (Playful only) ──────────────────────────── */
+body[data-motion="playful"] .pk-logo-anim {
+  position: relative;
+  overflow: hidden;
+}
+body[data-motion="playful"] .pk-logo-anim::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 247 214 / 0.6) 50%, transparent 60%);
+  animation: pk-coin-glint 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Brand-amber accent ────────────────────────────────────────────────── */
+.pk-portfolio-num {
+  background: linear-gradient(135deg, #7c3aed 0%, #c47d0e 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.pk-sync-dot { position: relative; width: 8px; height: 8px; display: inline-block; }
+.pk-sync-dot::before, .pk-sync-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 999px;
+}
+.pk-sync-dot::before { background: #fcd34d; animation: pk-ping-amber 2.4s cubic-bezier(0,0,0.2,1) infinite; opacity: 0.7; }
+.pk-sync-dot::after  { background: #d97706; }
+
+/* ── Utility classes for staggered children ────────────────────────────── */
+.pk-stagger-1 { animation-delay: 40ms; }
+.pk-stagger-2 { animation-delay: 80ms; }
+.pk-stagger-3 { animation-delay: 120ms; }
+.pk-stagger-4 { animation-delay: 160ms; }
+.pk-stagger-5 { animation-delay: 200ms; }
+.pk-stagger-6 { animation-delay: 240ms; }
