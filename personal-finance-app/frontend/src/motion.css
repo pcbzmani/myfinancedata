@@ -40,7 +40,6 @@ body[data-motion="playful"] .pk-card:hover {
 .pk-route { animation: pk-route-enter 320ms cubic-bezier(0.16, 1, 0.3, 1); }
 
 /* ── Sliding active-nav pill ───────────────────────────────────────────── */
-.pk-pill-track { position: relative; }
 .pk-active-pill {
   position: absolute;
   top: 0;
