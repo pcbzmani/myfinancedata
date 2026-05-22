@@ -47,17 +47,31 @@ export default function SlidingNavPill({ items, variant, collapsed, onItemClick 
   const [firstPaint, setFirstPaint] = useState(true);
   const axis = variant === 'sidebar' ? 'y' : 'x';
 
+  const measure = (track: HTMLElement, node: HTMLElement) => {
+    const tr = track.getBoundingClientRect();
+    const nr = node.getBoundingClientRect();
+    return axis === 'y'
+      ? {
+          transform: `translateY(${nr.top - tr.top + track.scrollTop}px)`,
+          width: nr.width,
+          height: nr.height,
+          left: nr.left - tr.left,
+        }
+      : {
+          transform: `translateX(${nr.left - tr.left}px)`,
+          width: nr.width,
+          height: nr.height,
+          top: nr.top - tr.top,
+        };
+  };
+
   useLayoutEffect(() => {
     const track = trackRef.current;
     if (!track) return;
     const nodes = track.querySelectorAll<HTMLElement>('[data-pill-item]');
     const node = nodes[activeIdx];
     if (!node) return;
-    setPillStyle(
-      axis === 'y'
-        ? { transform: `translateY(${node.offsetTop}px)`, width: node.offsetWidth, height: node.offsetHeight, left: node.offsetLeft }
-        : { transform: `translateX(${node.offsetLeft}px)`, width: node.offsetWidth, height: node.offsetHeight, top: node.offsetTop }
-    );
+    setPillStyle(measure(track, node));
     if (firstPaint) requestAnimationFrame(() => setFirstPaint(false));
   }, [activeIdx, collapsed, axis, firstPaint, items.length]);
 
@@ -65,14 +79,11 @@ export default function SlidingNavPill({ items, variant, collapsed, onItemClick 
   useLayoutEffect(() => {
     const onResize = () => {
       const track = trackRef.current;
-      const nodes = track?.querySelectorAll<HTMLElement>('[data-pill-item]');
-      const node = nodes?.[activeIdx];
-      if (!track || !node) return;
-      setPillStyle(
-        axis === 'y'
-          ? { transform: `translateY(${node.offsetTop}px)`, width: node.offsetWidth, height: node.offsetHeight, left: node.offsetLeft }
-          : { transform: `translateX(${node.offsetLeft}px)`, width: node.offsetWidth, height: node.offsetHeight, top: node.offsetTop }
-      );
+      if (!track) return;
+      const nodes = track.querySelectorAll<HTMLElement>('[data-pill-item]');
+      const node = nodes[activeIdx];
+      if (!node) return;
+      setPillStyle(measure(track, node));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
