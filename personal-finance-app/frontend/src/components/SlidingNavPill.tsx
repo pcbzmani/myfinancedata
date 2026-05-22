@@ -47,22 +47,30 @@ export default function SlidingNavPill({ items, variant, collapsed, onItemClick 
   const [firstPaint, setFirstPaint] = useState(true);
   const axis = variant === 'sidebar' ? 'y' : 'x';
 
-  const measure = (track: HTMLElement, node: HTMLElement) => {
+  const measure = (track: HTMLElement, node: HTMLElement): React.CSSProperties => {
+    if (axis === 'y') {
+      // Sidebar: all items share the same width, so derive insets from the
+      // nav's own padding instead of measuring the node's left/width.
+      // This avoids offsetLeft/getBoundingClientRect discrepancies entirely.
+      const cs = getComputedStyle(track);
+      const pl = parseFloat(cs.paddingLeft) || 0;
+      const pr = parseFloat(cs.paddingRight) || 0;
+      return {
+        transform: `translateY(${node.offsetTop}px)`,
+        height: node.offsetHeight,
+        left: pl,
+        right: pr,
+      };
+    }
+    // Bottom-tabs: items are flex-1 so offsetLeft is unreliable; use rects.
     const tr = track.getBoundingClientRect();
     const nr = node.getBoundingClientRect();
-    return axis === 'y'
-      ? {
-          transform: `translateY(${nr.top - tr.top + track.scrollTop}px)`,
-          width: nr.width,
-          height: nr.height,
-          left: nr.left - tr.left,
-        }
-      : {
-          transform: `translateX(${nr.left - tr.left}px)`,
-          width: nr.width,
-          height: nr.height,
-          top: nr.top - tr.top,
-        };
+    return {
+      transform: `translateX(${Math.round(nr.left - tr.left)}px)`,
+      width: node.offsetWidth,
+      height: node.offsetHeight,
+      top: Math.round(nr.top - tr.top),
+    };
   };
 
   useLayoutEffect(() => {
