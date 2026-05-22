@@ -18,3 +18,13 @@ Thumbs.db
 
 # Compiled JS artifacts that shadow TypeScript sources (never commit these)
 frontend/src/**/*.js
+
+# Capacitor Android — keep source, ignore build outputs & local SDK paths
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties
+frontend/android/captures/
+frontend/android/.idea/
+frontend/android/*.jks
+frontend/android/*.keystore
