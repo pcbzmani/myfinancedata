@@ -56,6 +56,7 @@ export default function SlidingNavPill({ items, variant, collapsed, onItemClick 
       const pl = parseFloat(cs.paddingLeft) || 0;
       const pr = parseFloat(cs.paddingRight) || 0;
       return {
+        top: 0,
         transform: `translateY(${node.offsetTop}px)`,
         height: node.offsetHeight,
         left: pl,
