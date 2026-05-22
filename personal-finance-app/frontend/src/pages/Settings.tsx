@@ -991,13 +991,33 @@ export default function Settings() {
         {/* Legal / Policies */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
           <p className="text-xs font-semibold text-violet-500 uppercase tracking-wider mb-2">Legal &amp; Support</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm mb-3">
             <a href="/privacy-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</a>
             <a href="/refund-policy.html" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Donation Policy</a>
             <a href="mailto:pcbzmani@gmail.com" className="text-violet-600 dark:text-violet-400 hover:underline">Contact developer</a>
             <a href="https://github.com/pcbzmani/myfinancedata/issues" target="_blank" rel="noopener" className="text-violet-600 dark:text-violet-400 hover:underline">Report a bug</a>
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+
+          {/* Rate on Play Store */}
+          <a
+            href="https://play.google.com/store/apps/details?id=app.netlify.pcbzmani.twa"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-sm transition-all group"
+          >
+            <span className="text-2xl">⭐</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-violet-700 dark:group-hover:text-violet-400 transition-colors">
+                Rate PanamKasu on Play Store
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Your rating helps others discover the app</p>
+            </div>
+            <svg className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-violet-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
             PanamKasu is free. For feature requests or feedback, email{' '}
             <a href="mailto:pcbzmani@gmail.com" className="underline hover:text-violet-600">pcbzmani@gmail.com</a>.
           </p>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import WelcomeModal from './components/WelcomeModal';
 import { useDarkMode } from './hooks/useDarkMode';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
@@ -36,6 +37,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <WelcomeModal />
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout dark={dark} onToggleDark={toggle} />}>
