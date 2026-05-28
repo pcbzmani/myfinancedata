@@ -117,8 +117,24 @@ function nextEndDate(prevEndDate: string, frequency: Frequency, customMonths = 1
   return d.toISOString().split('T')[0];
 }
 
+/** Subtract one billing period from a date — gives the start of the current cycle */
+function prevPeriodDate(dateStr: string, frequency: Frequency, customMonths = 1, customUnit: CustomUnit = 'months'): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  if (frequency === 'monthly') d.setMonth(d.getMonth() - 1);
+  else if (frequency === 'quarterly') d.setMonth(d.getMonth() - 3);
+  else if (frequency === 'half-yearly') d.setMonth(d.getMonth() - 6);
+  else if (frequency === 'custom') {
+    if (customUnit === 'days') d.setDate(d.getDate() - Math.max(1, customMonths));
+    else d.setMonth(d.getMonth() - Math.max(1, customMonths));
+  }
+  else if (frequency !== 'one-time') d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().split('T')[0];
+}
+
 interface RenewalCheck {
   sub: any;
+  newStartDate: string;
   newEndDate: string;
 }
 
@@ -164,15 +180,14 @@ export default function Subscriptions() {
         // Only prompt if endDate is within last 90 days (not ancient forgotten subs)
         (new Date(today).getTime() - new Date(i.endDate).getTime()) / 86400000 <= 90
       )
-      .map(i => ({
-        sub: i,
-        newEndDate: nextEndDate(
-          i.endDate,
-          i.frequency as Frequency,
-          Number(i.customMonths) || 1,
-          (i.customUnit || 'months') as CustomUnit
-        ),
-      }));
+      .map(i => {
+        const freq = i.frequency as Frequency;
+        const cm = Number(i.customMonths) || 1;
+        const cu = (i.customUnit || 'months') as CustomUnit;
+        const newEndDate = nextEndDate(i.endDate, freq, cm, cu);
+        const newStartDate = prevPeriodDate(newEndDate, freq, cm, cu);
+        return { sub: i, newStartDate, newEndDate };
+      });
     if (pending.length > 0) {
       setRenewalQueue(pending);
       setRenewalIdx(0);
@@ -314,7 +329,7 @@ export default function Subscriptions() {
     if (!current) return;
     setRenewalSaving(true);
     try {
-      const { sub, newEndDate } = current;
+      const { sub, newStartDate, newEndDate } = current;
       // Add an expense transaction for the renewal
       await addRow('transactions', {
         id: crypto.randomUUID(),
@@ -325,9 +340,9 @@ export default function Subscriptions() {
         description: `Subscription Renewal: ${sub.name}`,
         date: renewalDate,
       });
-      // Extend the endDate (startDate stays the same)
-      await updateRow('subscriptions', sub.id, { endDate: newEndDate });
-      setItems(prev => prev.map(i => i.id === sub.id ? { ...i, endDate: newEndDate } : i));
+      // Advance both startDate and endDate to the new billing cycle
+      await updateRow('subscriptions', sub.id, { startDate: newStartDate, endDate: newEndDate });
+      setItems(prev => prev.map(i => i.id === sub.id ? { ...i, startDate: newStartDate, endDate: newEndDate } : i));
       setRenewalIdx(idx => idx + 1);
       setRenewalDate(localToday());
     } catch (e: any) {
@@ -427,7 +442,7 @@ export default function Subscriptions() {
 
       {/* ── Renewal prompt modal ───────────────────────────────────────────── */}
       {renewalQueue.length > 0 && renewalIdx < renewalQueue.length && (() => {
-        const { sub, newEndDate } = renewalQueue[renewalIdx];
+        const { sub, newStartDate, newEndDate } = renewalQueue[renewalIdx];
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700">
@@ -454,7 +469,7 @@ export default function Subscriptions() {
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
                 />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  New end date will be: <span className="font-semibold text-violet-600">{newEndDate}</span>
+                  New period: <span className="font-semibold text-violet-600">{newStartDate}</span> → <span className="font-semibold text-violet-600">{newEndDate}</span>
                   {' '}· Cost: <span className="font-semibold">{sub.currency} {Number(sub.cost).toLocaleString()}</span>
                 </p>
               </div>
