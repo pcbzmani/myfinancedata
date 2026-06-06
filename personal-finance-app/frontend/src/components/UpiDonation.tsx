@@ -7,6 +7,7 @@
  */
 import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
+import { NETLIFY_BASE } from '../lib/api';
 
 const PRESETS = [49, 99, 199, 499];
 
@@ -39,7 +40,7 @@ export default function UpiDonation({ variant = 'button', label = 'Donate via UP
     if (!open) return;
     setLoading(true);
     setErr('');
-    fetch(`/api/upi-info?amount=${finalAmount}&note=Donation+to+PanamKasu`)
+    fetch(`${NETLIFY_BASE}/api/upi-info?amount=${finalAmount}&note=Donation+to+PanamKasu`)
       .then(r => r.json())
       .then(async (data: UpiInfo) => {
         setInfo(data);

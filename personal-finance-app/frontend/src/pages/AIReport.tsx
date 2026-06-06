@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { getRows } from '../lib/api';
+import { getRows, NETLIFY_BASE } from '../lib/api';
 import UpiDonation from '../components/UpiDonation';
 
 /* ─── Daily usage tracking (localStorage) ────────────────────────────── */
@@ -168,7 +168,7 @@ Give practical, India-specific financial advice. Use ₹ for Indian amounts and 
       const systemCtx = await buildSystemPrompt();
       const fullMessage = `${systemCtx}\n\n---\n\nUser question: ${message}`;
 
-      const res = await fetch('/api/ai-chat', {
+      const res = await fetch(`${NETLIFY_BASE}/api/ai-chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ message: fullMessage }),

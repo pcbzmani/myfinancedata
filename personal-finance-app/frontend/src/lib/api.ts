@@ -2,6 +2,11 @@ import { idbGetRows, idbAddRow, idbDeleteRow, idbUpdateRow } from './idb';
 
 const STORAGE_KEY = 'myfinance_script_url';
 
+/** Absolute base URL for Netlify functions — needed in Capacitor where relative URLs resolve to localhost */
+export const NETLIFY_BASE = typeof (window as any).Capacitor !== 'undefined'
+  ? 'https://pcbzmani.netlify.app'
+  : '';
+
 export function getScriptUrl(): string {
   return localStorage.getItem(STORAGE_KEY) || '';
 }
